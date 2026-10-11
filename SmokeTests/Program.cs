@@ -85,6 +85,18 @@ internal static class Program
         {
             main.Core.DrillholeId="retained"; main.ShowMeasurementCommand.Execute(null); main.ShowCoreCommand.Execute(null);
             Check(main.CurrentPage == main.Core && main.Core.DrillholeId == "retained", "Navigation retains form");
+            var retainedCore = main.Core;
+            var retainedMeasurement = main.Measurement;
+            Check(main.IsSidebarExpanded, "Sidebar initially expanded");
+            main.ToggleSidebarCommand.Execute(null);
+            Check(!main.IsSidebarExpanded && main.SidebarToggleLabel == "Expand sidebar", "Collapse sidebar");
+            Check(main.CurrentPage == retainedCore && main.Core.DrillholeId == "retained", "Collapse retains page/form");
+            main.ShowMeasurementCommand.Execute(null);
+            Check(!main.IsSidebarExpanded && main.CurrentPage == retainedMeasurement && main.IsMeasurementSelected,
+                "Navigation retains collapsed state and measurement instance");
+            main.ToggleSidebarCommand.Execute(null);
+            Check(main.IsSidebarExpanded && main.SidebarToggleLabel == "Collapse sidebar" && main.CurrentPage == retainedMeasurement,
+                "Expand retains selected page");
         }
         var service = new MockMeasurementService(); var start = DateTimeOffset.Now; var elapsed = Stopwatch.StartNew();
         var remaining = new List<TimeSpan>();

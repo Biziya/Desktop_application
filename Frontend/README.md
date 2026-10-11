@@ -141,3 +141,21 @@ The SDK-style project still uses default WPF globs for XAML Page and C# Compile 
 - NOT EXECUTED: Windows launch, live bindings/resource loading, navigation, countdown, averaging, drag/drop, delete dialog and CSV interaction checks. The provided smoke tests remain available for Windows; their imports were updated without changing test logic.
 
 When replacing the previous Frontend directory, remove or move the old directory first rather than overlaying the new files. Overlaying leaves the old source paths behind and can cause duplicate classes/resources. Preserve the separate Backend project and existing solution files.
+
+## UI polish and collapsible sidebar
+
+- Sidebar expands to 224 pixels and collapses to a 72-pixel icon rail. The toggle remains at the same top-left position, with an action-specific chevron, tooltip and accessible name.
+- Both navigation items retain icons, tooltips and selected-state highlighting. Labels/branding hide when collapsed. Content receives the freed width automatically through an Auto-sized sidebar column.
+- MainViewModel owns the in-memory sidebar state and command. It survives page switches; no disk preference or new page lifecycle is introduced. Toggle changes do not replace page ViewModels, alter CurrentPage or restart a capture.
+- Shared palette now provides navy text, soft-blue selection, neutral surfaces, green primary measurement actions and red destructive actions. Cards use 12-pixel corners; inputs/buttons use 8-pixel corners. Vector navigation icons replace text glyphs.
+- Existing buttons have hover/pressed/disabled feedback and a visible keyboard focus ring. Inputs use a consistent minimum height and read-only surface; existing error strings also control error borders without modifying validation.
+- Form spacing/headings, measurement controls, table header/selection states and the existing confirmation dialog interior are refined. Native window controls remain intact. The seven existing table columns and 36-pixel rows are preserved.
+- Sidebar resizing is immediate; no width animation, expensive shadows, new packages, additional workflows or restored instructional panels were added.
+
+Changed files: MainWindow.xaml, ViewModels/MainViewModel.cs, Shared/Styles/Theme.xaml, Pages/CoreInformation/CoreInformationPage.xaml, Pages/Measurement/MeasurementPage.xaml, Pages/Measurement/MeasurementStyles.xaml, Windows/ConfirmationWindow/DeleteConfirmationWindow.xaml, SmokeTests/Program.cs, and this README.
+
+Validation completed here: all existing non-shell C# files unchanged; existing navigation logic unchanged after excluding new sidebar members; XML/class/resource/event checks passed; form input bindings and measurement column headers/order/bindings preserved; compact row height and project dependencies preserved. These are source checks, not runtime rendering verification.
+
+Build attempt: `dotnet build Frontend/Frontend.csproj` could not start (`dotnet: command not found`). Windows build, launch, visual rendering, live binding/resource resolution and interaction tests remain unverified. Smoke tests include new assertions for collapse/expand, tooltip labels, retained page instances/form values and sidebar state across navigation; those tests have not been executed here.
+
+Additional Windows checks: toggle on both pages; navigate using icons; toggle during an active capture; resize in both sidebar states at the minimum size and maximized; check keyboard focus, validation errors and 125%/150% display scaling; drag/delete/export rows; cancel/confirm the existing dialog. The existing run commands above are unchanged.

@@ -6,15 +6,27 @@ namespace Frontend.ViewModels;
 public sealed class MainViewModel : ObservableObject, IDisposable
 {
     private ObservableObject currentPage;
+    private bool isSidebarExpanded = true;
     public MainViewModel()
     {
         Measurement = new MeasurementViewModel(new MockMeasurementService(), new CsvExportService(), new DialogService());
         Core = new CoreInformationViewModel(core => { Measurement.SetCore(core); Navigate(Measurement); });
         Core.Edited += () => Measurement.SetCore(null);
         currentPage = Core;
+        ToggleSidebarCommand = new RelayCommand(_ => IsSidebarExpanded = !IsSidebarExpanded);
         ShowCoreCommand = new RelayCommand(_ => Navigate(Core));
         ShowMeasurementCommand = new RelayCommand(_ => Navigate(Measurement));
     }
+    public bool IsSidebarExpanded
+    {
+        get => isSidebarExpanded;
+        private set
+        {
+            if (Set(ref isSidebarExpanded, value)) Changed(nameof(SidebarToggleLabel));
+        }
+    }
+    public string SidebarToggleLabel => IsSidebarExpanded ? "Collapse sidebar" : "Expand sidebar";
+    public RelayCommand ToggleSidebarCommand { get; }
     public CoreInformationViewModel Core { get; }
     public MeasurementViewModel Measurement { get; }
     public RelayCommand ShowCoreCommand { get; }
