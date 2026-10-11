@@ -4,8 +4,7 @@
  <Window.Resources><DataTemplate DataType="{x:Type vm:CoreInformationViewModel}"><views:CoreInformationPage/></DataTemplate><DataTemplate DataType="{x:Type vm:MeasurementViewModel}"><views:MeasurementPage/></DataTemplate></Window.Resources>
  <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="218"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
   <Border Background="#ECF4FF" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0" Padding="16,30,16,22">
-   <DockPanel><StackPanel DockPanel.Dock="Top" Margin="8,0,0,28"><TextBlock Text="◈  SPP CT-007" FontSize="22" FontWeight="Bold"/><TextBlock Text="Measurement Studio" Margin="30,6,0,0" Foreground="{StaticResource Muted}" FontSize="12"/></StackPanel>
-    <StackPanel DockPanel.Dock="Bottom" Margin="9,0"><TextBlock Text="FRONTEND PREVIEW" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource Muted}"/><TextBlock Text="Simulated device · 5 s captures" Margin="0,7,0,0" FontSize="11" Foreground="{StaticResource Muted}"/></StackPanel>
+   <DockPanel><StackPanel DockPanel.Dock="Top" Margin="8,0,0,28"><TextBlock Text="◈  SPP CT-007" FontSize="22" FontWeight="Bold"/></StackPanel>
     <StackPanel><Button Content="▤   Core Information" Style="{StaticResource NavigationButton}" Tag="{Binding IsCoreSelected}" Command="{Binding ShowCoreCommand}"/><Button Content="▥   Measurement" Style="{StaticResource NavigationButton}" Tag="{Binding IsMeasurementSelected}" Command="{Binding ShowMeasurementCommand}"/></StackPanel>
    </DockPanel>
   </Border>

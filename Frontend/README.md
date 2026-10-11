@@ -60,3 +60,13 @@ Windows visual/interaction checks:
 4. Repeat, drag rows above/below each other, scroll during dragging, cancel/confirm deletion.
 5. Export and inspect CSV order, metadata and local timestamp offsets. Cancel the file dialog; try an unwritable location.
 6. Close during capture and reopen; confirm a fresh session (memory-only state is intentional).
+
+## Measurement UI cleanup
+
+Removed the Capture No. and End Time display columns, capture instructions, table footer instructions, sidebar subtitle/preview text and duration panel. The countdown and Start button share a balanced two-column layout. Conditional form validation guidance, the empty-table message, and action notifications remain.
+
+Rows are now 36 pixels high (previously 60); headers are 34 pixels high (previously 48). Cell vertical padding remains zero, header/button padding is reduced, and text/drag/delete controls are vertically centered. Flexible data columns fill the table width with minimum widths for readability. Font sizes and alternating backgrounds are preserved.
+
+Capture No. and End Time remain in result models and CSV exports. All C# source, including measurement timing, averaging, commands, navigation, export and drag/drop handlers, is unchanged by this cleanup. Only MainWindow.xaml, Views/MeasurementPage.xaml, Styles/Theme.xaml and this README were updated.
+
+Cleanup verification: XML/resource/event-handler and column-order checks passed; all C# files were compared byte-for-byte with the previous implementation. Windows build and runtime interaction checks remain unexecuted because this environment has no .NET SDK or Windows desktop runtime.
