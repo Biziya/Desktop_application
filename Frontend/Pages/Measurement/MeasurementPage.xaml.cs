@@ -2,9 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using Frontend.Models;
-using Frontend.ViewModels;
-namespace Frontend.Views;
+namespace Frontend.Pages.Measurement;
 // Only pointer hit testing and drop feedback live in the view; collection changes belong to the VM.
 public partial class MeasurementPage : UserControl
 {

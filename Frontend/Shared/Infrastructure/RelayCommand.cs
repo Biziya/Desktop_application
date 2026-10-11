@@ -1,5 +1,5 @@
 using System.Windows.Input;
-namespace Frontend.Infrastructure;
+namespace Frontend.Shared.Infrastructure;
 public sealed class RelayCommand(Action<object?> execute, Predicate<object?>? canExecute = null) : ICommand
 {
     public event EventHandler? CanExecuteChanged;

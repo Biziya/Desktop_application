@@ -2,8 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using Microsoft.Win32;
-using Frontend.Models;
-namespace Frontend.Services;
+namespace Frontend.Pages.Measurement;
 public interface ICsvExportService
 {
     Task<bool> ExportAsync(IReadOnlyList<MeasurementResult> rows, CancellationToken cancellationToken);

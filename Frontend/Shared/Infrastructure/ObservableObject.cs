@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-namespace Frontend.Infrastructure;
+namespace Frontend.Shared.Infrastructure;
 public abstract class ObservableObject : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;

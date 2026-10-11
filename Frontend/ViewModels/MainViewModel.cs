@@ -1,5 +1,7 @@
-using Frontend.Infrastructure;
-using Frontend.Services;
+using Frontend.Shared.Infrastructure;
+using Frontend.Pages.CoreInformation;
+using Frontend.Pages.Measurement;
+using Frontend.Windows.ConfirmationWindow;
 namespace Frontend.ViewModels;
 public sealed class MainViewModel : ObservableObject, IDisposable
 {

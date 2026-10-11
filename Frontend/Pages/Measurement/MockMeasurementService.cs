@@ -1,5 +1,5 @@
 using System.Diagnostics;
-namespace Frontend.Services;
+namespace Frontend.Pages.Measurement;
 public sealed record CaptureData(DateTimeOffset StartTime, DateTimeOffset EndTime,
     IReadOnlyList<double> Samples, string Unit);
 public interface IMeasurementService

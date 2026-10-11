@@ -1,19 +1,19 @@
 using System.Globalization;
-using Frontend.Infrastructure;
-using Frontend.Models;
-namespace Frontend.ViewModels;
+using Frontend.Shared.Infrastructure;
+using CoreInformationData = Frontend.Shared.Models.CoreInformation;
+namespace Frontend.Pages.CoreInformation;
 public sealed class CoreInformationViewModel : ObservableObject
 {
     private string drillholeId = "", drillholeName = "", projectArea = "", coreId = "";
     private string depthFrom = "", depthTo = "", operatorName = "", notes = "";
     private bool showErrors;
     public event Action? Edited;
-    public CoreInformationViewModel(Action<CoreInformation> saved) =>
+    public CoreInformationViewModel(Action<CoreInformationData> saved) =>
         SaveCommand = new RelayCommand(_ =>
         {
             showErrors = true;
             RefreshValidation();
-            if (IsValid) saved(new CoreInformation(DrillholeId.Trim(), DrillholeName.Trim(),
+            if (IsValid) saved(new CoreInformationData(DrillholeId.Trim(), DrillholeName.Trim(),
                 ProjectArea.Trim(), CoreId.Trim(), Parse(DepthFrom), Parse(DepthTo), Operator.Trim(), Notes.Trim()));
         });
     public RelayCommand SaveCommand { get; }

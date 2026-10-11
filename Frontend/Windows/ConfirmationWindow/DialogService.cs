@@ -1,7 +1,6 @@
 using System.Windows;
-using Frontend.Views;
-namespace Frontend.Services;
-public interface IDialogService { bool ConfirmDelete(); }
+using Frontend.Shared.Services;
+namespace Frontend.Windows.ConfirmationWindow;
 public sealed class DialogService : IDialogService
 {
     public bool ConfirmDelete() => new DeleteConfirmationWindow

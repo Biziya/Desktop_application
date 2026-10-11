@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Windows.Threading;
-using Frontend.Models;
-using Frontend.Services;
+using Frontend.Shared.Models;
+using Frontend.Shared.Services;
+using Frontend.Pages.Measurement;
+using Frontend.Pages.CoreInformation;
 using Frontend.ViewModels;
 
 internal static class Program

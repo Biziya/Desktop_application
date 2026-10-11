@@ -1,5 +1,6 @@
-using Frontend.Infrastructure;
-namespace Frontend.Models;
+using CoreInformationData = Frontend.Shared.Models.CoreInformation;
+using Frontend.Shared.Infrastructure;
+namespace Frontend.Pages.Measurement;
 public sealed class MeasurementResult : ObservableObject
 {
     private int number;
@@ -11,5 +12,5 @@ public sealed class MeasurementResult : ObservableObject
     public required double AverageValue { get; init; }
     public required string Unit { get; init; }
     // Snapshot keeps each result associated with the core that was saved at capture start.
-    public required CoreInformation Core { get; init; }
+    public required CoreInformationData Core { get; init; }
 }

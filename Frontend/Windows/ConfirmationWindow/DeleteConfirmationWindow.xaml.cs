@@ -1,5 +1,5 @@
 using System.Windows;
-namespace Frontend.Views;
+namespace Frontend.Windows.ConfirmationWindow;
 public partial class DeleteConfirmationWindow : Window
 {
     public DeleteConfirmationWindow() => InitializeComponent();

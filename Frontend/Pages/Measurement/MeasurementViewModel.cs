@@ -1,8 +1,8 @@
 using System.Collections.ObjectModel;
-using Frontend.Infrastructure;
-using Frontend.Models;
-using Frontend.Services;
-namespace Frontend.ViewModels;
+using Frontend.Shared.Infrastructure;
+using CoreInformationData = Frontend.Shared.Models.CoreInformation;
+using Frontend.Shared.Services;
+namespace Frontend.Pages.Measurement;
 public sealed class MeasurementViewModel : ObservableObject, IDisposable
 {
     private readonly IMeasurementService measurement;
@@ -10,7 +10,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     private readonly IDialogService dialogs;
     private readonly CancellationTokenSource lifetime = new();
     private CancellationTokenSource? notificationLifetime;
-    private CoreInformation? savedCore;
+    private CoreInformationData? savedCore;
     private bool capturing, disposed;
     private string countdown = "00:05", notification = "";
     private int nextCapture = 1;
@@ -31,7 +31,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     public string Countdown { get => countdown; private set => Set(ref countdown,value); }
     public string Notification { get => notification; private set => Set(ref notification,value); }
     public bool NeedsCore => savedCore is null;
-    public void SetCore(CoreInformation? core) { savedCore = core; Changed(nameof(NeedsCore)); StartCommand.Refresh(); }
+    public void SetCore(CoreInformationData? core) { savedCore = core; Changed(nameof(NeedsCore)); StartCommand.Refresh(); }
     private async Task CaptureAsync()
     {
         if (savedCore is not { } core || IsCapturing || disposed) return;

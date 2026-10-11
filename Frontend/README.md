@@ -12,7 +12,7 @@ dotnet build Frontend/Frontend.csproj
 dotnet run --project Frontend/Frontend.csproj
 ```
 
-The project name, namespace, target framework, and project path remain `Frontend`, `Frontend`, `net10.0-windows`, and `Frontend/Frontend.csproj`. If using an existing solution, replace its Frontend source folder with this one. Keep your existing Backend and solution files unchanged. Old bin/obj files from the uploaded starter are excluded.
+The project name, root namespace, target framework, and project path remain `Frontend`, `Frontend`, `net10.0-windows`, and `Frontend/Frontend.csproj`. If using an existing solution, replace its Frontend source folder with this one. Keep your existing Backend and solution files unchanged. Old bin/obj files from the uploaded starter are excluded.
 
 ## Implemented
 
@@ -30,13 +30,53 @@ The project name, namespace, target framework, and project path remain `Frontend
 
 ## Structure
 
-- `MainWindow.xaml`: application shell and view templates.
-- `Views/`: form, measurement table, confirmation dialog. Code-behind is limited to view input/drag/drop/dialog behavior.
-- `ViewModels/`: retained navigation/form/measurement state, commands, validation, ordering.
-- `Models/`: validated core snapshot and measurement result.
-- `Services/`: replaceable measurement, CSV export and dialog interfaces plus mock/frontend implementations.
-- `Infrastructure/`: small observable object and command helpers.
-- `Styles/Theme.xaml`: shared colors and control templates.
+```text
+Frontend/
+├── Pages/
+│   ├── CoreInformation/
+│   │   ├── CoreInformationPage.xaml
+│   │   ├── CoreInformationPage.xaml.cs
+│   │   └── CoreInformationViewModel.cs
+│   └── Measurement/
+│       ├── MeasurementPage.xaml
+│       ├── MeasurementPage.xaml.cs
+│       ├── MeasurementViewModel.cs
+│       ├── MeasurementResult.cs
+│       ├── MockMeasurementService.cs
+│       ├── CsvExportService.cs
+│       └── MeasurementStyles.xaml
+├── Windows/
+│   └── ConfirmationWindow/
+│       ├── DeleteConfirmationWindow.xaml
+│       ├── DeleteConfirmationWindow.xaml.cs
+│       └── DialogService.cs
+├── Shared/
+│   ├── Infrastructure/
+│   │   ├── ObservableObject.cs
+│   │   └── RelayCommand.cs
+│   ├── Models/
+│   │   └── CoreInformation.cs
+│   ├── Services/
+│   │   └── IDialogService.cs
+│   └── Styles/
+│       └── Theme.xaml
+├── ViewModels/
+│   └── MainViewModel.cs
+├── MainWindow.xaml
+├── MainWindow.xaml.cs
+├── App.xaml
+├── App.xaml.cs
+├── AssemblyInfo.cs
+├── Frontend.csproj
+└── README.md
+SmokeTests/
+├── SmokeTests.csproj
+└── Program.cs
+```
+
+CoreInformation owns form UI, validation and depth calculation. Measurement owns capture state, table interactions, simulation, result model, export and table styles. ConfirmationWindow owns the existing delete dialog and its implementation service. No extra nesting project or empty folders were added.
+
+CoreInformation is a shared data model because both the form and captured results use it. IDialogService is the shared contract between Measurement and the dialog implementation; Measurement does not reference the concrete window. Shared infrastructure and general styles support all views. MainViewModel remains outside the page folders and owns navigation, retained page instances and service composition.
 
 The unused Settings/About/Help links in the illustrative mockup are omitted because no behavior was requested. The large top-level page headings and measurement summary/status cards are omitted as requested; form section headings remain.
 
@@ -67,6 +107,37 @@ Removed the Capture No. and End Time display columns, capture instructions, tabl
 
 Rows are now 36 pixels high (previously 60); headers are 34 pixels high (previously 48). Cell vertical padding remains zero, header/button padding is reduced, and text/drag/delete controls are vertically centered. Flexible data columns fill the table width with minimum widths for readability. Font sizes and alternating backgrounds are preserved.
 
-Capture No. and End Time remain in result models and CSV exports. All C# source, including measurement timing, averaging, commands, navigation, export and drag/drop handlers, is unchanged by this cleanup. Only MainWindow.xaml, Views/MeasurementPage.xaml, Styles/Theme.xaml and this README were updated.
+Capture No. and End Time remain in result models and CSV exports. All C# source, including measurement timing, averaging, commands, navigation, export and drag/drop handlers, is unchanged by this cleanup. That earlier cleanup changed only the main-window XAML, measurement-page XAML, theme and README; the files have since been relocated as described below.
 
 Cleanup verification: XML/resource/event-handler and column-order checks passed; all C# files were compared byte-for-byte with the previous implementation. Windows build and runtime interaction checks remain unexecuted because this environment has no .NET SDK or Windows desktop runtime.
+
+## Page-folder refactor
+
+### Files moved
+
+- Core Information view, code-behind and ViewModel: `Views/` and `ViewModels/` → `Pages/CoreInformation/`.
+- Measurement view, code-behind, ViewModel, result model and mock/export services: `Views/`, `ViewModels/`, `Models/` and `Services/` → `Pages/Measurement/`.
+- Delete dialog XAML/code-behind and DialogService: `Views/` and `Services/` → `Windows/ConfirmationWindow/`; existing filenames retained.
+- CoreInformation model → `Shared/Models/`; observable/command helpers → `Shared/Infrastructure/`; general theme → `Shared/Styles/`.
+- IDialogService was extracted unchanged from DialogService.cs into `Shared/Services/IDialogService.cs` to keep the measurement view model independent of the concrete dialog.
+- Five table-specific style definitions were moved unchanged into `Pages/Measurement/MeasurementStyles.xaml` and merged by MeasurementPage.
+- Old empty Views, Models, Services, Infrastructure and Styles folders were removed. No duplicate source files remain.
+
+### References updated
+
+C# namespaces follow the new folders: `Frontend.Pages.CoreInformation`, `Frontend.Pages.Measurement`, `Frontend.Windows.ConfirmationWindow` and `Frontend.Shared.*`. MainViewModel remains `Frontend.ViewModels`. Using directives in the frontend and smoke tests were updated. A `CoreInformationData` type alias refers to the same shared CoreInformation model to avoid ambiguity with the new CoreInformation namespace; the actual class and its properties are unchanged.
+
+View x:Class values now match their relocated code-behind namespaces. MainWindow uses separate core and measurement XAML namespace declarations and updated DataTemplates. App.xaml loads `Shared/Styles/Theme.xaml`. MeasurementPage merges the adjacent `MeasurementStyles.xaml`. StartupUri remains `MainWindow.xaml`.
+
+The SDK-style project still uses default WPF globs for XAML Page and C# Compile items. No explicit old-path includes or pack URIs were present, so the project file and build settings remain unchanged. App.xaml retains its default ApplicationDefinition role.
+
+### Validation results
+
+- PASS: all C# implementation bodies match the prior version after normalizing imports, namespaces, the model alias and the extracted interface.
+- PASS: all existing view element trees/layouts and style definitions match the prior version after accounting for relocated namespace/resource declarations.
+- PASS: XML parsing, XAML x:Class/code-behind correspondence, namespace and DataTemplate type references, event handlers, static resource names and relative dictionary source paths.
+- PASS: no obsolete moved source files or empty folders; archive integrity verified.
+- BLOCKED: `dotnet build Frontend/Frontend.csproj` could not start because `dotnet` is not installed in the execution environment.
+- NOT EXECUTED: Windows launch, live bindings/resource loading, navigation, countdown, averaging, drag/drop, delete dialog and CSV interaction checks. The provided smoke tests remain available for Windows; their imports were updated without changing test logic.
+
+When replacing the previous Frontend directory, remove or move the old directory first rather than overlaying the new files. Overlaying leaves the old source paths behind and can cause duplicate classes/resources. Preserve the separate Backend project and existing solution files.

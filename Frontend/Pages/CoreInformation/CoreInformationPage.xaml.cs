@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-namespace Frontend.Views;
+namespace Frontend.Pages.CoreInformation;
 public partial class CoreInformationPage : UserControl
 {
     public CoreInformationPage() => InitializeComponent();
@@ -11,7 +11,7 @@ public partial class CoreInformationPage : UserControl
         var proposed = box.Text.Remove(box.SelectionStart, box.SelectionLength).Insert(box.SelectionStart, input);
         var separator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
         if (proposed.Length == 0 || proposed == separator) return true;
-        return ViewModels.CoreInformationViewModel.TryDepth(proposed, out _);
+        return CoreInformationViewModel.TryDepth(proposed, out _);
     }
     private void DepthInput(object sender, TextCompositionEventArgs e)
     { if (sender is TextBox box) e.Handled = !Allowed(box,e.Text); }
