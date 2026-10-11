@@ -3,7 +3,7 @@
   <ResourceDictionary Source="MeasurementStyles.xaml"/>
  </ResourceDictionary.MergedDictionaries></ResourceDictionary></UserControl.Resources>
  <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-  <Border Style="{StaticResource Card}" PreviewMouseRightButtonDown="CaptureAreaRightButtonDown" ToolTip="While measurement mode is active, right-click here to capture."><StackPanel><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+  <Border Style="{StaticResource Card}"><StackPanel><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
    <StackPanel HorizontalAlignment="Center">
     <TextBlock Text="Capture Countdown" Foreground="{StaticResource Muted}" HorizontalAlignment="Center" Margin="0,0,0,10"/>
     <Grid Width="140" Height="140">

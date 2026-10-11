@@ -18,16 +18,16 @@ Replace the old Frontend folder rather than overlaying it, because earlier versi
 
 1. Enter required Core Information and click Save & Continue.
 2. Click green **Start** to activate measurement mode. The button becomes red **Stop**. Nothing is captured yet.
-3. Right-click the **countdown panel** (ring or blank panel space) to begin a five-second capture. The panel tooltip identifies the trigger area. Right-clicking the Start/Stop button itself is excluded.
+3. Right-click anywhere in the active **main application window** to begin a five-second capture, including the panel, table, sidebar or other main-window controls.
 4. The ring displays elapsed progress clockwise from the top while the centered timer counts down from 00:05 to 00:00.
 5. Five simulated samples are averaged into one row. The ring and timer reset and measurement mode stays active.
 6. Right-click again for another capture, or click Stop to leave measurement mode.
 
-Mouse handling is deliberately scoped to the countdown panel in the visible Measurement page of the active window. Table, sidebar, other pages, dialogs and other applications are not trigger areas. No handlers are attached to a global input source or the window. Additional right-clicks during capture/processing are consumed and ignored.
+A single PreviewMouseDown registration on MainWindow with handledEventsToo enabled detects right-button-down events while measurement mode is active. It works across the main window, including when navigating between pages. Inactive, minimized or disabled main windows, separate dialogs and other applications never trigger captures. There are no global hooks or per-page subscriptions to leak or duplicate. While armed, right-click is reserved for measurement triggering; while Idle, normal right-click behavior is untouched. Additional right-clicks during capture/processing are consumed and ignored. Left-click navigation, Start/Stop and other controls continue working normally.
 
 Stop immediately resets the timer/ring and cancels an unfinished capture. No partial row is created. Completed rows stay intact. Stop remains available during capture and processing. Rapid Stop/Start cannot overlap the old capture: new triggers remain blocked until its cancellation cleanup completes. Late progress or results from a cancelled service are ignored.
 
-Navigation retains the page ViewModels, measurement mode and results. An already-running capture can finish while another page is displayed, but that page cannot trigger a new capture. Editing Core Information invalidates its saved snapshot, stops measurement mode and cancels an unfinished capture; Save & Continue enables starting again. Existing rows retain their original core metadata.
+Navigation retains the page ViewModels, measurement mode and results. An already-running capture can finish while another page is displayed; right-click can also trigger another capture from that page while measurement mode remains active. Editing Core Information invalidates its saved snapshot, stops measurement mode and cancels an unfinished capture; Save & Continue enables starting again. Existing rows retain their original core metadata.
 
 ## States and timing
 
@@ -112,10 +112,20 @@ They cover arming without capture; Idle/duplicate triggers; elapsed ring progres
 Manual Windows checks:
 
 1. Start and wait: Stop appears, timer stays at five, no row appears.
-2. Right-click the countdown panel: one five-second capture, full ring/zero, one averaged row, reset to Ready. Repeat and rapidly right-click during capture.
+2. Right-click anywhere in the main window: one five-second capture, full ring/zero, one averaged row, reset to Ready. Repeat and rapidly right-click during capture.
 3. Stop mid-capture and during zero/Processing: no cancelled row. Restart and repeat. Previously completed rows stay unchanged.
-4. Verify right-clicks on the table, sidebar, Core Information, another application, or open dialogs never trigger captures.
+4. While armed, verify main-window right-clicks on the panel, table, sidebar and Core Information each trigger only one capture when Ready. While Idle, verify none trigger captures. Verify another application or an open modal dialog never triggers the main window.
 5. Switch pages/collapse the sidebar during capture, return, and confirm state/result continuity. Edit the core and verify mode disarms until saved again.
 6. Verify the ring at 0%, 50%, 100%, resizing, and 125%/150% display scaling. Check the compact table remains scrollable at minimum window size.
 7. Reorder/delete/export results. Compare table seconds-only display with precise CSV start/end/completion timestamps and offsets.
 8. Close during capture; verify no uncaught cancellation errors.
+
+## Window-wide trigger revision
+
+The latest revision only moves right-click routing from the countdown card to a single MainWindow input handler and removes the obsolete page handler/tooltip. Measurement state, ring, averaging, timestamps, table columns/layout, CSV export and all other commands remain unchanged. Source/reference checks passed. Build was attempted but could not start because dotnet is unavailable; Windows runtime/input validation remains unexecuted.
+
+## Window input reliability
+
+MainWindow registers one PreviewMouseDown handler with handledEventsToo enabled and removes it on closure. The handler does not discard an event merely because a child control marked it handled. Window-level tunneling covers the main window client area, including blank areas and existing controls, without page-specific or global subscriptions. Armed context-menu openings are suppressed; normal right-click behavior resumes after Stop. An explicit minimized-state guard supplements the active/enabled-window checks. The ViewModel still rejects busy triggers and owns the capture lifecycle.
+
+Only MainWindow.xaml.cs and this README changed in this revision. Source checks verified those changes and unchanged measurement code. Windows build and runtime tests remain unexecuted because dotnet is not installed. On Windows, additionally check right-clicks over an input, table row, button and blank space while armed, and confirm minimized/inactive/Idle input never captures.
