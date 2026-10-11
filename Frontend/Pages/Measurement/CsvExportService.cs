@@ -28,7 +28,7 @@ public sealed class CsvExportService : ICsvExportService
     }
     public static string Serialize(IReadOnlyList<MeasurementResult> rows)
     {
-        var csv = new StringBuilder("No.,Capture No.,Start Time,End Time,Sample Count,Average Value,Unit,Drillhole ID,Drillhole Name,Project / Area,Core ID,Depth From (m),Depth To (m),Core Depth (m),Operator,Notes\r\n");
+        var csv = new StringBuilder("No.,Capture No.,Start Time,End Time,Sample Count,Average Value,Unit,Drillhole ID,Drillhole Name,Project / Area,Core ID,Depth From (m),Depth To (m),Core Depth (m),Operator,Notes,Completed At\r\n");
         for (var i = 0; i < rows.Count; i++)
         {
             var r = rows[i];
@@ -37,7 +37,7 @@ public sealed class CsvExportService : ICsvExportService
                 r.AverageValue.ToString("F4", CultureInfo.InvariantCulture), r.Unit, r.Core.DrillholeId,
                 r.Core.DrillholeName, r.Core.ProjectArea, r.Core.CoreId,
                 r.Core.DepthFrom.ToString(CultureInfo.InvariantCulture), r.Core.DepthTo.ToString(CultureInfo.InvariantCulture),
-                r.Core.CoreDepth.ToString(CultureInfo.InvariantCulture), r.Core.Operator, r.Core.Notes];
+                r.Core.CoreDepth.ToString(CultureInfo.InvariantCulture), r.Core.Operator, r.Core.Notes, r.CompletedAt.ToString("O")];
             csv.AppendLine(string.Join(",", cells.Select(Escape)));
         }
         return csv.ToString();

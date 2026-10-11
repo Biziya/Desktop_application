@@ -8,6 +8,8 @@ public sealed class MeasurementResult : ObservableObject
     public required int CaptureNumber { get; init; }
     public required DateTimeOffset StartTime { get; init; }
     public required DateTimeOffset EndTime { get; init; }
+    // Actual completion is independent of the intended five-second EndTime boundary.
+    public required DateTimeOffset CompletedAt { get; init; }
     public required int SampleCount { get; init; }
     public required double AverageValue { get; init; }
     public required string Unit { get; init; }

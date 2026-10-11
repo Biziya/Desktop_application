@@ -10,6 +10,18 @@ public partial class MeasurementPage : UserControl
     private MeasurementResult? candidate;
     private DataGridRow? highlighted;
     public MeasurementPage() => InitializeComponent();
+    // Scoped to the countdown card: no window/global subscriptions, and no table/sidebar interception.
+    private void CaptureAreaRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Right || !IsVisible || !IsEnabled ||
+            Window.GetWindow(this) is not { IsActive: true } ||
+            Ancestor<System.Windows.Controls.Primitives.ButtonBase>(e.OriginalSource as DependencyObject) is not null ||
+            DataContext is not MeasurementViewModel vm || !vm.IsMeasurementModeActive) return;
+        var timestamp = DateTimeOffset.Now;
+        // Consume the routed event once, including ignored clicks while a capture is busy.
+        e.Handled = true;
+        if (vm.TriggerCommand.CanExecute(timestamp)) vm.TriggerCommand.Execute(timestamp);
+    }
     private void HandleDown(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: MeasurementResult row })

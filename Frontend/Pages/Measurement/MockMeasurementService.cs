@@ -1,7 +1,7 @@
 using System.Diagnostics;
 namespace Frontend.Pages.Measurement;
 public sealed record CaptureData(DateTimeOffset StartTime, DateTimeOffset EndTime,
-    IReadOnlyList<double> Samples, string Unit);
+    IReadOnlyList<double> Samples, string Unit, DateTimeOffset CompletedAt);
 public interface IMeasurementService
 {
     Task<CaptureData> CaptureAsync(DateTimeOffset start, Action<TimeSpan> reportRemaining,
@@ -33,6 +33,6 @@ public sealed class MockMeasurementService : IMeasurementService
         cancellationToken.ThrowIfCancellationRequested();
         while (samples.Count < 5) samples.Add(10 + Random.Shared.NextDouble() * 5);
         reportRemaining(TimeSpan.Zero);
-        return new CaptureData(start, start + Duration, samples.AsReadOnly(), "cps");
+        return new CaptureData(start, start + Duration, samples.AsReadOnly(), "cps", DateTimeOffset.Now);
     }
 }

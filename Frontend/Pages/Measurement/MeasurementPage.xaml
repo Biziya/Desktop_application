@@ -1,11 +1,22 @@
-<UserControl x:Class="Frontend.Pages.Measurement.MeasurementPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<UserControl x:Class="Frontend.Pages.Measurement.MeasurementPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Frontend.Pages.Measurement">
  <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries>
   <ResourceDictionary Source="MeasurementStyles.xaml"/>
  </ResourceDictionary.MergedDictionaries></ResourceDictionary></UserControl.Resources>
  <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-  <Border Style="{StaticResource Card}"><StackPanel><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-   <StackPanel HorizontalAlignment="Center"><TextBlock Text="◷" FontSize="32" Foreground="{StaticResource Blue}" HorizontalAlignment="Center"/><TextBlock Text="Capture Countdown" Foreground="{StaticResource Muted}" Margin="0,8,0,4"/><TextBlock Text="{Binding Countdown}" FontSize="46" FontWeight="SemiBold" Foreground="{StaticResource Blue}" HorizontalAlignment="Center" AutomationProperties.Name="Capture countdown"/></StackPanel>
-   <Button Grid.Column="1" Content="▶  Start" FontSize="25" Background="{StaticResource Success}" Margin="24,0,0,0" HorizontalAlignment="Center" MinWidth="200" VerticalAlignment="Center" Padding="32,18" Command="{Binding StartCommand}"/>
+  <Border Style="{StaticResource Card}" PreviewMouseRightButtonDown="CaptureAreaRightButtonDown" ToolTip="While measurement mode is active, right-click here to capture."><StackPanel><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <StackPanel HorizontalAlignment="Center">
+    <TextBlock Text="Capture Countdown" Foreground="{StaticResource Muted}" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+    <Grid Width="140" Height="140">
+     <local:CountdownRing Progress="{Binding CaptureProgress}" TrackBrush="{StaticResource Line}" ProgressBrush="{StaticResource Blue}" IsHitTestVisible="False"/>
+     <TextBlock Text="{Binding Countdown}" FontSize="32" FontWeight="SemiBold" Foreground="{StaticResource Blue}" HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.Name="Capture countdown"/>
+    </Grid>
+   </StackPanel>
+   <Button Grid.Column="1" Content="{Binding MeasurementButtonText}" FontSize="25" Margin="24,0,0,0" HorizontalAlignment="Center" MinWidth="200" VerticalAlignment="Center" Padding="32,18" Command="{Binding ToggleMeasurementCommand}">
+    <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+     <Setter Property="Background" Value="{StaticResource Success}"/>
+     <Style.Triggers><DataTrigger Binding="{Binding IsMeasurementModeActive}" Value="True"><Setter Property="Background" Value="{StaticResource Danger}"/></DataTrigger></Style.Triggers>
+    </Style></Button.Style>
+   </Button>
   </Grid>
   <TextBlock Text="Complete Core Information and click Save &amp; Continue to enable Start." Foreground="{StaticResource Warning}" TextWrapping="Wrap" Margin="0,12,0,0" Visibility="{Binding NeedsCore, Converter={StaticResource BoolVisibility}}"/>
   </StackPanel></Border>
@@ -15,7 +26,7 @@
     <DataGrid.Columns>
      <DataGridTemplateColumn Width="34"><DataGridTemplateColumn.CellTemplate><DataTemplate><TextBlock Text="⠿" Opacity="0.7" HorizontalAlignment="Stretch" TextAlignment="Center" VerticalAlignment="Center" Cursor="SizeAll" FontSize="22" Foreground="{StaticResource Blue}" Background="Transparent" ToolTip="Drag to reorder" AutomationProperties.Name="Drag to reorder measurement" PreviewMouseLeftButtonDown="HandleDown"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
      <DataGridTextColumn Header="No." Binding="{Binding Number}" Width="44" ElementStyle="{StaticResource CenteredTableText}" HeaderStyle="{StaticResource CenteredTableHeader}"/>
-     <DataGridTextColumn Header="Start Time" Binding="{Binding StartTime, StringFormat={}{0:yyyy-MM-dd HH:mm:ss.fff}}" Width="2.4*" MinWidth="196"/>
+     <DataGridTextColumn Header="Start Time" Binding="{Binding StartTime, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}" Width="2.4*" MinWidth="196"/>
      <DataGridTextColumn Header="Samples" Binding="{Binding SampleCount}" Width="*" MinWidth="74" ElementStyle="{StaticResource CenteredTableText}" HeaderStyle="{StaticResource CenteredTableHeader}"/>
      <DataGridTextColumn Header="Average" Binding="{Binding AverageValue, StringFormat=F2}" Width="*" MinWidth="82" ElementStyle="{StaticResource CenteredTableText}" HeaderStyle="{StaticResource CenteredTableHeader}"/>
      <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="0.7*" MinWidth="50" ElementStyle="{StaticResource CenteredTableText}" HeaderStyle="{StaticResource CenteredTableHeader}"/>

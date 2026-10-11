@@ -52,14 +52,28 @@ internal static class Program
         var core = saved ?? throw new InvalidOperationException("No saved core");
         var fake = new ControlledMeasurements(); var dialogs = new FakeDialogs(); var export = new FakeExport();
         using var vm = new MeasurementViewModel(fake, export, dialogs);
-        Check(!vm.StartCommand.CanExecute(null), "Capture requires saved core");
+        Check(!vm.ToggleMeasurementCommand.CanExecute(null), "Capture requires saved core");
         Check(!vm.ExportCommand.CanExecute(null), "Empty export disabled");
+        vm.TriggerCommand.Execute(null);
+        Check(fake.Calls == 0, "Idle triggers ignored");
         vm.SetCore(core);
-        vm.StartCommand.Execute(null); vm.StartCommand.Execute(null);
-        Check(fake.Calls == 1 && vm.IsCapturing && !vm.StartCommand.CanExecute(null), "Overlapping captures blocked");
-        fake.Complete(); await Until(() => vm.StartCommand.CanExecute(null));
+        vm.ToggleMeasurementCommand.Execute(null);
+        Check(vm.State == MeasurementState.Ready && vm.IsMeasurementModeActive && fake.Calls == 0 &&
+            vm.Results.Count == 0 && vm.Countdown == "00:05" && vm.CaptureProgress == 0, "Start arms without capturing");
+        var triggerTime = new DateTimeOffset(2026,10,11,11,16,10,851,TimeSpan.FromHours(8));
+        vm.TriggerCommand.Execute(triggerTime); vm.TriggerCommand.Execute(triggerTime);
+        Check(fake.Calls == 1 && vm.IsCapturing && !vm.TriggerCommand.CanExecute(null) &&
+            vm.ToggleMeasurementCommand.CanExecute(null), "Duplicate capture blocked, Stop remains enabled");
+        fake.Report(TimeSpan.FromSeconds(2.5));
+        Check(vm.Countdown == "00:03" && vm.CaptureProgress == 0.5, "Elapsed progress drives ring and text");
+        fake.Complete(); await Until(() => vm.State == MeasurementState.Processing);
+        Check(vm.CaptureProgress == 1 && vm.Countdown == "00:00" && !vm.CanTrigger, "Processing shows zero and blocks triggers");
+        await Until(() => vm.CanTrigger);
         Check(vm.Results.Count == 1 && vm.Results[0].AverageValue == 3 && vm.Results[0].SampleCount == 5, "Exactly one averaged result");
-        for (int i=0; i<2; i++) { vm.StartCommand.Execute(null); fake.Complete(); await Until(() => vm.StartCommand.CanExecute(null)); }
+        Check(vm.Results[0].StartTime == triggerTime && vm.Results[0].EndTime == triggerTime.AddSeconds(5) &&
+            vm.Results[0].CompletedAt == triggerTime.AddSeconds(5).AddMilliseconds(20), "Independent precise trigger/end/completion timestamps");
+        Check(vm.Countdown == "00:05" && vm.CaptureProgress == 0 && vm.IsMeasurementModeActive, "Reset while staying armed");
+        for (int i=0; i<2; i++) { vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger); }
         var first = vm.Results[0]; var second = vm.Results[1]; var third = vm.Results[2];
         vm.Move(third, first, false);
         Check(vm.Results[0] == third && third.Number == 1 && third.CaptureNumber == 3, "Reorder keeps capture identity");
@@ -69,18 +83,47 @@ internal static class Program
         Check(vm.Results.Count == 3, "Cancel deletion");
         dialogs.Confirm = true; vm.DeleteCommand.Execute(second);
         Check(vm.Results.Count == 2 && third.Number == 2 && third.CaptureNumber == 3, "Deletion renumbers display only");
-        vm.StartCommand.Execute(null); fake.Complete(); await Until(() => vm.StartCommand.CanExecute(null));
+        vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger);
         Check(vm.Results[2].CaptureNumber == 4, "Deleted capture numbers are not reused");
         vm.Move(vm.Results[2], first, false);
         vm.ExportCommand.Execute(null); await Until(() => vm.ExportCommand.CanExecute(null));
         Check(export.Rows?.Select(r => r.CaptureNumber).SequenceEqual(new[] {4,1,3}) == true, "Export keeps display order");
         var csv = CsvExportService.Serialize(vm.Results.ToArray());
         Check(csv.Split('\n')[1].StartsWith("\"1\",\"4\","), "CSV display and capture numbers");
-        var escaped = new MeasurementResult { CaptureNumber=99, StartTime=first.StartTime, EndTime=first.EndTime,
+        var escaped = new MeasurementResult { CaptureNumber=99, StartTime=first.StartTime, EndTime=first.EndTime, CompletedAt=first.CompletedAt,
             SampleCount=5, AverageValue=3.5, Unit="cps", Core=core with { Notes="=SUM(1,2)", DrillholeName="A \"quoted\" name" } };
         Check(CsvExportService.Serialize(new[] {escaped}).Contains("\"'=SUM(1,2)\""), "CSV formula escaping");
         Check(CsvExportService.Serialize(new[] {escaped}).Contains("A \"\"quoted\"\" name"), "CSV quote escaping");
-        vm.SetCore(null); Check(!vm.StartCommand.CanExecute(null), "Editing invalidates saved form");
+        Check(CsvExportService.Serialize(new[] {first}).Contains(triggerTime.ToString("O")), "CSV retains fractional seconds and offset");
+        Check(csv.Contains("Completed At"), "CSV includes completion timestamp");
+        var count = vm.Results.Count;
+        vm.ToggleMeasurementCommand.Execute(null);
+        Check(vm.State == MeasurementState.Idle && vm.Results.Count == count, "Stop keeps completed rows");
+        vm.TriggerCommand.Execute(null); Check(vm.Results.Count == count, "Stopped trigger ignored");
+        vm.ToggleMeasurementCommand.Execute(null); vm.TriggerCommand.Execute(null);
+        vm.ToggleMeasurementCommand.Execute(null);
+        Check(vm.State == MeasurementState.Idle && vm.Countdown == "00:05" && vm.CaptureProgress == 0, "Stop immediately resets active capture");
+        vm.ToggleMeasurementCommand.Execute(null); await Until(() => vm.CanTrigger);
+        Check(vm.Results.Count == count, "Cancelled capture creates no row after rapid rearm");
+        vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.State == MeasurementState.Processing);
+        vm.ToggleMeasurementCommand.Execute(null); vm.ToggleMeasurementCommand.Execute(null); await Until(() => vm.CanTrigger);
+        Check(vm.Results.Count == count, "Stop in Processing prevents row commit");
+        vm.TriggerCommand.Execute(null); fake.Fail(); await Until(() => vm.CanTrigger);
+        Check(vm.Results.Count == count && vm.Countdown == "00:05" && vm.Notification.StartsWith("Capture failed"), "Failure recovers Ready without row");
+        vm.SetCore(null); Check(!vm.ToggleMeasurementCommand.CanExecute(null) && vm.State == MeasurementState.Idle, "Editing invalidates saved form and disarms");
+
+        // A future service may return or report progress after cancellation. Ignore it and prevent overlap.
+        var late = new ControlledMeasurements { HonorCancellation = false };
+        using (var lateVm = new MeasurementViewModel(late, export, dialogs))
+        {
+            lateVm.SetCore(core); lateVm.ToggleMeasurementCommand.Execute(null); lateVm.TriggerCommand.Execute(null);
+            lateVm.ToggleMeasurementCommand.Execute(null); lateVm.ToggleMeasurementCommand.Execute(null);
+            late.Report(TimeSpan.FromSeconds(1)); lateVm.TriggerCommand.Execute(null);
+            Check(!lateVm.CanTrigger && late.Calls == 1 && lateVm.Countdown == "00:05" && lateVm.CaptureProgress == 0,
+                "Late progress and rearm cannot overlap cancellation cleanup");
+            late.Complete(); await Until(() => lateVm.CanTrigger);
+            Check(lateVm.Results.Count == 0, "Late cancelled result discarded");
+        }
         using (var main = new MainViewModel())
         {
             main.Core.DrillholeId="retained"; main.ShowMeasurementCommand.Execute(null); main.ShowCoreCommand.Execute(null);
@@ -97,6 +140,10 @@ internal static class Program
             main.ToggleSidebarCommand.Execute(null);
             Check(main.IsSidebarExpanded && main.SidebarToggleLabel == "Collapse sidebar" && main.CurrentPage == retainedMeasurement,
                 "Expand retains selected page");
+            main.Measurement.SetCore(core); main.Measurement.ToggleMeasurementCommand.Execute(null);
+            main.Measurement.TriggerCommand.Execute(null); main.ShowCoreCommand.Execute(null);
+            Check(main.Measurement.IsCapturing && main.CurrentPage == retainedCore, "Navigation does not duplicate or reset running capture");
+            main.Measurement.ToggleMeasurementCommand.Execute(null);
         }
         var service = new MockMeasurementService(); var start = DateTimeOffset.Now; var elapsed = Stopwatch.StartNew();
         var remaining = new List<TimeSpan>();
@@ -108,7 +155,7 @@ internal static class Program
         catch (OperationCanceledException) { }
         var closingService = new ControlledMeasurements();
         var closingVm = new MeasurementViewModel(closingService, export, dialogs); closingVm.SetCore(core);
-        closingVm.StartCommand.Execute(null); closingVm.Dispose(); await Until(() => !closingVm.IsCapturing);
+        closingVm.ToggleMeasurementCommand.Execute(null); closingVm.TriggerCommand.Execute(null); closingVm.Dispose(); await Until(() => !closingVm.IsCapturing);
         Check(closingVm.Results.Count == 0, "Closing cancels without partial result");
     }
     private sealed class FakeDialogs : IDialogService
@@ -122,14 +169,20 @@ internal static class Program
     private sealed class ControlledMeasurements : IMeasurementService
     {
         public int Calls { get; private set; }
+        public bool HonorCancellation { get; init; } = true;
         private TaskCompletionSource<CaptureData>? pending;
+        private Action<TimeSpan>? reportRemaining;
         private DateTimeOffset start;
         public async Task<CaptureData> CaptureAsync(DateTimeOffset started, Action<TimeSpan> report, CancellationToken token)
         {
-            Calls++; start=started; pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            using var registration = token.Register(() => pending.TrySetCanceled(token));
-            return await pending.Task;
+            Calls++; start=started; reportRemaining=report;
+            var operation = new TaskCompletionSource<CaptureData>(TaskCreationOptions.RunContinuationsAsynchronously);
+            pending=operation;
+            using var registration = token.Register(() => { if (HonorCancellation) operation.TrySetCanceled(token); });
+            return await operation.Task;
         }
-        public void Complete() => pending?.SetResult(new CaptureData(start,start.AddSeconds(5),new double[] {1,2,3,4,5},"cps"));
+        public void Report(TimeSpan remaining) => reportRemaining?.Invoke(remaining);
+        public void Fail() => pending?.SetException(new InvalidOperationException("Simulated failure"));
+        public void Complete() => pending?.SetResult(new CaptureData(start,start.AddSeconds(5),new double[] {1,2,3,4,5},"cps",start.AddSeconds(5).AddMilliseconds(20)));
     }
 }
