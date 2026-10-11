@@ -14,6 +14,10 @@ public sealed class CountdownRing : FrameworkElement
     public static readonly DependencyProperty ProgressBrushProperty = DependencyProperty.Register(
         nameof(ProgressBrush), typeof(Brush), typeof(CountdownRing),
         new FrameworkPropertyMetadata(Brushes.RoyalBlue, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty RingThicknessProperty = DependencyProperty.Register(
+        nameof(RingThickness), typeof(double), typeof(CountdownRing),
+        new FrameworkPropertyMetadata(8d, FrameworkPropertyMetadataOptions.AffectsRender));
+    public double RingThickness { get => (double)GetValue(RingThicknessProperty); set => SetValue(RingThicknessProperty,value); }
     public double Progress { get => (double)GetValue(ProgressProperty); set => SetValue(ProgressProperty,value); }
     public Brush TrackBrush { get => (Brush)GetValue(TrackBrushProperty); set => SetValue(TrackBrushProperty,value); }
     public Brush ProgressBrush { get => (Brush)GetValue(ProgressBrushProperty); set => SetValue(ProgressBrushProperty,value); }
@@ -21,7 +25,7 @@ public sealed class CountdownRing : FrameworkElement
     protected override void OnRender(DrawingContext drawing)
     {
         base.OnRender(drawing);
-        const double thickness = 8;
+        var thickness = double.IsFinite(RingThickness) && RingThickness > 0 ? RingThickness : 8;
         var radius = Math.Min(ActualWidth,ActualHeight) / 2 - thickness / 2 - 1;
         if (radius <= 0) return;
         var center = new Point(ActualWidth/2,ActualHeight/2);
