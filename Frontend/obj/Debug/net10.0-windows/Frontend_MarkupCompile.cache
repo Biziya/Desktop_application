@@ -1,5 +1,5 @@
 ﻿Frontend
-1.0.0.0
+
 
 winexe
 C#
@@ -12,9 +12,9 @@ TRACE;DEBUG;NET;NET10_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_O
 C:\Users\bsarangerel\Documents\Workspace-biziya\Projects\Project_clone\CT-007-Desktop\Frontend\App.xaml
 7-244249153
 
-23-1112171473
+21-2134670681
 206-1943539212
 MainWindow.xaml;Pages\CoreInformation\CoreInformationPage.xaml;Pages\Measurement\MeasurementPage.xaml;Pages\Measurement\MeasurementStyles.xaml;Pages\Measurement\MeasurementUiConstants.xaml;Shared\Styles\Theme.xaml;Windows\ConfirmationWindow\DeleteConfirmationWindow.xaml;
 
-True
+False
 
