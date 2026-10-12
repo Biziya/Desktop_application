@@ -1,8 +1,9 @@
 using System.Collections.ObjectModel;
 using Frontend.Shared.Infrastructure;
-using CoreInformationData = Frontend.Shared.Models.CoreInformation;
-using Frontend.Shared.Services;
+using Frontend.Shared.Models;
+
 namespace Frontend.Pages.Measurement;
+
 public sealed class MeasurementViewModel : ObservableObject, IDisposable
 {
     private readonly IMeasurementService measurement;
@@ -11,111 +12,251 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     private readonly CancellationTokenSource lifetime = new();
     private CancellationTokenSource? notificationLifetime;
     private CancellationTokenSource? activeCapture;
-    private CoreInformationData? savedCore;
+    private CoreSnapshot? savedCore;
     private bool disposed;
     private MeasurementState state = MeasurementState.Idle;
-    private string countdown = "00:05", notification = "";
+    private string countdown;
+    private string notification = "";
     private double captureProgress;
     private int nextCapture = 1;
 
     public MeasurementViewModel(IMeasurementService measurement, ICsvExportService export, IDialogService dialogs)
     {
-        this.measurement = measurement; this.export = export; this.dialogs = dialogs;
-        ToggleMeasurementCommand = new RelayCommand(_ => ToggleMeasurementMode(),
-            _ => !disposed && (IsMeasurementModeActive || savedCore is not null));
-        TriggerCommand = new RelayCommand(parameter =>
-        {
-            // CaptureAsync contains all cancellation/error handling. Execution starts synchronously
-            // so the state gate closes before another routed mouse event can be accepted.
-            _ = CaptureAsync(parameter is DateTimeOffset timestamp ? timestamp : DateTimeOffset.Now);
-        }, _ => CanTrigger);
-        ExportCommand = new AsyncCommand(ExportAsync, _ => Notify("Export failed. Check the file location and try again."),
-            () => !disposed && Results.Count > 0);
-        DeleteCommand = new RelayCommand(Delete, p => !disposed && p is MeasurementResult);
+        this.measurement = measurement;
+        this.export = export;
+        this.dialogs = dialogs;
+        countdown = FormatCountdown(measurement.Duration);
+
+        ToggleMeasurementCommand = new RelayCommand(
+            _ => ToggleMeasurementMode(),
+            _ => IsMeasurementModeActive || savedCore is not null);
+
+        TriggerCommand = new RelayCommand(
+            parameter =>
+            {
+                // CaptureAsync contains all cancellation/error handling. Execution starts synchronously
+                // so the state gate closes before another routed mouse event can be accepted.
+                _ = CaptureAsync(parameter is DateTimeOffset timestamp ? timestamp : DateTimeOffset.Now);
+            },
+            _ => CanTrigger);
+
+        ExportCommand = new AsyncCommand(
+            ExportAsync,
+            _ => Notify("Export failed. Check the file location and try again."),
+            () => Results.Count > 0);
+
+        DeleteCommand = new RelayCommand(Delete, parameter => parameter is MeasurementResult row && Results.Contains(row));
+
+        Results.CollectionChanged += (_, _) => ExportCommand.Refresh();
     }
+
     public ObservableCollection<MeasurementResult> Results { get; } = [];
+
     public RelayCommand ToggleMeasurementCommand { get; }
+
     public RelayCommand TriggerCommand { get; }
+
     public AsyncCommand ExportCommand { get; }
+
     public RelayCommand DeleteCommand { get; }
+
     public MeasurementState State
     {
         get => state;
         private set
         {
-            if (!Set(ref state,value)) return;
-            Changed(nameof(IsMeasurementModeActive)); Changed(nameof(IsCapturing));
-            Changed(nameof(MeasurementButtonText));
-            RefreshCommands();
+            if (Set(ref state, value))
+            {
+                Changed(nameof(IsMeasurementModeActive));
+                RefreshCommands();
+            }
         }
     }
+
     public bool IsMeasurementModeActive => State != MeasurementState.Idle;
+
     public bool IsCapturing => State is MeasurementState.Capturing or MeasurementState.Processing;
-    public bool CanTrigger => !disposed && State == MeasurementState.Ready && savedCore is not null && activeCapture is null;
-    public string MeasurementButtonText => IsMeasurementModeActive ? "■  Stop" : "▶  Start";
-    public string Countdown { get => countdown; private set => Set(ref countdown,value); }
-    public double CaptureProgress { get => captureProgress; private set => Set(ref captureProgress,value); }
-    public string Notification { get => notification; private set => Set(ref notification,value); }
+
+    public bool CanTrigger => State == MeasurementState.Ready && savedCore is not null && activeCapture is null;
+
+    public string Countdown
+    {
+        get => countdown;
+        private set => Set(ref countdown, value);
+    }
+
+    public double CaptureProgress
+    {
+        get => captureProgress;
+        private set => Set(ref captureProgress, value);
+    }
+
+    public string Notification
+    {
+        get => notification;
+        private set => Set(ref notification, value);
+    }
+
     public bool NeedsCore => savedCore is null;
 
-    public void SetCore(CoreInformationData? core)
+    public void SetCore(CoreSnapshot? core)
     {
         savedCore = core;
-        if (core is null) StopMeasurementMode();
-        Changed(nameof(NeedsCore)); RefreshCommands();
+
+        if (core is null)
+        {
+            StopMeasurementMode();
+        }
+
+        Changed(nameof(NeedsCore));
+        RefreshCommands();
     }
+
+    public void Move(MeasurementResult source, MeasurementResult target, bool after)
+    {
+        var sourceIndex = Results.IndexOf(source);
+        var targetIndex = Results.IndexOf(target);
+
+        if (sourceIndex < 0 || targetIndex < 0 || sourceIndex == targetIndex)
+        {
+            return;
+        }
+
+        var destination = targetIndex + (after ? 1 : 0);
+
+        if (sourceIndex < destination)
+        {
+            destination--;
+        }
+
+        Results.Move(sourceIndex, destination);
+        Renumber();
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        StopMeasurementMode();
+        lifetime.Cancel();
+        notificationLifetime?.Cancel();
+        notificationLifetime?.Dispose();
+        lifetime.Dispose();
+        ExportCommand.Refresh();
+        DeleteCommand.Refresh();
+    }
+
     private void RefreshCommands()
     {
-        Changed(nameof(CanTrigger)); ToggleMeasurementCommand.Refresh(); TriggerCommand.Refresh();
+        ToggleMeasurementCommand.Refresh();
+        TriggerCommand.Refresh();
     }
+
     private void ToggleMeasurementMode()
     {
-        if (IsMeasurementModeActive) { StopMeasurementMode(); return; }
-        if (disposed || savedCore is null) return;
-        ResetCountdown(); State = MeasurementState.Ready;
+        if (IsMeasurementModeActive)
+        {
+            StopMeasurementMode();
+            return;
+        }
+
+        ResetCountdown();
+        State = MeasurementState.Ready;
     }
+
     private void StopMeasurementMode()
     {
-        State = MeasurementState.Idle;
+        // Cancel first so the State change below refreshes the commands with the final picture.
         activeCapture?.Cancel();
-        ResetCountdown(); RefreshCommands();
+        State = MeasurementState.Idle;
+        ResetCountdown();
     }
-    private void ResetCountdown() { Countdown = "00:05"; CaptureProgress = 0; }
+
+    private void ResetCountdown()
+    {
+        Countdown = FormatCountdown(measurement.Duration);
+        CaptureProgress = 0;
+    }
+
+    private string FormatCountdown(TimeSpan remaining)
+    {
+        var seconds = Math.Clamp((int)Math.Ceiling(remaining.TotalSeconds), 0, (int)measurement.Duration.TotalSeconds);
+        return $"00:{seconds:00}";
+    }
 
     private async Task CaptureAsync(DateTimeOffset start)
     {
-        if (!CanTrigger || savedCore is not { } core) return;
+        if (savedCore is not { } core)
+        {
+            return;
+        }
+
         using var capture = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         var token = capture.Token;
         activeCapture = capture;
         State = MeasurementState.Capturing;
+
         try
         {
-            var data = await measurement.CaptureAsync(start, remaining =>
-            {
-                // A cancelled operation may report late; it must never change a newer UI state.
-                if (token.IsCancellationRequested || disposed || activeCapture != capture) return;
-                Countdown = $"00:{Math.Clamp((int)Math.Ceiling(remaining.TotalSeconds),0,5):00}";
-                CaptureProgress = Math.Clamp(1 - remaining.TotalSeconds / MockMeasurementService.Duration.TotalSeconds, 0, 1);
-            }, token);
+            var data = await measurement.CaptureAsync(
+                start,
+                remaining =>
+                {
+                    // A cancelled operation may report late; it must never change a newer UI state.
+                    if (token.IsCancellationRequested || disposed || activeCapture != capture)
+                    {
+                        return;
+                    }
+
+                    Countdown = FormatCountdown(remaining);
+                    CaptureProgress = Math.Clamp(1 - remaining.TotalSeconds / measurement.Duration.TotalSeconds, 0, 1);
+                },
+                token);
+
             token.ThrowIfCancellationRequested();
             State = MeasurementState.Processing;
-            Countdown = "00:00"; CaptureProgress = 1;
-            if (data.Samples.Count == 0) throw new InvalidOperationException("Capture contains no samples.");
+            Countdown = FormatCountdown(TimeSpan.Zero);
+            CaptureProgress = 1;
+
+            if (data.Samples.Count == 0)
+            {
+                throw new InvalidOperationException("Capture contains no samples.");
+            }
+
             var average = data.Samples.Average();
-            // Let WPF render zero. This display hold does not extend the capture interval.
-            // Stop remains available and can cancel until the completed row is committed.
+
+            // Display hold, kept on purpose: it gives WPF one render of "00:00" and the full ring before the
+            // row is committed. It does not extend the capture interval, and Stop can still cancel during it.
             await Task.Delay(100, token);
             token.ThrowIfCancellationRequested();
-            Results.Add(new MeasurementResult { CaptureNumber = nextCapture++, StartTime = data.StartTime,
-                EndTime = data.EndTime, CompletedAt = data.CompletedAt, SampleCount = data.Samples.Count,
-                AverageValue = average, Unit = data.Unit, Core = core });
+
+            Results.Add(new MeasurementResult
+            {
+                CaptureNumber = nextCapture++,
+                StartTime = data.StartTime,
+                EndTime = data.EndTime,
+                CompletedAt = data.CompletedAt,
+                SampleCount = data.Samples.Count,
+                AverageValue = average,
+                Unit = data.Unit,
+                Core = core
+            });
             Renumber();
         }
-        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+        }
         catch (Exception)
         {
-            if (!token.IsCancellationRequested && !disposed) Notify("Capture failed. Right-click to try again.");
+            // Disposal cancels the token, so a real failure always has an uncancelled token here.
+            if (!token.IsCancellationRequested)
+            {
+                Notify("Capture failed. Right-click to try again.");
+            }
         }
         finally
         {
@@ -123,52 +264,69 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             {
                 activeCapture = null;
                 ResetCountdown();
+
                 if (!disposed && State is MeasurementState.Capturing or MeasurementState.Processing)
+                {
                     State = MeasurementState.Ready;
+                }
+
                 RefreshCommands();
             }
         }
     }
+
     private void Delete(object? parameter)
     {
-        if (parameter is not MeasurementResult row || !Results.Contains(row) || !dialogs.ConfirmDelete()) return;
-        Results.Remove(row); Renumber(); Notify("Measurement deleted.");
+        if (parameter is not MeasurementResult row || !dialogs.ConfirmDelete())
+        {
+            return;
+        }
+
+        Results.Remove(row);
+        Renumber();
+        Notify("Measurement deleted.");
     }
-    public void Move(MeasurementResult source, MeasurementResult target, bool after)
-    {
-        var sourceIndex = Results.IndexOf(source);
-        var targetIndex = Results.IndexOf(target);
-        if (sourceIndex < 0 || targetIndex < 0 || sourceIndex == targetIndex) return;
-        var destination = targetIndex + (after ? 1 : 0);
-        if (sourceIndex < destination) destination--;
-        Results.Move(sourceIndex, destination); Renumber();
-    }
+
     private void Renumber()
     {
-        for (var i=0; i<Results.Count; i++) Results[i].Number = i+1;
-        ExportCommand.Refresh();
+        for (var i = 0; i < Results.Count; i++)
+        {
+            Results[i].Number = i + 1;
+        }
     }
+
     private async Task ExportAsync()
     {
-        if (await export.ExportAsync(Results.ToArray(), lifetime.Token)) Notify("CSV exported.");
+        if (await export.ExportAsync(Results.ToArray(), lifetime.Token))
+        {
+            Notify("CSV exported.");
+        }
     }
+
     private async void Notify(string message)
     {
-        if (disposed) return;
+        if (disposed)
+        {
+            return;
+        }
+
         notificationLifetime?.Cancel();
         notificationLifetime?.Dispose();
         notificationLifetime = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         var token = notificationLifetime.Token;
         Notification = message;
-        try { await Task.Delay(4500, token); if (!disposed) Notification = ""; }
-        catch (OperationCanceledException) { }
-    }
-    public void Dispose()
-    {
-        if (disposed) return;
-        disposed = true;
-        StopMeasurementMode();
-        lifetime.Cancel(); notificationLifetime?.Cancel(); notificationLifetime?.Dispose(); lifetime.Dispose();
-        ExportCommand.Refresh(); DeleteCommand.Refresh();
+
+        try
+        {
+            await Task.Delay(4500, token);
+
+            if (!disposed)
+            {
+                Notification = "";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 }

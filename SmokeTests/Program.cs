@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Windows.Threading;
 using Frontend.Shared.Models;
-using Frontend.Shared.Services;
 using Frontend.Pages.Measurement;
 using Frontend.Pages.CoreInformation;
 using Frontend.ViewModels;
@@ -38,7 +37,7 @@ internal static class Program
     private static async Task Run()
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-        CoreInformation? saved = null;
+        CoreSnapshot? saved = null;
         var form = new CoreInformationViewModel(core => saved = core);
         form.SaveCommand.Execute(null);
         Check(saved is null && form.DrillholeIdError.Length > 0, "Required field validation");
@@ -168,6 +167,7 @@ internal static class Program
     }
     private sealed class ControlledMeasurements : IMeasurementService
     {
+        public TimeSpan Duration => TimeSpan.FromSeconds(5);
         public int Calls { get; private set; }
         public bool HonorCancellation { get; init; } = true;
         private TaskCompletionSource<CaptureData>? pending;

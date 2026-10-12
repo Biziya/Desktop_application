@@ -33,7 +33,7 @@ Navigation retains the page ViewModels, measurement mode and results. An already
 
 MeasurementState contains Idle, Ready, Capturing and Processing. State transitions belong to MeasurementViewModel. Start moves Idle to Ready; a trigger moves Ready to Capturing; successful acquisition moves to Processing; a single committed row returns to Ready. Stop or disposal returns to Idle. Capture errors produce a short notification and return to Ready without a row.
 
-MockMeasurementService uses Stopwatch elapsed time and asynchronous delays with approximately 40 ms progress updates. Rendering/animation never determines completion. A 100 ms display hold shows 00:00 during Processing; this does not extend the five-second capture boundary. Stop can cancel before the result is committed. The implementation remains a simulation: delayed scheduling can generate missed synthetic sample values at completion, and is not a real device acquisition implementation.
+MockMeasurementService uses Stopwatch elapsed time and asynchronous delays with approximately 40 ms progress updates. Rendering/animation never determines completion. A 100 ms display hold shows 00:00 during Processing; this does not extend the capture boundary. The capture length comes from `IMeasurementService.Duration`, which drives the countdown text and ring. Stop can cancel before the result is committed. The implementation remains a simulation: delayed scheduling can generate missed synthetic sample values at completion, and is not a real device acquisition implementation.
 
 CountdownRing is a lightweight native WPF FrameworkElement. Its Progress property is elapsed / duration (0 to 1); it draws a neutral track and a clockwise arc with round ends, handling empty/full circles separately. It owns no timer or subscriptions.
 
@@ -53,7 +53,8 @@ CSV retains the existing ISO 8601 round-trip timestamp format (O), including fra
 
 - Required form validation, decimal typing/paste filtering, live depth calculation and saved core snapshots.
 - Blue/white theme, collapsible sidebar, active navigation, icon tooltips and retained sidebar state.
-- Seven table columns: drag handle, No., Start Time, Samples, Average, Unit and Delete; 36-pixel rows and alternating backgrounds.
+- Seven table columns: drag handle, No., Start Time, Samples, Average, Unit and Delete; 36-pixel rows (at the default 1.0 multipliers) and alternating backgrounds.
+- Measurement page sizes are Default x Multiplier values in `Pages/Measurement/MeasurementUiConstants.xaml`; every multiplier is 1.0 by default, which is the original look. They are applied with `{local:Scale ...}` (`ScaleExtension.cs`).
 - Reordering with insertion feedback/edge scrolling, stable capture identifiers, delete confirmation, notifications and CSV save dialog.
 - Completed results remain in memory across navigation. Application restart intentionally starts a fresh session.
 
@@ -74,16 +75,18 @@ Frontend/
 │       ├── CountdownRing.cs
 │       ├── MeasurementResult.cs
 │       ├── MockMeasurementService.cs
+│       ├── IDialogService.cs
 │       ├── CsvExportService.cs
-│       └── MeasurementStyles.xaml
+│       ├── MeasurementStyles.xaml
+│       ├── MeasurementUiConstants.xaml
+│       └── ScaleExtension.cs
 ├── Windows/ConfirmationWindow/
 │   ├── DeleteConfirmationWindow.xaml
 │   ├── DeleteConfirmationWindow.xaml.cs
 │   └── DialogService.cs
 ├── Shared/
 │   ├── Infrastructure/ (ObservableObject, commands)
-│   ├── Models/ (CoreInformation)
-│   ├── Services/ (IDialogService)
+│   ├── Models/ (CoreSnapshot)
 │   └── Styles/ (Theme.xaml)
 ├── ViewModels/MainViewModel.cs
 ├── MainWindow.xaml + MainWindow.xaml.cs

@@ -24,16 +24,13 @@
     <Geometry x:Key="ExpandIcon">M9,5 L16,12 9,19</Geometry>
     <BooleanToVisibilityConverter x:Key="BoolVisibility"/>
 
-    <Style TargetType="Window">
+    <Style x:Key="AppWindow" TargetType="Window">
         <Setter Property="FontFamily" Value="Segoe UI"/>
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="Foreground" Value="{StaticResource Navy}"/>
         <Setter Property="Background" Value="{StaticResource Canvas}"/>
         <Setter Property="UseLayoutRounding" Value="True"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
-    </Style>
-    <Style TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource Navy}"/>
     </Style>
     <Style x:Key="MutedText" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource Muted}"/>
@@ -156,13 +153,11 @@
     <Style x:Key="NavigationLabel" TargetType="TextBlock">
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Margin" Value="7,0,8,0"/>
-        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
         <Setter Property="Visibility" Value="{Binding IsSidebarExpanded, Converter={StaticResource BoolVisibility}}"/>
     </Style>
     <Style x:Key="DeleteButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Foreground" Value="{StaticResource Danger}"/>
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Width" Value="28"/><Setter Property="Height" Value="28"/>
         <Setter Property="Padding" Value="4,2"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>

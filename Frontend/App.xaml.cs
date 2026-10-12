@@ -1,5 +1,3 @@
-﻿using System.Configuration;
-using System.Data;
 using System.Windows;
 
 namespace Frontend;
@@ -10,4 +8,3 @@ namespace Frontend;
 public partial class App : Application
 {
 }
-
