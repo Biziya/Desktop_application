@@ -137,33 +137,7 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Header="No."
-                                            Binding="{Binding Number}"
-                                            Width="44"
-                                            ElementStyle="{StaticResource CenteredTableText}"
-                                            HeaderStyle="{StaticResource CenteredTableHeader}"/>
-                        <DataGridTextColumn Header="Start Time"
-                                            Binding="{Binding StartTime, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}"
-                                            Width="2.4*"
-                                            MinWidth="196"/>
-                        <DataGridTextColumn Header="Samples"
-                                            Binding="{Binding SampleCount}"
-                                            Width="*"
-                                            MinWidth="74"
-                                            ElementStyle="{StaticResource CenteredTableText}"
-                                            HeaderStyle="{StaticResource CenteredTableHeader}"/>
-                        <DataGridTextColumn Header="Average"
-                                            Binding="{Binding AverageValue, StringFormat=F2}"
-                                            Width="*"
-                                            MinWidth="82"
-                                            ElementStyle="{StaticResource CenteredTableText}"
-                                            HeaderStyle="{StaticResource CenteredTableHeader}"/>
-                        <DataGridTextColumn Header="Unit"
-                                            Binding="{Binding Unit}"
-                                            Width="0.7*"
-                                            MinWidth="50"
-                                            ElementStyle="{StaticResource CenteredTableText}"
-                                            HeaderStyle="{StaticResource CenteredTableHeader}"/>
+                        <!-- Measurement value columns are inserted here from MeasurementColumns.cs (see MeasurementPage.xaml.cs). -->
 
                         <DataGridTemplateColumn Header="Delete"
                                                 Width="64"

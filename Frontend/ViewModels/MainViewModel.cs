@@ -11,8 +11,15 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private bool isSidebarExpanded = true;
 
     public MainViewModel()
+        : this(new SqliteMeasurementRepository(SqliteMeasurementRepository.DefaultPath))
     {
-        Measurement = new MeasurementViewModel(new MockMeasurementService(), new CsvExportService(), new DialogService());
+    }
+
+    public MainViewModel(IMeasurementRepository repository)
+    {
+        Measurement = new MeasurementViewModel(
+            new MockMeasurementService(), new CsvExportService(), new DialogService(), repository);
+        _ = Measurement.RestoreLatestSessionAsync();
         Core = new CoreInformationViewModel(core =>
         {
             Measurement.SetCore(core);

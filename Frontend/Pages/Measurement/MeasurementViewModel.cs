@@ -9,6 +9,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     private readonly IMeasurementService measurement;
     private readonly ICsvExportService export;
     private readonly IDialogService dialogs;
+    private readonly IMeasurementRepository repository;
     private readonly CancellationTokenSource lifetime = new();
     private CancellationTokenSource? notificationLifetime;
     private CancellationTokenSource? activeCapture;
@@ -19,12 +20,21 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     private string notification = "";
     private double captureProgress;
     private int nextCapture = 1;
+    private MeasurementSession? session;
 
-    public MeasurementViewModel(IMeasurementService measurement, ICsvExportService export, IDialogService dialogs)
+    // Database writes run one after another, in the order they were requested. Never faults.
+    private Task persistence = Task.CompletedTask;
+
+    public MeasurementViewModel(
+        IMeasurementService measurement,
+        ICsvExportService export,
+        IDialogService dialogs,
+        IMeasurementRepository repository)
     {
         this.measurement = measurement;
         this.export = export;
         this.dialogs = dialogs;
+        this.repository = repository;
         countdown = FormatCountdown(measurement.Duration);
 
         ToggleMeasurementCommand = new RelayCommand(
@@ -99,6 +109,45 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     public bool NeedsCore => savedCore is null;
 
+    /// <summary>Session shown in the table and exported. Hidden from the table; null until Start or a restore.</summary>
+    public Guid? MeasurementSessionId => session?.Id;
+
+    /// <summary>
+    /// Shows the most recently stored session after a restart. It does not create a session, and it is skipped
+    /// if Start has already begun a new one.
+    /// </summary>
+    public async Task RestoreLatestSessionAsync()
+    {
+        try
+        {
+            if (await repository.LoadLatestSessionAsync() is not { } latest)
+            {
+                return;
+            }
+
+            var rows = await repository.LoadAsync(latest.Id);
+
+            if (disposed || session is not null)
+            {
+                return;
+            }
+
+            session = latest;
+            Changed(nameof(MeasurementSessionId));
+
+            foreach (var row in rows)
+            {
+                Results.Add(row);
+            }
+
+            Renumber();
+        }
+        catch (Exception error)
+        {
+            Notify($"Stored measurements could not be loaded: {error.Message}");
+        }
+    }
+
     public void SetCore(CoreSnapshot? core)
     {
         savedCore = core;
@@ -131,6 +180,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
         Results.Move(sourceIndex, destination);
         Renumber();
+        SaveSession();
     }
 
     public void Dispose()
@@ -142,6 +192,9 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
         disposed = true;
         StopMeasurementMode();
+
+        // Let queued saves finish on close. They run on the thread pool, so waiting here cannot deadlock.
+        persistence.Wait(TimeSpan.FromSeconds(5));
         lifetime.Cancel();
         notificationLifetime?.Cancel();
         notificationLifetime?.Dispose();
@@ -164,8 +217,19 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             return;
         }
 
+        BeginSession();
         ResetCountdown();
         State = MeasurementState.Ready;
+    }
+
+    // Start is the action that begins a new measurement, so it alone creates a session. Navigation, Stop and
+    // restoring stored rows never do. The previous session stays in the database; the table shows only this one.
+    private void BeginSession()
+    {
+        session = MeasurementSession.New();
+        nextCapture = 1;
+        Results.Clear();
+        Changed(nameof(MeasurementSessionId));
     }
 
     private void StopMeasurementMode()
@@ -190,7 +254,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     private async Task CaptureAsync(DateTimeOffset start)
     {
-        if (savedCore is not { } core)
+        if (savedCore is not { } core || session is not { } current)
         {
             return;
         }
@@ -236,16 +300,19 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
             Results.Add(new MeasurementResult
             {
+                MeasurementSessionId = current.Id,
                 CaptureNumber = nextCapture++,
                 StartTime = data.StartTime,
                 EndTime = data.EndTime,
                 CompletedAt = data.CompletedAt,
                 SampleCount = data.Samples.Count,
+                Reading = data.Reading ?? DeviceReading.Empty,
                 AverageValue = average,
                 Unit = data.Unit,
                 Core = core
             });
             Renumber();
+            SaveSession();
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -284,6 +351,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
         Results.Remove(row);
         Renumber();
+        Persist(() => repository.DeleteAsync(row.MeasurementSessionId, row.CaptureNumber));
+        SaveSession();
         Notify("Measurement deleted.");
     }
 
@@ -292,6 +361,38 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         for (var i = 0; i < Results.Count; i++)
         {
             Results[i].Number = i + 1;
+        }
+    }
+
+    // Stores the whole table (one session, display order). Rows already stored only get their No updated,
+    // so a row whose earlier save failed is saved again by the next change.
+    private void SaveSession()
+    {
+        if (session is { } current)
+        {
+            var rows = Results.ToArray();
+            Persist(() => repository.SaveAsync(current, rows));
+        }
+    }
+
+    // Queues a write without blocking the UI. A failure is reported; the rows stay in the table.
+    private async void Persist(Func<Task> write)
+    {
+        var previous = persistence;
+        var current = Task.Run(async () =>
+        {
+            await previous;
+            await write();
+        });
+        persistence = current.ContinueWith(_ => { }, TaskScheduler.Default);
+
+        try
+        {
+            await current;
+        }
+        catch (Exception error)
+        {
+            Notify($"Saving to the database failed ({error.Message}). Rows stay in the table and are saved again with the next change.");
         }
     }
 

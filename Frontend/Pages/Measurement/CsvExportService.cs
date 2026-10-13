@@ -12,10 +12,6 @@ public interface ICsvExportService
 
 public sealed class CsvExportService : ICsvExportService
 {
-    private const string Header =
-        "No.,Capture No.,Start Time,End Time,Sample Count,Average Value,Unit,Drillhole ID,Drillhole Name," +
-        "Project / Area,Core ID,Depth From (m),Depth To (m),Core Depth (m),Operator,Notes,Completed At\r\n";
-
     public async Task<bool> ExportAsync(IReadOnlyList<MeasurementResult> rows, CancellationToken cancellationToken)
     {
         var dialog = new SaveFileDialog
@@ -53,54 +49,41 @@ public sealed class CsvExportService : ICsvExportService
         return true;
     }
 
+    /// <summary>
+    /// Columns, order and headers come from MeasurementColumns.cs. Rows are written in the given (display) order and
+    /// must belong to one measurement session; MeasurementSessionId is the last column.
+    /// </summary>
     public static string Serialize(IReadOnlyList<MeasurementResult> rows)
     {
-        var csv = new StringBuilder(Header);
-
-        for (var i = 0; i < rows.Count; i++)
+        if (rows.Select(r => r.MeasurementSessionId).Distinct().Skip(1).Any())
         {
-            var r = rows[i];
+            throw new ArgumentException("A CSV export must contain a single measurement session.", nameof(rows));
+        }
 
-            // Numbers and dates are quoted only; free text is also guarded against spreadsheet formulas.
-            string[] cells =
-            [
-                Quote((i + 1).ToString(CultureInfo.InvariantCulture)),
-                Quote(r.CaptureNumber.ToString(CultureInfo.InvariantCulture)),
-                Quote(r.StartTime.ToString("O")),
-                Quote(r.EndTime.ToString("O")),
-                Quote(r.SampleCount.ToString(CultureInfo.InvariantCulture)),
-                Quote(r.AverageValue.ToString("F4", CultureInfo.InvariantCulture)),
-                Text(r.Unit),
-                Text(r.Core.DrillholeId),
-                Text(r.Core.DrillholeName),
-                Text(r.Core.ProjectArea),
-                Text(r.Core.CoreId),
-                Quote(r.Core.DepthFrom.ToString(CultureInfo.InvariantCulture)),
-                Quote(r.Core.DepthTo.ToString(CultureInfo.InvariantCulture)),
-                Quote(r.Core.CoreDepth.ToString(CultureInfo.InvariantCulture)),
-                Text(r.Core.Operator),
-                Text(r.Core.Notes),
-                Quote(r.CompletedAt.ToString("O"))
-            ];
+        var columns = MeasurementColumns.All.Where(c => c.IncludeInCsv).ToArray();
+        var csv = new StringBuilder();
+        csv.Append(string.Join(",", columns.Select(c => Quote(c.CsvHeader)))).Append("\r\n");
 
-            csv.AppendLine(string.Join(",", cells));
+        foreach (var row in rows)
+        {
+            csv.Append(string.Join(",", columns.Select(c => Quote(Format(c.Value(row)))))).Append("\r\n");
         }
 
         return csv.ToString();
     }
 
-    private static string Quote(string value) => "\"" + value.Replace("\"", "\"\"") + "\"";
-
-    /// <summary>Quotes user-entered text and prevents it being interpreted as a spreadsheet formula.</summary>
-    private static string Text(string value)
+    // Invariant culture; timestamps keep sub-second precision and offset ("O"); doubles round-trip ("R");
+    // a missing device value is an empty cell.
+    private static string Format(object? value) => value switch
     {
-        var trimmed = value.TrimStart();
+        null => "",
+        DateTimeOffset time => time.ToString("O", CultureInfo.InvariantCulture),
+        double number => number.ToString("R", CultureInfo.InvariantCulture),
+        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+        _ => value.ToString() ?? ""
+    };
 
-        if (trimmed.Length > 0 && trimmed[0] is '=' or '+' or '-' or '@')
-        {
-            value = "'" + value;
-        }
-
-        return Quote(value);
-    }
+    // Every cell is quoted and embedded quotes are doubled. All columns are numbers, timestamps or IDs,
+    // so there is no free text that could be read as a spreadsheet formula.
+    private static string Quote(string value) => "\"" + value.Replace("\"", "\"\"") + "\"";
 }

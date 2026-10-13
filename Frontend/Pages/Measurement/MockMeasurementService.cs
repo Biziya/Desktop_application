@@ -7,7 +7,24 @@ public sealed record CaptureData(
     DateTimeOffset EndTime,
     IReadOnlyList<double> Samples,
     string Unit,
-    DateTimeOffset CompletedAt);
+    DateTimeOffset CompletedAt,
+    DeviceReading? Reading = null);
+
+/// <summary>
+/// Device-reported values for one capture. Raw values are kept separate from processed values.
+/// Every field is optional: a service that does not provide a value leaves it null (blank in table/CSV, NULL in SQLite).
+/// The mock service provides none of them; a real CT007 service fills them from the device.
+/// </summary>
+public sealed record DeviceReading(
+    long? TsMs = null,
+    double? Count0 = null,
+    double? Count0Raw = null,
+    double? Hdm = null,
+    double? HdmRaw = null,
+    double? DoseRate = null)
+{
+    public static DeviceReading Empty { get; } = new();
+}
 
 public interface IMeasurementService
 {

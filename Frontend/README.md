@@ -1,6 +1,6 @@
 # SPP CT-007 Measurement Studio
 
-Frontend-only WPF / .NET 10 application. Mock measurements only: no backend, SQLite, Bluetooth, global mouse hooks or extra NuGet dependencies.
+WPF / .NET 10 application. Mock measurements only: no backend, Bluetooth or global mouse hooks. Measurement rows are stored in a local SQLite database (`Microsoft.Data.Sqlite`, the only NuGet dependency).
 
 ## Run on Windows
 
@@ -45,18 +45,54 @@ All timestamps are DateTimeOffset values with their original subsecond precision
 - EndTime: the intended five-second boundary, for example 2026-10-11 11:16:15.851.
 - CompletedAt: when the measurement service actually completed, independently recorded. It can be later than EndTime if UI scheduling is delayed.
 
-The table displays StartTime as yyyy-MM-dd HH:mm:ss only. Display formatting never modifies the stored value. EndTime and CaptureNumber remain internal/export fields, with no new table columns.
+Start Time and End Time are stored and exported but hidden in the table. CompletedAt, the average, unit and core snapshot stay on the in-memory row only; they are not stored or exported.
 
-CSV retains the existing ISO 8601 round-trip timestamp format (O), including fractional seconds and offset. A new Completed At column is appended after all existing CSV columns. It preserves actual completion time without changing the positions of existing fields. Export still preserves the manually arranged order, core snapshots, numeric formatting, UTF-8 BOM and CSV escaping. Temporary-file replacement avoids a partially written destination on cancellation.
+## Columns
+
+`Pages/Measurement/MeasurementColumns.cs` is the single column definition. Each entry has a stable binding path, a table label, a CSV header, table visibility, CSV inclusion and the value reader used by CSV export; list order is the column order for both table and CSV. Changing a label changes only the table header: bindings, CSV headers and SQLite column names are separate.
+
+| Column | Table | CSV | Model field | SQLite column |
+|---|---|---|---|---|
+| No | Yes | Yes | `Number` (display position) | `DisplayNo` |
+| Capture No | Yes | Yes | `CaptureNumber` | `CaptureNo` |
+| Start Time | No | Yes | `StartTime` | `StartTime` |
+| End Time | No | Yes | `EndTime` | `EndTime` |
+| Sample | Yes | Yes | `SampleCount` (samples in the capture) | `Sample` |
+| ts_ms | Yes | Yes | `Reading.TsMs` | `TsMs` |
+| count0 | Yes | Yes | `Reading.Count0` | `Count0` |
+| count0_raw | Yes | Yes | `Reading.Count0Raw` | `Count0Raw` |
+| hdm | Yes | Yes | `Reading.Hdm` | `Hdm` |
+| hdm_raw | Yes | Yes | `Reading.HdmRaw` | `HdmRaw` |
+| dose_rate | Yes | Yes | `Reading.DoseRate` | `DoseRate` |
+| MeasurementSessionId | No | Yes (last) | `MeasurementSessionId` | `MeasurementSessionId` |
+
+**Missing mappings.** The capture pipeline had no source for ts_ms, count0, count0_raw, hdm, hdm_raw or dose_rate. They are now an optional `DeviceReading` on `CaptureData`, which a device service fills; raw and processed values are separate fields. `MockMeasurementService` does not invent them, so they are blank in the table and CSV and NULL in SQLite until a real CT007 service supplies them. Averaging and timing are unchanged.
+
+The table builds these columns in `MeasurementPage.xaml.cs` between the drag handle and Delete columns. Their minimum width (`TableValueColumnMinWidth`) and its multiplier are in `MeasurementUiConstants.xaml` with the other sizes.
+
+## Measurement sessions and SQLite
+
+- **Start** begins a new measurement session with a new GUID. Every capture until the next Start gets that `MeasurementSessionId`. Stop, navigation, editing Core Information and restoring stored rows never create one.
+- The table shows the current session only. Start clears the table (the previous session stays in the database) and Capture No starts again at 1; within a session it is never reused after delete or reorder.
+- Database: `%LocalAppData%\CT007 Measurement Studio\measurements.db`. Tables `MeasurementSessions (MeasurementSessionId, CreatedAt)` and `MeasurementRecords (MeasurementRecordId, MeasurementSessionId FK, ...)`. A unique index on `(MeasurementSessionId, CaptureNo)` prevents duplicates and serves lookups by session.
+- After each capture, reorder and delete, the ViewModel queues a save of the whole table. Saves run in order on the thread pool, never on the UI thread, in one transaction each, with parameterized SQL. Saving a row again only updates its No. Delete removes the row from the database too.
+- If a save fails, a notification shows the error, the rows stay in the table and the next change saves them again. A failed delete is reported but not retried. Closing waits up to five seconds for queued saves.
+- On startup the most recently stored session is shown again (Idle; it can be reordered, deleted and exported). Start then begins a new session.
+- Schema version is kept in `PRAGMA user_version`. Migrations add only missing steps inside a transaction, so existing data is kept; a database from a newer app version is refused rather than changed.
+- Timestamps are stored as ISO 8601 round-trip text (O) with full sub-second precision and offset; device values as INTEGER/REAL.
+
+## Export
+
+CSV contains the columns above in order, with MeasurementSessionId last, for the current session only, in the table's display order. Timestamps use the round-trip format (O); numbers use invariant culture and round-trip precision; missing device values are empty cells. Every cell is quoted with embedded quotes doubled; lines end in CRLF; UTF-8 BOM and temporary-file replacement are unchanged. Export rejects rows from more than one session.
 
 ## Existing features preserved
 
 - Required form validation, decimal typing/paste filtering, live depth calculation and saved core snapshots.
 - Blue/white theme, collapsible sidebar, active navigation, icon tooltips and retained sidebar state.
-- Seven table columns: drag handle, No., Start Time, Samples, Average, Unit and Delete; 36-pixel rows (at the default 1.0 multipliers) and alternating backgrounds.
+- Drag handle and Delete columns around the configured measurement columns; 36-pixel rows (at the default 1.0 multipliers) and alternating backgrounds.
 - Measurement page sizes are Default x Multiplier values in `Pages/Measurement/MeasurementUiConstants.xaml`; every multiplier is 1.0 by default, which is the original look. They are applied with `{local:Scale ...}` (`ScaleExtension.cs`).
 - Reordering with insertion feedback/edge scrolling, stable capture identifiers, delete confirmation, notifications and CSV save dialog.
-- Completed results remain in memory across navigation. Application restart intentionally starts a fresh session.
+- Completed results remain across navigation and, through SQLite, across restarts.
 
 ## Source organization
 
@@ -77,6 +113,8 @@ Frontend/
 │       ├── MockMeasurementService.cs
 │       ├── IDialogService.cs
 │       ├── CsvExportService.cs
+│       ├── MeasurementColumns.cs
+│       ├── MeasurementRepository.cs
 │       ├── MeasurementStyles.xaml
 │       ├── MeasurementUiConstants.xaml
 │       └── ScaleExtension.cs
@@ -100,9 +138,7 @@ SmokeTests/
 
 ## Validation
 
-Source checks passed: XML parsing, XAML class/custom-control references, dictionary paths, resource names and event handlers. Table structure is unchanged apart from the requested display timestamp format. Reorder/delete routines and export orchestration are preserved. Unrelated frontend source, styles and project dependencies are unchanged.
-
-Build attempt could not start: dotnet: command not found. No .NET SDK or Windows desktop runtime is available in the implementation environment. Windows compilation, launch, actual WPF rendering, mouse interactions and smoke-test execution remain **unverified**.
+Columns/SQLite revision: the ViewModel, repository, column configuration, CSV export and models were compiled with the .NET 10 SDK (warnings as errors) and the full smoke-test sequence passed against a real SQLite database on Linux. That environment had no NuGet access or Windows desktop pack, so SQLite was reached through a test-only stand-in for the `Microsoft.Data.Sqlite` calls, and the WPF project itself (XAML, `MeasurementPage.xaml.cs`, `ScaleExtension.cs`) was not compiled. XAML files parse as XML. Run the build and smoke tests on Windows to confirm.
 
 Run the updated smoke tests on Windows:
 
@@ -110,7 +146,7 @@ Run the updated smoke tests on Windows:
 dotnet run --project SmokeTests/SmokeTests.csproj
 ```
 
-They cover arming without capture; Idle/duplicate triggers; elapsed ring progress; repeat captures; exact millisecond start/end values and separate completion; cancellation in Capturing and Processing; rapid rearm; late cancelled results; service failure; stable identifiers; reorder/delete/export; navigation/sidebar state; five-second duration; closure and cancellation. They do not substitute for real mouse/UI tests.
+They cover arming without capture; Idle/duplicate triggers; elapsed ring progress; repeat captures; exact millisecond start/end values and separate completion; cancellation in Capturing and Processing; rapid rearm; late cancelled results; service failure; stable identifiers; reorder/delete/export; navigation/sidebar state; five-second duration; closure and cancellation; session IDs per Start and across navigation; CSV column order, precision and session column; stored No after reorder; no duplicate saves; save-failure reporting; SQLite session isolation, precision, nulls, delete and restart restore. They do not substitute for real mouse/UI tests.
 
 Manual Windows checks:
 

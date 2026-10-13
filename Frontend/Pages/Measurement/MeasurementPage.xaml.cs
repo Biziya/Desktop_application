@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -24,6 +25,7 @@ public partial class MeasurementPage : UserControl
     public MeasurementPage()
     {
         InitializeComponent();
+        AddMeasurementColumns();
 
         DataContextChanged += (_, _) =>
         {
@@ -36,6 +38,26 @@ public partial class MeasurementPage : UserControl
         };
         Loaded += OnLoaded;
         Unloaded += (_, _) => StopObservingResults();
+    }
+
+    // Visible columns, their order, labels and bindings come from MeasurementColumns.cs; sizes from MeasurementUiConstants.xaml.
+    // They go between the drag handle (first) and Delete (last) columns declared in XAML.
+    private void AddMeasurementColumns()
+    {
+        var index = 1;
+
+        foreach (var column in MeasurementColumns.All.Where(c => c.ShowInTable))
+        {
+            ResultsGrid.Columns.Insert(index++, new DataGridTextColumn
+            {
+                Header = column.Label,
+                Binding = new Binding(column.Binding) { Mode = BindingMode.OneWay, StringFormat = column.DisplayFormat },
+                Width = new DataGridLength(1, DataGridLengthUnitType.Star),
+                MinWidth = ScaleExtension.Size("TableValueColumnMinWidth"),
+                ElementStyle = (Style)FindResource("CenteredTableText"),
+                HeaderStyle = (Style)FindResource("CenteredTableHeader")
+            });
+        }
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)

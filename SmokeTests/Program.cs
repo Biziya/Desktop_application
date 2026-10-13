@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using Microsoft.Data.Sqlite;
 using System.Windows.Threading;
 using Frontend.Shared.Models;
 using Frontend.Pages.Measurement;
@@ -50,8 +52,10 @@ internal static class Program
         Check(!CoreInformationViewModel.TryDepth("invalid",out _), "Invalid numeric input");
         var core = saved ?? throw new InvalidOperationException("No saved core");
         var fake = new ControlledMeasurements(); var dialogs = new FakeDialogs(); var export = new FakeExport();
-        using var vm = new MeasurementViewModel(fake, export, dialogs);
+        var store = new MemoryRepository();
+        using var vm = new MeasurementViewModel(fake, export, dialogs, store);
         Check(!vm.ToggleMeasurementCommand.CanExecute(null), "Capture requires saved core");
+        Check(vm.MeasurementSessionId is null, "No session before Start");
         Check(!vm.ExportCommand.CanExecute(null), "Empty export disabled");
         vm.TriggerCommand.Execute(null);
         Check(fake.Calls == 0, "Idle triggers ignored");
@@ -59,6 +63,7 @@ internal static class Program
         vm.ToggleMeasurementCommand.Execute(null);
         Check(vm.State == MeasurementState.Ready && vm.IsMeasurementModeActive && fake.Calls == 0 &&
             vm.Results.Count == 0 && vm.Countdown == "00:05" && vm.CaptureProgress == 0, "Start arms without capturing");
+        var firstSession = vm.MeasurementSessionId ?? throw new InvalidOperationException("Start creates a session");
         var triggerTime = new DateTimeOffset(2026,10,11,11,16,10,851,TimeSpan.FromHours(8));
         vm.TriggerCommand.Execute(triggerTime); vm.TriggerCommand.Execute(triggerTime);
         Check(fake.Calls == 1 && vm.IsCapturing && !vm.TriggerCommand.CanExecute(null) &&
@@ -84,22 +89,50 @@ internal static class Program
         Check(vm.Results.Count == 2 && third.Number == 2 && third.CaptureNumber == 3, "Deletion renumbers display only");
         vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger);
         Check(vm.Results[2].CaptureNumber == 4, "Deleted capture numbers are not reused");
+        Check(vm.MeasurementSessionId == firstSession && vm.Results.All(r => r.MeasurementSessionId == firstSession),
+            "One session ID for every capture of the session");
+        await Until(() => store.Rows(firstSession).Select(r => r.CaptureNumber).SequenceEqual(vm.Results.Select(r => r.CaptureNumber)));
+        Check(store.SaveCount > store.Rows(firstSession).Count, "Re-saving the same rows does not duplicate them");
         vm.Move(vm.Results[2], first, false);
         vm.ExportCommand.Execute(null); await Until(() => vm.ExportCommand.CanExecute(null));
         Check(export.Rows?.Select(r => r.CaptureNumber).SequenceEqual(new[] {4,1,3}) == true, "Export keeps display order");
+        await Until(() => store.Rows(firstSession).Select(r => r.CaptureNumber).SequenceEqual(new[] {4,1,3}));
+        Check(store.Rows(firstSession).Select(r => r.Number).SequenceEqual(new[] {1,2,3}), "Reorder updates stored No");
         var csv = CsvExportService.Serialize(vm.Results.ToArray());
-        Check(csv.Split('\n')[1].StartsWith("\"1\",\"4\","), "CSV display and capture numbers");
-        var escaped = new MeasurementResult { CaptureNumber=99, StartTime=first.StartTime, EndTime=first.EndTime, CompletedAt=first.CompletedAt,
-            SampleCount=5, AverageValue=3.5, Unit="cps", Core=core with { Notes="=SUM(1,2)", DrillholeName="A \"quoted\" name" } };
-        Check(CsvExportService.Serialize(new[] {escaped}).Contains("\"'=SUM(1,2)\""), "CSV formula escaping");
-        Check(CsvExportService.Serialize(new[] {escaped}).Contains("A \"\"quoted\"\" name"), "CSV quote escaping");
-        Check(CsvExportService.Serialize(new[] {first}).Contains(triggerTime.ToString("O")), "CSV retains fractional seconds and offset");
-        Check(csv.Contains("Completed At"), "CSV includes completion timestamp");
+        var lines = csv.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        Check(lines[0] == "\"No\",\"Capture No\",\"Start Time\",\"End Time\",\"Sample\",\"ts_ms\",\"count0\",\"count0_raw\"," +
+            "\"hdm\",\"hdm_raw\",\"dose_rate\",\"MeasurementSessionId\"", "CSV header order and session ID last");
+        Check(lines[1].StartsWith("\"1\",\"4\",") && lines[1].EndsWith($",\"{firstSession}\"") && lines.Length == 4,
+            "CSV display/capture numbers and session ID");
+        Check(CsvExportService.Serialize(new[] {first}).Contains(triggerTime.ToString("O") + "\",\"" + triggerTime.AddSeconds(5).ToString("O")),
+            "CSV retains fractional seconds and offset for start/end");
+        Check(!csv.Contains("Average") && !csv.Contains("Completed At"), "CSV has only configured columns");
+        var reading = new DeviceReading(1760152570851, 0.1 + 0.2, 125, 1.5e-7, -3, 12.25);
+        var withReading = new MeasurementResult { MeasurementSessionId=firstSession, CaptureNumber=99, StartTime=first.StartTime,
+            EndTime=first.EndTime, SampleCount=5, Reading=reading };
+        Check(CsvExportService.Serialize(new[] {withReading}).Contains(
+            "\"1760152570851\",\"0.30000000000000004\",\"125\",\"1.5E-07\",\"-3\",\"12.25\""), "CSV device values keep full precision");
+        Check(CsvExportService.Serialize(new[] {first}).Contains("\"5\",\"\",\"\",\"\",\"\",\"\",\"\","), "Missing device values are empty cells");
+        var otherSession = new MeasurementResult { MeasurementSessionId=Guid.NewGuid(), CaptureNumber=1, StartTime=first.StartTime,
+            EndTime=first.EndTime, SampleCount=5 };
+        try { CsvExportService.Serialize(new[] {first, otherSession}); throw new Exception("Mixed-session export accepted"); }
+        catch (ArgumentException) { }
+        Check(MeasurementColumns.All.Where(c => c.ShowInTable).Select(c => c.Label).SequenceEqual(
+            new[] {"No","Capture No","Sample","ts_ms","count0","count0_raw","hdm","hdm_raw","dose_rate"}), "Table column order; times and session hidden");
+        Check(MeasurementColumns.All.All(c => Resolve(c.Binding, withReading) is { } bound && Equals(bound, c.Value(withReading))),
+            "Every binding resolves to the same value the CSV writes");
+        Check(MeasurementColumns.All.Last() is { Label: "Session", CsvHeader: "MeasurementSessionId", ShowInTable: false },
+            "Labels are independent of CSV headers");
         var count = vm.Results.Count;
         vm.ToggleMeasurementCommand.Execute(null);
         Check(vm.State == MeasurementState.Idle && vm.Results.Count == count, "Stop keeps completed rows");
         vm.TriggerCommand.Execute(null); Check(vm.Results.Count == count, "Stopped trigger ignored");
-        vm.ToggleMeasurementCommand.Execute(null); vm.TriggerCommand.Execute(null);
+        vm.ToggleMeasurementCommand.Execute(null);
+        var secondSession = vm.MeasurementSessionId;
+        Check(secondSession is not null && secondSession != firstSession && vm.Results.Count == 0 &&
+            store.Rows(firstSession).Count == count, "Start begins a new session; the previous one stays stored");
+        count = 0;
+        vm.TriggerCommand.Execute(null);
         vm.ToggleMeasurementCommand.Execute(null);
         Check(vm.State == MeasurementState.Idle && vm.Countdown == "00:05" && vm.CaptureProgress == 0, "Stop immediately resets active capture");
         vm.ToggleMeasurementCommand.Execute(null); await Until(() => vm.CanTrigger);
@@ -113,7 +146,7 @@ internal static class Program
 
         // A future service may return or report progress after cancellation. Ignore it and prevent overlap.
         var late = new ControlledMeasurements { HonorCancellation = false };
-        using (var lateVm = new MeasurementViewModel(late, export, dialogs))
+        using (var lateVm = new MeasurementViewModel(late, export, dialogs, new MemoryRepository()))
         {
             lateVm.SetCore(core); lateVm.ToggleMeasurementCommand.Execute(null); lateVm.TriggerCommand.Execute(null);
             lateVm.ToggleMeasurementCommand.Execute(null); lateVm.ToggleMeasurementCommand.Execute(null);
@@ -123,7 +156,7 @@ internal static class Program
             late.Complete(); await Until(() => lateVm.CanTrigger);
             Check(lateVm.Results.Count == 0, "Late cancelled result discarded");
         }
-        using (var main = new MainViewModel())
+        using (var main = new MainViewModel(new MemoryRepository()))
         {
             main.Core.DrillholeId="retained"; main.ShowMeasurementCommand.Execute(null); main.ShowCoreCommand.Execute(null);
             Check(main.CurrentPage == main.Core && main.Core.DrillholeId == "retained", "Navigation retains form");
@@ -141,7 +174,10 @@ internal static class Program
                 "Expand retains selected page");
             main.Measurement.SetCore(core); main.Measurement.ToggleMeasurementCommand.Execute(null);
             main.Measurement.TriggerCommand.Execute(null); main.ShowCoreCommand.Execute(null);
-            Check(main.Measurement.IsCapturing && main.CurrentPage == retainedCore, "Navigation does not duplicate or reset running capture");
+            var navigationSession = main.Measurement.MeasurementSessionId;
+            main.ShowMeasurementCommand.Execute(null); main.ShowCoreCommand.Execute(null);
+            Check(main.Measurement.IsCapturing && main.CurrentPage == retainedCore &&
+                main.Measurement.MeasurementSessionId == navigationSession, "Navigation does not duplicate, reset or start a session");
             main.Measurement.ToggleMeasurementCommand.Execute(null);
         }
         var service = new MockMeasurementService(); var start = DateTimeOffset.Now; var elapsed = Stopwatch.StartNew();
@@ -153,12 +189,116 @@ internal static class Program
         try { await service.CaptureAsync(start, _ => {}, cancel.Token); throw new Exception("Cancellation ignored"); }
         catch (OperationCanceledException) { }
         var closingService = new ControlledMeasurements();
-        var closingVm = new MeasurementViewModel(closingService, export, dialogs); closingVm.SetCore(core);
+        var closingVm = new MeasurementViewModel(closingService, export, dialogs, new MemoryRepository()); closingVm.SetCore(core);
         closingVm.ToggleMeasurementCommand.Execute(null); closingVm.TriggerCommand.Execute(null); closingVm.Dispose(); await Until(() => !closingVm.IsCapturing);
         Check(closingVm.Results.Count == 0, "Closing cancels without partial result");
+
+        // Failed saves are reported and the rows stay in the table.
+        var failing = new MemoryRepository { Fail = true };
+        var failingService = new ControlledMeasurements();
+        using (var failingVm = new MeasurementViewModel(failingService, export, dialogs, failing))
+        {
+            failingVm.SetCore(core); failingVm.ToggleMeasurementCommand.Execute(null);
+            failingVm.TriggerCommand.Execute(null); failingService.Complete();
+            await Until(() => failingVm.Notification.StartsWith("Saving to the database failed"));
+            Check(failingVm.Results.Count == 1, "Save failure keeps the captured row");
+            failing.Fail = false;
+            failingVm.TriggerCommand.Execute(null); failingService.Complete(); await Until(() => failingVm.CanTrigger);
+            var id = failingVm.MeasurementSessionId!.Value;
+            await Until(() => failing.Rows(id).Count == 2);
+        }
+
+        await SqliteChecks(core);
+    }
+
+    private static async Task SqliteChecks(CoreSnapshot core)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"ct007-smoke-{Guid.NewGuid():N}.db");
+
+        try
+        {
+            var a = MeasurementSession.New(); var b = MeasurementSession.New();
+            var start = new DateTimeOffset(2026,10,11,11,16,10,851,TimeSpan.FromHours(8)).AddTicks(1234);
+            MeasurementResult Row(MeasurementSession s, int capture, DeviceReading reading) => new()
+            { MeasurementSessionId=s.Id, CaptureNumber=capture, StartTime=start, EndTime=start.AddSeconds(5), SampleCount=5, Reading=reading };
+            var a1 = Row(a, 1, new DeviceReading(1760152570851, 0.1 + 0.2, 125, 1.5e-7, -3, 12.25));
+            var a2 = Row(a, 2, DeviceReading.Empty);
+            var store = new SqliteMeasurementRepository(path);
+            await store.SaveAsync(a, new[] {a1, a2});
+            await store.SaveAsync(a, new[] {a2, a1});
+            await store.SaveAsync(b, new[] {Row(b, 1, DeviceReading.Empty)});
+            try { await store.SaveAsync(b, new[] {a1}); throw new Exception("Cross-session save accepted"); }
+            catch (ArgumentException) { }
+
+            var reopened = new SqliteMeasurementRepository(path);
+            var loaded = await reopened.LoadAsync(a.Id);
+            Check(loaded.Select(r => r.CaptureNumber).SequenceEqual(new[] {2,1}) && loaded[0].Number == 1, "Upsert: no duplicates, display order kept");
+            Check(loaded[1].StartTime == start && loaded[1].StartTime.Offset == start.Offset && loaded[1].EndTime == start.AddSeconds(5) &&
+                loaded[1].Reading == a1.Reading && loaded[0].Reading == DeviceReading.Empty && loaded[1].SampleCount == 5,
+                "Stored values, precision and nulls survive a reopen");
+            Check((await reopened.LoadAsync(b.Id)).All(r => r.MeasurementSessionId == b.Id) && (await reopened.LoadAsync(b.Id)).Count == 1,
+                "Loading one session excludes others");
+            Check((await reopened.LoadLatestSessionAsync())?.Id == b.Id, "Latest session");
+            await reopened.DeleteAsync(a.Id, 2);
+            Check((await reopened.LoadAsync(a.Id)).Count == 1, "Delete removes only that capture");
+
+            // Restart: a new ViewModel shows the last session without creating one; Start then creates a new one.
+            var service = new ControlledMeasurements();
+            Guid captured;
+            using (var vm = new MeasurementViewModel(service, new FakeExport(), new FakeDialogs(), reopened))
+            {
+                vm.SetCore(core); vm.ToggleMeasurementCommand.Execute(null);
+                captured = vm.MeasurementSessionId!.Value;
+                for (int i=0; i<2; i++) { vm.TriggerCommand.Execute(null); service.Complete(); await Until(() => vm.CanTrigger); }
+            }
+            using (var restarted = new MeasurementViewModel(new ControlledMeasurements(), new FakeExport(), new FakeDialogs(),
+                       new SqliteMeasurementRepository(path)))
+            {
+                await restarted.RestoreLatestSessionAsync();
+                Check(restarted.MeasurementSessionId == captured && restarted.Results.Count == 2 && restarted.State == MeasurementState.Idle &&
+                    restarted.Results.Select(r => r.CaptureNumber).SequenceEqual(new[] {1,2}), "Records available after restart");
+                restarted.SetCore(core); restarted.ToggleMeasurementCommand.Execute(null);
+                Check(restarted.MeasurementSessionId != captured && restarted.Results.Count == 0, "New session after restart gets a new ID");
+            }
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(path);
+        }
+    }
+
+    // Follows a binding path the way WPF does, to prove the configured table bindings exist.
+    private static object? Resolve(string path, object? source)
+    {
+        foreach (var part in path.Split('.'))
+        {
+            source = source?.GetType().GetProperty(part)?.GetValue(source);
+        }
+
+        return source;
     }
     private sealed class FakeDialogs : IDialogService
     { public bool Confirm { get; set; } public bool ConfirmDelete() => Confirm; }
+    private sealed class MemoryRepository : IMeasurementRepository
+    {
+        private readonly object gate = new();
+        private readonly Dictionary<(Guid, int), MeasurementResult> rows = new();
+        private readonly Dictionary<(Guid, int), int> numbers = new();
+        public volatile bool Fail;
+        public int SaveCount { get; private set; }
+        public List<MeasurementResult> Rows(Guid session)
+        { lock (gate) return rows.Where(p => p.Key.Item1 == session).OrderBy(p => numbers[p.Key]).Select(p => p.Value).ToList(); }
+        public Task SaveAsync(MeasurementSession session, IReadOnlyList<MeasurementResult> list)
+        {
+            if (Fail) throw new IOException("disk full");
+            lock (gate) for (int i=0; i<list.Count; i++) { rows[(session.Id, list[i].CaptureNumber)] = list[i]; numbers[(session.Id, list[i].CaptureNumber)] = i+1; SaveCount++; }
+            return Task.CompletedTask;
+        }
+        public Task DeleteAsync(Guid session, int capture) { lock (gate) { rows.Remove((session, capture)); numbers.Remove((session, capture)); } return Task.CompletedTask; }
+        public Task<MeasurementSession?> LoadLatestSessionAsync() => Task.FromResult<MeasurementSession?>(null);
+        public Task<IReadOnlyList<MeasurementResult>> LoadAsync(Guid session) => Task.FromResult<IReadOnlyList<MeasurementResult>>(Rows(session));
+    }
     private sealed class FakeExport : ICsvExportService
     {
         public IReadOnlyList<MeasurementResult>? Rows { get; private set; }
