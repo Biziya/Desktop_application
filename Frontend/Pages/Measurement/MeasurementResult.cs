@@ -28,6 +28,16 @@ public sealed class MeasurementResult : ObservableObject
 
     public DeviceReading Reading { get; init; } = DeviceReading.Empty;
 
+    // DEMO / PREVIEW ONLY: a random ts_ms shown while the device does not report one (see
+    // MeasurementViewModel.ShowDemoTsMs). Generated once per row and kept in memory only: never saved to SQLite and
+    // never exported — storage and CSV read Reading.TsMs.
+    public long? DemoTsMs { get; set; }
+
+    // ts_ms shown in the table and chart: the device value, or the demo value when there is none.
+    public long? DisplayTsMs => Reading.TsMs ?? DemoTsMs;
+
+    public bool IsDemoTsMs => Reading.TsMs is null && DemoTsMs is not null;
+
     // Depth interval of the capture in millimetres (see Depth.cs): To = From + Step, fixed when the capture began.
     // Null for rows stored before depths were recorded. Reordering never changes them.
     public long? FromMm { get; init; }

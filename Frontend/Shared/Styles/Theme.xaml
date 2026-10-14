@@ -24,6 +24,9 @@
     <SolidColorBrush x:Key="Danger" Color="#C82C45"/>
     <SolidColorBrush x:Key="DangerSurface" Color="#FFF0F2"/>
     <SolidColorBrush x:Key="Warning" Color="#966015"/>
+    <SolidColorBrush x:Key="WarningSurface" Color="#FFF6E5"/>
+    <!-- Form and status labels: darker than Muted, lighter than Navy body text. -->
+    <SolidColorBrush x:Key="LabelText" Color="#334155"/>
     <CornerRadius x:Key="ControlRadius">8</CornerRadius>
     <CornerRadius x:Key="CardRadius">12</CornerRadius>
     <Geometry x:Key="CoreIcon">M4,2 L16,2 20,6 20,22 4,22 Z M16,2 L16,6 20,6 M8,10 L16,10 M8,14 L16,14 M8,18 L13,18</Geometry>
@@ -31,6 +34,29 @@
     <Geometry x:Key="CollapseIcon">M14,5 L7,12 14,19</Geometry>
     <Geometry x:Key="ExpandIcon">M9,5 L16,12 9,19</Geometry>
     <BooleanToVisibilityConverter x:Key="BoolVisibility"/>
+
+    <!-- Application icon: the shapes of Icons/icon.svg (64 x 64), drawn natively because WPF does not render SVG files. -->
+    <DrawingImage x:Key="AppIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#2563EB" Geometry="M14,0 H50 A14,14 0 0 1 64,14 V50 A14,14 0 0 1 50,64 H14 A14,14 0 0 1 0,50 V14 A14,14 0 0 1 14,0 Z"/>
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="14,30,9,16" RadiusX="2" RadiusY="2"/>
+                            <RectangleGeometry Rect="27.5,21,9,25" RadiusX="2" RadiusY="2"/>
+                            <RectangleGeometry Rect="41,12,9,34" RadiusX="2" RadiusY="2"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#BFD3FF">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="11,49,42,3" RadiusX="1.5" RadiusY="1.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
 
     <Style x:Key="AppWindow" TargetType="Window">
         <Setter Property="FontFamily" Value="Segoe UI"/>
@@ -51,6 +77,16 @@
         <Setter Property="CornerRadius" Value="{StaticResource CardRadius}"/>
         <Setter Property="Padding" Value="22"/>
         <Setter Property="Margin" Value="0,0,0,16"/>
+    </Style>
+    <!-- Label above an input or value; the same on every page. -->
+    <Style x:Key="FieldLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource LabelText}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style x:Key="RequiredStar" TargetType="Run">
+        <Setter Property="Foreground" Value="{StaticResource Danger}"/>
     </Style>
     <Style x:Key="SectionTitle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="18"/>
@@ -88,6 +124,15 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+    <!-- Read-only value that can still be selected and copied (e.g. file paths); long values wrap. -->
+    <Style x:Key="CopyableValue" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+        <Setter Property="IsReadOnly" Value="True"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="Padding" Value="9,7"/>
+        <Setter Property="Margin" Value="0,6,0,0"/>
     </Style>
     <!-- Existing error strings drive appearance; validation remains in the ViewModel. -->
     <Style x:Key="ValidatedInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">

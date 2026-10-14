@@ -48,6 +48,13 @@ internal static class Program
         Check(form.IsDeviceConnected && form.DeviceName == "CT007-A1" && form.DeviceIdentifier == "00:1B:44:11:3A:B7", "Connected device name and ID");
         link.Connect(null);
         Check(!form.IsDeviceConnected && form.DeviceName == "No CT007 device connected" && form.DeviceIdentifier == "", "No stale device details");
+        Check(form.GammGuardDatabasePath == "Not available", "Gamm Guard path: Not available without a device");
+        link.Connect(new DeviceConnection("CT007-A1", "00:1B:44:11:3A:B7", @"D:\GammGuard\data\gammguard.sqlite"));
+        Check(form.GammGuardDatabasePath == @"D:\GammGuard\data\gammguard.sqlite" && form.DatabasePath == @"C:\data\measurements.db",
+            "Gamm Guard path reported by the device, separate from the measurement database");
+        link.Connect(new DeviceConnection("CT007-B2", "00:1B:44:11:3A:C8"));
+        Check(form.GammGuardDatabasePath == "Not available", "A device without a reported path shows Not available, not a stale path");
+        link.Connect(null);
         var account = CoreInformationViewModel.CurrentWindowsAccount();
         Check(account.Length > 0 && account.EndsWith(Environment.UserName) &&
             (account == Environment.UserName || account == $"{Environment.UserDomainName}\\{Environment.UserName}") &&
@@ -123,29 +130,39 @@ internal static class Program
         vm.Move(vm.Results[2], first, false);
         vm.ExportCommand.Execute(null); await Until(() => vm.ExportCommand.CanExecute(null));
         Check(export.Rows?.Select(r => r.CaptureNumber).SequenceEqual(new[] {4,1,3}) == true, "Export keeps display order");
+        var exported = export.Session ?? throw new InvalidOperationException("Export receives the session");
+        Check(exported.Id == firstSession && exported.DrillholeId == "DH-001" && exported.DrillholeName == "North Ridge" &&
+            exported.Project == "Campaign 7" && exported.Operator == "Field Tech", "Export receives the exported session's metadata");
         await Until(() => store.Rows(firstSession).Select(r => r.CaptureNumber).SequenceEqual(new[] {4,1,3}));
         Check(store.Rows(firstSession).Select(r => r.Number).SequenceEqual(new[] {1,2,3}), "Reorder updates stored No");
         Check(store.Rows(firstSession).Select(r => (r.CaptureNumber, r.FromMm)).SequenceEqual(new (int, long?)[] {(4,151500),(1,150000),(3,151000)}),
             "Reordering keeps each row's depths");
         Check(store.Progress(firstSession) == new DepthProgress(152000, 250), "Next depth and step saved with the session");
-        var csv = CsvExportService.Serialize(vm.Results.ToArray());
+        var csv = CsvExportService.Serialize(vm.Results.ToArray(), exported);
         var lines = csv.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
         Check(lines[0] == "\"No\",\"Capture No\",\"Start Time\",\"End Time\",\"Sample\",\"ts_ms\",\"count0\",\"count0_raw\"," +
-            "\"hdm\",\"hdm_raw\",\"dose_rate\",\"session_id\"", "CSV header order and session ID last");
-        Check(lines[1].StartsWith("\"1\",\"4\",") && lines[1].EndsWith($",\"{firstSession}\"") && lines.Length == 4,
-            "CSV display/capture numbers and session ID");
-        Check(CsvExportService.Serialize(new[] {first}).Contains(triggerTime.ToString("O") + "\",\"" + triggerTime.AddSeconds(5).ToString("O")),
+            "\"hdm\",\"hdm_raw\",\"dose_rate\",\"Drillhole\",\"Project\",\"Campaign\",\"Operator\",\"Notes\",\"session_id\"",
+            "CSV header: measurement columns, session metadata (Campaign once), session ID last");
+        Check(lines[0].Split(',').Count(h => h == "\"Campaign\"") == 1, "Campaign exported once");
+        Check(lines.Skip(1).All(l => l.EndsWith($"\"DH-001\",\"North Ridge\",\"Campaign 7\",\"Field Tech\",\"\",\"{firstSession}\"")),
+            "Session metadata repeated on every row");
+        Check(lines[1].StartsWith("\"1\",\"4\",") && lines.Length == 4, "CSV display/capture numbers in saved order");
+        var notes = exported with { Comment = "Broken zone, \"fault\" at 151 m\nre-check", Operator = "=cmd" };
+        var escapedCsv = CsvExportService.Serialize(new[] {vm.Results[0]}, notes);
+        Check(escapedCsv.Contains("\"Broken zone, \"\"fault\"\" at 151 m\nre-check\"") && escapedCsv.Contains("\"'=cmd\""),
+            "Notes keep commas, quotes and line breaks inside one quoted cell; formulas are neutralised");
+        Check(CsvExportService.Serialize(new[] {first}, exported).Contains(triggerTime.ToString("O") + "\",\"" + triggerTime.AddSeconds(5).ToString("O")),
             "CSV retains fractional seconds and offset for start/end");
         Check(!csv.Contains("Average") && !csv.Contains("Completed At"), "CSV has only configured columns");
         var reading = new DeviceReading(1760152570851, 0.1 + 0.2, 125, 1.5e-7, -3, 12.25);
         var withReading = new MeasurementResult { SessionId=firstSession, CaptureNumber=99, StartTime=first.StartTime,
             EndTime=first.EndTime, SampleCount=5, Reading=reading, FromMm=1000, ToMm=1500, StepMm=500 };
-        Check(CsvExportService.Serialize(new[] {withReading}).Contains(
+        Check(CsvExportService.Serialize(new[] {withReading}, exported).Contains(
             "\"1760152570851\",\"0.30000000000000004\",\"125\",\"1.5E-07\",\"-3\",\"12.25\""), "CSV device values keep full precision");
-        Check(CsvExportService.Serialize(new[] {first}).Contains("\"5\",\"\",\"\",\"\",\"\",\"\",\"\","), "Missing device values are empty cells");
+        Check(CsvExportService.Serialize(new[] {first}, exported).Contains("\"5\",\"\",\"\",\"\",\"\",\"\",\"\","), "Missing device values are empty cells");
         var otherSession = new MeasurementResult { SessionId=Guid.NewGuid(), CaptureNumber=1, StartTime=first.StartTime,
             EndTime=first.EndTime, SampleCount=5 };
-        try { CsvExportService.Serialize(new[] {first, otherSession}); throw new Exception("Mixed-session export accepted"); }
+        try { CsvExportService.Serialize(new[] {first, otherSession}, exported); throw new Exception("Mixed-session export accepted"); }
         catch (ArgumentException) { }
         Check(MeasurementColumns.All.Where(c => MeasurementColumnLayout.For(c).Visible).Select(c => c.Label).SequenceEqual(
             new[] {"No","From (m)","To (m)","Step (m)","Sample","ts_ms","count0","count0_raw","hdm","hdm_raw","dose_rate"}),
@@ -289,6 +306,40 @@ internal static class Program
             await Until(() => failing.Rows(id).Count == 2);
         }
 
+        // DEMO ts_ms: random preview values for rows without a device value, kept in memory only.
+        var demoService = new ControlledMeasurements();
+        using (var demoVm = new MeasurementViewModel(demoService, export, dialogs, new MemoryRepository(), showDemoTsMs: true))
+        {
+            demoVm.SetCore(core with { DrillholeId = "DEMO-1" }); demoVm.NextFrom = "10"; demoVm.Step = "0.5";
+            demoVm.ToggleMeasurementCommand.Execute(null);
+            demoVm.TriggerCommand.Execute(null); demoService.Complete(); await Until(() => demoVm.CanTrigger);
+            demoVm.TriggerCommand.Execute(null); demoVm.Step = "0.25"; demoService.Complete(); await Until(() => demoVm.CanTrigger);
+            demoVm.TriggerCommand.Execute(null); demoService.Complete(); await Until(() => demoVm.CanTrigger);
+            demoService.Reading = new DeviceReading(TsMs: 4321);
+            demoVm.TriggerCommand.Execute(null); demoService.Complete(); await Until(() => demoVm.CanTrigger);
+            var demoRows = demoVm.Results.ToList();
+            var shown = demoRows.Select(r => r.DisplayTsMs).ToList();
+            Check(demoVm.ShowDemoTsMs && demoRows.Take(3).All(r => r.IsDemoTsMs && r.Reading.TsMs is null && r.DisplayTsMs is >= 500 and <= 5000),
+                "Demo ts_ms generated for rows without a device value");
+            Check(demoRows[3] is { IsDemoTsMs: false, DemoTsMs: null, DisplayTsMs: 4321 }, "A device ts_ms is shown as is, never replaced by a demo value");
+            Check(demoRows.All(r => Equals(Resolve(MeasurementColumns.TsMs.Binding, r), r.DisplayTsMs)),
+                "Table ts_ms column shows the same value as the chart bar height (DisplayTsMs)");
+            Check(demoRows.Select(r => (r.FromMetres, r.ToMetres, r.StepMetres)).SequenceEqual(new (decimal?, decimal?, decimal?)[]
+                { (10.0m, 10.5m, 0.5m), (10.5m, 11.0m, 0.5m), (11.0m, 11.25m, 0.25m), (11.25m, 11.5m, 0.25m) }),
+                "Bar edges are from/to; a step change makes the following bars narrower");
+            demoVm.Move(demoRows[3], demoRows[0], false);
+            Check(demoRows.Select(r => r.DisplayTsMs).SequenceEqual(shown) && demoVm.Results[0] == demoRows[3],
+                "Demo values stay the same after reordering (generated once)");
+            var demoCsv = CsvExportService.Serialize(demoVm.Results.ToArray(), new MeasurementSession(demoVm.SessionId!.Value, DateTimeOffset.Now));
+            var tsColumn = Array.IndexOf(demoCsv.Split("\r\n")[0].Split(','), "\"ts_ms\"");
+            var tsCells = demoCsv.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(l => l.Split(',')[tsColumn]).ToList();
+            Check(tsCells.SequenceEqual(new[] {"\"4321\"", "\"\"", "\"\"", "\"\""}), "CSV exports the device ts_ms only, never demo values");
+        }
+        using (var plain = new MeasurementViewModel(new ControlledMeasurements(), export, dialogs, new MemoryRepository()))
+        {
+            Check(!plain.ShowDemoTsMs, "Demo mode is off unless enabled");
+        }
+
         await SqliteChecks(core);
     }
 
@@ -364,7 +415,8 @@ internal static class Program
                 Check(restarted.Results.Select(r => (r.FromMm, r.ToMm, r.StepMm)).SequenceEqual(new (long?, long?, long?)[]
                     { (151000, 151250, 250), (150000, 150500, 500), (150500, 151000, 500) }), "Depths restored unchanged by reordering");
                 Check(restarted.NextFrom == "151.25" && restarted.Step == "0.25", "Next depth and step restored after restart");
-                Check(CsvExportService.Serialize(restarted.Results.ToArray()).Split("\r\n")[1].StartsWith("\"1\",\"3\","), "CSV follows saved order");
+                var restoredSession = await new SqliteMeasurementRepository(path).LoadLatestSessionAsync();
+                Check(CsvExportService.Serialize(restarted.Results.ToArray(), restoredSession!).Split("\r\n")[1].StartsWith("\"1\",\"3\","), "CSV follows saved order");
                 restarted.SetCore(core); restarted.ToggleMeasurementCommand.Execute(null);
                 Check(restarted.SessionId == captured && restarted.State == MeasurementState.Ready, "Start after restart continues the restored session");
             }
@@ -380,6 +432,23 @@ internal static class Program
                     continued.Results[^1] is { FromMm: 151250, ToMm: 151500 }, "Appends after restored rows, depth continues");
                 continued.ToggleMeasurementCommand.Execute(null);
             }
+            // Demo values never reach SQLite; a device ts_ms is stored.
+            var demoService = new ControlledMeasurements();
+            Guid demoSession;
+            using (var demoVm = new MeasurementViewModel(demoService, new FakeExport(), new FakeDialogs(), new SqliteMeasurementRepository(path), showDemoTsMs: true))
+            {
+                demoVm.SetCore(core with { DrillholeId = "DEMO-2" }); await Until(() => demoVm.SessionId is not null);
+                demoSession = demoVm.SessionId!.Value;
+                demoVm.NextFrom = "1"; demoVm.Step = "0.5"; demoVm.ToggleMeasurementCommand.Execute(null);
+                demoVm.TriggerCommand.Execute(null); demoService.Complete(); await Until(() => demoVm.CanTrigger);
+                demoService.Reading = new DeviceReading(TsMs: 777);
+                demoVm.TriggerCommand.Execute(null); demoService.Complete(); await Until(() => demoVm.CanTrigger);
+                Check(demoVm.Results[0].IsDemoTsMs, "Demo value shown for the first row");
+            }
+            var demoStored = await new SqliteMeasurementRepository(path).LoadAsync(demoSession);
+            Check(demoStored.Count == 2 && demoStored[0].Reading.TsMs is null && demoStored[0].DemoTsMs is null && demoStored[1].Reading.TsMs == 777,
+                "SQLite holds no demo values; device ts_ms is saved");
+
             var final = await new SqliteMeasurementRepository(path).LoadAsync(captured);
             Check(final.Select(r => r.CaptureNumber).SequenceEqual(new[] {3,1,2,4}), "Stored order and rows complete, no duplicates");
             Check(await new SqliteMeasurementRepository(path).LoadProgressAsync(captured) == new DepthProgress(151500, 250),
@@ -560,8 +629,9 @@ internal static class Program
     private sealed class FakeExport : ICsvExportService
     {
         public IReadOnlyList<MeasurementResult>? Rows { get; private set; }
-        public Task<bool> ExportAsync(IReadOnlyList<MeasurementResult> rows, CancellationToken token)
-        { Rows=rows; return Task.FromResult(true); }
+        public MeasurementSession? Session { get; private set; }
+        public Task<bool> ExportAsync(IReadOnlyList<MeasurementResult> rows, MeasurementSession session, CancellationToken token)
+        { Rows=rows; Session=session; return Task.FromResult(true); }
     }
     private sealed class ControlledMeasurements : IMeasurementService
     {
@@ -584,6 +654,7 @@ internal static class Program
         }
         public void Report(TimeSpan remaining) => reportRemaining?.Invoke(remaining);
         public void Fail() => pending?.SetException(new InvalidOperationException("Simulated failure"));
-        public void Complete() => pending?.SetResult(new CaptureData(start,start.AddSeconds(5),new double[] {1,2,3,4,5},"cps",start.AddSeconds(5).AddMilliseconds(20)));
+        public DeviceReading? Reading { get; set; }
+        public void Complete() => pending?.SetResult(new CaptureData(start,start.AddSeconds(5),new double[] {1,2,3,4,5},"cps",start.AddSeconds(5).AddMilliseconds(20),Reading));
     }
 }

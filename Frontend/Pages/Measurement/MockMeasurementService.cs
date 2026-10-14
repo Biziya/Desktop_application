@@ -26,8 +26,11 @@ public sealed record DeviceReading(
     public static DeviceReading Empty { get; } = new();
 }
 
-/// <summary>Identity of the connected CT007, as reported by the connection.</summary>
-public sealed record DeviceConnection(string Name, string Identifier);
+/// <summary>
+/// Identity of the connected CT007, as reported by the connection. <paramref name="GammGuardDatabasePath"/> is the
+/// Gamm Guard SQLite database the device integration reports, or null when it does not report one.
+/// </summary>
+public sealed record DeviceConnection(string Name, string Identifier, string? GammGuardDatabasePath = null);
 
 public interface IMeasurementService
 {

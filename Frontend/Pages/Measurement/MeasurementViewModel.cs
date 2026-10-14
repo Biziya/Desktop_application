@@ -35,8 +35,10 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         IMeasurementService measurement,
         ICsvExportService export,
         IDialogService dialogs,
-        IMeasurementRepository repository)
+        IMeasurementRepository repository,
+        bool showDemoTsMs = false)
     {
+        ShowDemoTsMs = showDemoTsMs;
         this.measurement = measurement;
         this.export = export;
         this.dialogs = dialogs;
@@ -65,7 +67,11 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
         NewMeasurementCommand = new RelayCommand(_ => NewMeasurement(), _ => !IsMeasurementModeActive);
 
-        Results.CollectionChanged += (_, _) => ExportCommand.Refresh();
+        Results.CollectionChanged += (_, change) =>
+        {
+            AssignDemoTsMs(change.NewItems);
+            ExportCommand.Refresh();
+        };
     }
 
     public ObservableCollection<MeasurementResult> Results { get; } = [];
@@ -80,6 +86,12 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     /// <summary>Closes the current drillhole: the next Save &amp; Continue opens the session of the drillhole entered then.</summary>
     public RelayCommand NewMeasurementCommand { get; }
+
+    /// <summary>
+    /// DEMO / PREVIEW MODE: rows without a device ts_ms get a random one so the table and chart can be previewed.
+    /// Turn off (MainViewModel) once the device provides ts_ms. Demo values are never saved or exported.
+    /// </summary>
+    public bool ShowDemoTsMs { get; }
 
     public MeasurementState State
     {
@@ -523,6 +535,23 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
+    // Each row gets its demo value once, when it enters the table, so redraws and reorders keep the same value.
+    private void AssignDemoTsMs(System.Collections.IList? rows)
+    {
+        if (!ShowDemoTsMs || rows is null)
+        {
+            return;
+        }
+
+        foreach (MeasurementResult row in rows)
+        {
+            if (row.Reading.TsMs is null)
+            {
+                row.DemoTsMs ??= Random.Shared.Next(500, 5001);
+            }
+        }
+    }
+
     private void Delete(object? parameter)
     {
         if (parameter is not MeasurementResult row || !dialogs.ConfirmDelete())
@@ -590,7 +619,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     private async Task ExportAsync()
     {
-        if (await export.ExportAsync(Results.ToArray(), lifetime.Token))
+        if (session is { } current && await export.ExportAsync(Results.ToArray(), current, lifetime.Token))
         {
             Notify("CSV exported.");
         }

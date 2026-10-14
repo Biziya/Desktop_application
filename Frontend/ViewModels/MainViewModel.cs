@@ -10,6 +10,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private ObservableObject currentPage;
     private bool isSidebarExpanded = true;
 
+    // DEMO / PREVIEW: random ts_ms for rows without a device value (in memory only; never saved or exported).
+    // Set to false once the CT007 service provides ts_ms.
+    private const bool ShowDemoTsMs = true;
+
     public MainViewModel()
         : this(new SqliteMeasurementRepository(SqliteMeasurementRepository.DefaultPath))
     {
@@ -18,7 +22,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public MainViewModel(IMeasurementRepository repository)
     {
         var device = new MockMeasurementService();
-        Measurement = new MeasurementViewModel(device, new CsvExportService(), new DialogService(), repository);
+        Measurement = new MeasurementViewModel(
+            device, new CsvExportService(), new DialogService(), repository, showDemoTsMs: ShowDemoTsMs);
         _ = Measurement.RestoreLatestSessionAsync();
         Core = new CoreInformationViewModel(
             core =>

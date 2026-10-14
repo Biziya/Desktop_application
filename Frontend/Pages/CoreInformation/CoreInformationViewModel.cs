@@ -28,6 +28,7 @@ public sealed class CoreInformationViewModel : ObservableObject
             Changed(nameof(DeviceStatus));
             Changed(nameof(DeviceName));
             Changed(nameof(DeviceIdentifier));
+            Changed(nameof(GammGuardDatabasePath));
         };
     }
 
@@ -45,6 +46,13 @@ public sealed class CoreInformationViewModel : ObservableObject
     public string DeviceName => device.ConnectedDevice?.Name ?? "No CT007 device connected";
 
     public string DeviceIdentifier => device.ConnectedDevice?.Identifier ?? "";
+
+    /// <summary>
+    /// Gamm Guard SQLite database reported by the connected device; separate from <see cref="DatabasePath"/>.
+    /// "Not available" when no device is connected or it reports no path — no path is ever guessed.
+    /// </summary>
+    public string GammGuardDatabasePath =>
+        device.ConnectedDevice?.GammGuardDatabasePath is { Length: > 0 } path ? path : "Not available";
 
     public string DrillholeId
     {

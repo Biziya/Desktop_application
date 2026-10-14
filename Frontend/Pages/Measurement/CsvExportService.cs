@@ -7,12 +7,12 @@ namespace Frontend.Pages.Measurement;
 
 public interface ICsvExportService
 {
-    Task<bool> ExportAsync(IReadOnlyList<MeasurementResult> rows, CancellationToken cancellationToken);
+    Task<bool> ExportAsync(IReadOnlyList<MeasurementResult> rows, MeasurementSession session, CancellationToken cancellationToken);
 }
 
 public sealed class CsvExportService : ICsvExportService
 {
-    public async Task<bool> ExportAsync(IReadOnlyList<MeasurementResult> rows, CancellationToken cancellationToken)
+    public async Task<bool> ExportAsync(IReadOnlyList<MeasurementResult> rows, MeasurementSession session, CancellationToken cancellationToken)
     {
         var dialog = new SaveFileDialog
         {
@@ -29,7 +29,7 @@ public sealed class CsvExportService : ICsvExportService
         }
 
         // Snapshot serialization happens before yielding so later reorder/delete cannot affect this export.
-        var csv = Serialize(rows);
+        var csv = Serialize(rows, session);
         var temporary = dialog.FileName + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
         try
@@ -49,24 +49,43 @@ public sealed class CsvExportService : ICsvExportService
         return true;
     }
 
+    // Session metadata repeated on every row: CSV header (= Core Information label) → stored session field.
+    // Placed just before session_id, which stays the last column.
+    private static readonly (string Header, Func<MeasurementSession, string?> Value)[] SessionColumns =
+    [
+        ("Drillhole", s => s.DrillholeId),
+        ("Project", s => s.DrillholeName),
+        ("Campaign", s => s.Project),
+        ("Operator", s => s.Operator),
+        ("Notes", s => s.Comment)
+    ];
+
     /// <summary>
-    /// Columns, order and headers come from MeasurementColumns.cs. Rows are written in the given (display) order and
-    /// must belong to one measurement session; session_id is the last column.
+    /// Measurement columns, order and headers come from MeasurementColumns.cs, followed by the metadata of
+    /// <paramref name="session"/> and session_id. Rows are written in the given (saved) order and must all belong to
+    /// <paramref name="session"/>. ts_ms is the device value only — demo values are never exported.
     /// </summary>
-    public static string Serialize(IReadOnlyList<MeasurementResult> rows)
+    public static string Serialize(IReadOnlyList<MeasurementResult> rows, MeasurementSession session)
     {
-        if (rows.Select(r => r.SessionId).Distinct().Skip(1).Any())
+        if (rows.Any(r => r.SessionId != session.Id))
         {
-            throw new ArgumentException("A CSV export must contain a single measurement session.", nameof(rows));
+            throw new ArgumentException("A CSV export must contain only rows of the exported measurement session.", nameof(rows));
         }
 
-        var columns = MeasurementColumns.All.Where(c => c.IncludeInCsv).ToArray();
+        var columns = MeasurementColumns.All.Where(c => c.IncludeInCsv && c != MeasurementColumns.SessionId).ToArray();
+        var metadata = SessionColumns.Select(c => Text(c.Value(session) ?? "")).ToArray();
         var csv = new StringBuilder();
-        csv.Append(string.Join(",", columns.Select(c => Quote(c.CsvHeader)))).Append("\r\n");
+        var headers = columns.Select(c => c.CsvHeader)
+            .Concat(SessionColumns.Select(c => c.Header))
+            .Append(MeasurementColumns.SessionId.CsvHeader);
+        csv.Append(string.Join(",", headers.Select(Quote))).Append("\r\n");
 
         foreach (var row in rows)
         {
-            csv.Append(string.Join(",", columns.Select(c => Quote(Format(c.Value(row)))))).Append("\r\n");
+            var cells = columns.Select(c => Quote(Format(c.Value(row))))
+                .Concat(metadata)
+                .Append(Quote(Format(MeasurementColumns.SessionId.Value(row))));
+            csv.Append(string.Join(",", cells)).Append("\r\n");
         }
 
         return csv.ToString();
@@ -83,7 +102,10 @@ public sealed class CsvExportService : ICsvExportService
         _ => value.ToString() ?? ""
     };
 
-    // Every cell is quoted and embedded quotes are doubled. All columns are numbers, timestamps or IDs,
-    // so there is no free text that could be read as a spreadsheet formula.
+    // Every cell is quoted and embedded quotes are doubled, so commas and line breaks (e.g. in Notes) stay in one cell.
     private static string Quote(string value) => "\"" + value.Replace("\"", "\"\"") + "\"";
+
+    // User-entered text is also kept from being read as a spreadsheet formula.
+    private static string Text(string value) =>
+        Quote(value.TrimStart() is { Length: > 0 } trimmed && trimmed[0] is '=' or '+' or '-' or '@' ? "'" + value : value);
 }

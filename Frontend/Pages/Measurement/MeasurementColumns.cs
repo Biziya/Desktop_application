@@ -43,8 +43,9 @@ public static class MeasurementColumns
         new(nameof(MeasurementResult.StepMetres), "Step (m)", "step_m", false, r => r.StepMetres, "0.00#");
     public static readonly MeasurementColumn Sample =
         new(nameof(MeasurementResult.SampleCount), "Sample", "Sample", true, r => r.SampleCount);
+    // The table shows DisplayTsMs (device value, or the in-memory demo value); CSV writes only the device value.
     public static readonly MeasurementColumn TsMs =
-        new(Reading + nameof(DeviceReading.TsMs), "ts_ms", "ts_ms", true, r => r.Reading.TsMs);
+        new(nameof(MeasurementResult.DisplayTsMs), "ts_ms", "ts_ms", true, r => r.Reading.TsMs);
     public static readonly MeasurementColumn Count0 =
         new(Reading + nameof(DeviceReading.Count0), "count0", "count0", true, r => r.Reading.Count0);
     public static readonly MeasurementColumn Count0Raw =
