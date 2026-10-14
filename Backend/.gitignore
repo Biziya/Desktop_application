@@ -1,5 +1,4 @@
+**/bin/
+**/obj/
 bin/
 obj/
-Debug/
-.vs/
-*.user
