@@ -307,32 +307,24 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\bsarangerel\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\Bek\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\bsarangerel\\Documents\\Workspace-biziya\\Projects\\Project_clone\\CT-007-Desktop\\Frontend\\Frontend.csproj",
+      "projectUniqueName": "C:\\Users\\Bek\\Documents\\Projects\\Desktop_application\\Frontend\\Frontend.csproj",
       "projectName": "Frontend",
-      "projectPath": "C:\\Users\\bsarangerel\\Documents\\Workspace-biziya\\Projects\\Project_clone\\CT-007-Desktop\\Frontend\\Frontend.csproj",
-      "packagesPath": "C:\\Users\\bsarangerel\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\bsarangerel\\Documents\\Workspace-biziya\\Projects\\Project_clone\\CT-007-Desktop\\Frontend\\obj\\",
+      "projectPath": "C:\\Users\\Bek\\Documents\\Projects\\Desktop_application\\Frontend\\Frontend.csproj",
+      "packagesPath": "C:\\Users\\Bek\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Bek\\Documents\\Projects\\Desktop_application\\Frontend\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
-        "C:\\Users\\bsarangerel\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\Bek\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0-windows"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -352,7 +344,7 @@
         "auditLevel": "low",
         "auditMode": "all"
       },
-      "SdkAnalysisLevel": "10.0.300"
+      "SdkAnalysisLevel": "10.0.400"
     },
     "frameworks": {
       "net10.0-windows": {
@@ -383,7 +375,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.402/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.CSharp": "(,4.7.32767]",
           "Microsoft.VisualBasic": "(,10.4.32767]",

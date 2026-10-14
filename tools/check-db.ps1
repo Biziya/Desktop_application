@@ -15,7 +15,7 @@ param(
     [string]$Sql,
     [string]$Value,
     [switch]$Grid,
-    [string]$Database = (Join-Path $env:LOCALAPPDATA 'CT007 Measurement Studio\measurements.db')
+    [string]$Database = (Join-Path $env:LOCALAPPDATA 'CT007-Measurement-Studio\measurements.db')
 )
 
 $ErrorActionPreference = 'Stop'
