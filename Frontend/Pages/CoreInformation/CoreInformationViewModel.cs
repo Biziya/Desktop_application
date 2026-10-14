@@ -9,7 +9,6 @@ public sealed class CoreInformationViewModel : ObservableObject
     private string drillholeId = "";
     private string drillholeName = "";
     private string projectArea = "";
-    private string coreId = "";
     private string operatorName = "";
     private string notes = "";
     private bool showErrors;
@@ -65,12 +64,6 @@ public sealed class CoreInformationViewModel : ObservableObject
         set { if (Set(ref projectArea, value)) Update(); }
     }
 
-    public string CoreId
-    {
-        get => coreId;
-        set { if (Set(ref coreId, value)) Update(); }
-    }
-
     public string Operator
     {
         get => operatorName;
@@ -100,18 +93,14 @@ public sealed class CoreInformationViewModel : ObservableObject
     }
 
     public string DrillholeIdError =>
-        showErrors && string.IsNullOrWhiteSpace(DrillholeId) ? "Enter a drillhole ID." : "";
+        showErrors && string.IsNullOrWhiteSpace(DrillholeId) ? "Enter a drillhole." : "";
 
     public string DrillholeNameError =>
-        showErrors && string.IsNullOrWhiteSpace(DrillholeName) ? "Enter a drillhole name." : "";
-
-    public string CoreIdError =>
-        showErrors && string.IsNullOrWhiteSpace(CoreId) ? "Enter a core ID." : "";
+        showErrors && string.IsNullOrWhiteSpace(DrillholeName) ? "Enter a project." : "";
 
     private bool HasRequiredText =>
         !string.IsNullOrWhiteSpace(DrillholeId) &&
-        !string.IsNullOrWhiteSpace(DrillholeName) &&
-        !string.IsNullOrWhiteSpace(CoreId);
+        !string.IsNullOrWhiteSpace(DrillholeName);
 
     private void Save(Action<CoreSnapshot> saved)
     {
@@ -133,7 +122,6 @@ public sealed class CoreInformationViewModel : ObservableObject
             DrillholeId.Trim(),
             DrillholeName.Trim(),
             ProjectArea.Trim(),
-            CoreId.Trim(),
             Operator.Trim(),
             Notes.Trim()));
     }
@@ -148,6 +136,5 @@ public sealed class CoreInformationViewModel : ObservableObject
     {
         Changed(nameof(DrillholeIdError));
         Changed(nameof(DrillholeNameError));
-        Changed(nameof(CoreIdError));
     }
 }

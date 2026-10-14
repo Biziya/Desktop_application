@@ -110,7 +110,7 @@ CSV contains the columns above in order (including the hidden Capture No, Start 
 
 ## Existing features preserved
 
-- Required form validation and saved core snapshots. Operator is pre-filled with the signed-in Windows account (`DOMAIN\Username` for a domain account, otherwise the user name — never the computer name alone); it stays editable, an emptied field is filled again on Save & Continue, and a drillhole's stored operator is never overwritten.
+- Core Information page: two sections, **Drillhole Information** and **Device Status**. Labels Drillhole, Project and Campaign are display text for `DrillholeId`, `DrillholeName` and `ProjectArea` (SQLite `DrillholeID`, `DrillholeName`, `Project`); Drillhole and Project are required. There is no Core ID field (it was never stored). Required form validation and saved core snapshots. Operator is pre-filled with the signed-in Windows account (`DOMAIN\Username` for a domain account, otherwise the user name — never the computer name alone); it stays editable, an emptied field is filled again on Save & Continue, and a drillhole's stored operator is never overwritten.
 - Blue/white theme, collapsible sidebar, active navigation, icon tooltips and retained sidebar state.
 - Drag handle and Delete columns around the configured measurement columns; 36-pixel rows (at the default 1.0 multipliers) and alternating backgrounds.
 - Measurement page sizes are Default x Multiplier values in `Pages/Measurement/MeasurementUiConstants.xaml`; every multiplier is 1.0 by default, which is the original look. They are applied with `{local:Scale ...}` (`ScaleExtension.cs`).

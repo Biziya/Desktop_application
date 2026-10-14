@@ -240,7 +240,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
             if (resolved.Id != candidate.Id && resolved.MetadataDiffers(candidate))
             {
-                Notify($"Drillhole {core.DrillholeId} already exists. Its stored name, project, operator and comment are kept; the edited values were not saved.");
+                Notify($"Drillhole {core.DrillholeId} already exists. Its stored project, campaign, operator and notes are kept; the edited values were not saved.");
             }
         }
         catch (Exception error)

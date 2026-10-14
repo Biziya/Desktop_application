@@ -44,57 +44,49 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
 
+            <!-- One section for all form fields. Labels are display text only: Drillhole → DrillholeId (DrillholeID),
+                 Project → DrillholeName (DrillholeName), Campaign → ProjectArea (Project). Three equal columns with the same
+                 field margins keep both rows aligned and every input the same width; Notes spans two. -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="Drillhole Information" Style="{StaticResource SectionTitle}"/>
-                    <UniformGrid Columns="3">
-                        <StackPanel Style="{StaticResource FieldPanel}">
-                            <TextBlock><Run Text="Drillhole ID"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
-                            <TextBox Style="{StaticResource ValidatedInput}"
-                                     Tag="{Binding DrillholeIdError}"
-                                     Text="{Binding DrillholeId, UpdateSourceTrigger=PropertyChanged}"
-                                     AutomationProperties.Name="Drillhole ID"/>
-                            <TextBlock Style="{StaticResource ErrorText}" Text="{Binding DrillholeIdError}"/>
-                        </StackPanel>
-                        <StackPanel Style="{StaticResource FieldPanel}">
-                            <TextBlock><Run Text="Drillhole Name"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
-                            <TextBox Style="{StaticResource ValidatedInput}"
-                                     Tag="{Binding DrillholeNameError}"
-                                     Text="{Binding DrillholeName, UpdateSourceTrigger=PropertyChanged}"
-                                     AutomationProperties.Name="Drillhole Name"/>
-                            <TextBlock Style="{StaticResource ErrorText}" Text="{Binding DrillholeNameError}"/>
-                        </StackPanel>
-                        <StackPanel Style="{StaticResource FieldPanel}">
-                            <TextBlock Text="Project / Area"/>
-                            <TextBox Text="{Binding ProjectArea, UpdateSourceTrigger=PropertyChanged}"
-                                     AutomationProperties.Name="Project / Area"/>
-                        </StackPanel>
-                    </UniformGrid>
-                </StackPanel>
-            </Border>
-
-            <Border Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock Text="Core Information" Style="{StaticResource SectionTitle}"/>
-                    <StackPanel Style="{StaticResource FieldPanel}">
-                        <TextBlock><Run Text="Core ID"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
-                        <TextBox Style="{StaticResource ValidatedInput}"
-                                 Tag="{Binding CoreIdError}"
-                                 Text="{Binding CoreId, UpdateSourceTrigger=PropertyChanged}"
-                                 AutomationProperties.Name="Core ID"/>
-                        <TextBlock Style="{StaticResource ErrorText}" Text="{Binding CoreIdError}"/>
-                    </StackPanel>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition/>
-                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition/>
+                            <ColumnDefinition/>
                         </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         <StackPanel Style="{StaticResource FieldPanel}">
+                            <TextBlock><Run Text="Drillhole"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
+                            <TextBox Style="{StaticResource ValidatedInput}"
+                                     Tag="{Binding DrillholeIdError}"
+                                     Text="{Binding DrillholeId, UpdateSourceTrigger=PropertyChanged}"
+                                     AutomationProperties.Name="Drillhole"/>
+                            <TextBlock Style="{StaticResource ErrorText}" Text="{Binding DrillholeIdError}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Style="{StaticResource FieldPanel}">
+                            <TextBlock><Run Text="Project"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
+                            <TextBox Style="{StaticResource ValidatedInput}"
+                                     Tag="{Binding DrillholeNameError}"
+                                     Text="{Binding DrillholeName, UpdateSourceTrigger=PropertyChanged}"
+                                     AutomationProperties.Name="Project"/>
+                            <TextBlock Style="{StaticResource ErrorText}" Text="{Binding DrillholeNameError}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Style="{StaticResource FieldPanel}">
+                            <TextBlock Text="Campaign"/>
+                            <TextBox Text="{Binding ProjectArea, UpdateSourceTrigger=PropertyChanged}"
+                                     AutomationProperties.Name="Campaign"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" Style="{StaticResource FieldPanel}" Margin="0,0,14,0">
                             <TextBlock Text="Operator"/>
                             <TextBox Text="{Binding Operator, UpdateSourceTrigger=PropertyChanged}"
                                      AutomationProperties.Name="Operator"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="1">
+                        <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,14,0">
                             <TextBlock Text="Notes"/>
                             <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
                                      AutomationProperties.Name="Notes"

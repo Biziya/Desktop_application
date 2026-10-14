@@ -54,11 +54,14 @@ internal static class Program
             account != Environment.MachineName, "Windows account: DOMAIN\\user or user, never the computer name alone");
         Check(form.Operator == account, "Operator autofilled for a new form");
         form.SaveCommand.Execute(null);
-        Check(saved is null && form.DrillholeIdError.Length > 0, "Required field validation");
-        form.DrillholeId = "DH-001"; form.DrillholeName = "North Ridge"; form.CoreId = "C-001";
-        Check(form.IsValid, "Valid without depth fields");
+        Check(saved is null && form.DrillholeIdError == "Enter a drillhole." && form.DrillholeNameError == "Enter a project.",
+            "Required field validation uses the new labels");
+        form.DrillholeId = "DH-001"; form.DrillholeName = "North Ridge"; form.ProjectArea = "Campaign 7";
+        Check(form.IsValid && typeof(CoreInformationViewModel).GetProperty("CoreId") is null && typeof(CoreSnapshot).GetProperty("CoreId") is null,
+            "Valid with only Drillhole and Project; no Core ID or depth fields");
         form.Operator = "Field Tech"; form.SaveCommand.Execute(null);
-        Check(saved is { Operator: "Field Tech" }, "Edited Operator kept and saved");
+        Check(saved is { DrillholeId: "DH-001", DrillholeName: "North Ridge", ProjectArea: "Campaign 7", Operator: "Field Tech" },
+            "Renamed fields save to their original mappings; edited Operator kept");
         form.Operator = "  "; form.SaveCommand.Execute(null);
         Check(saved?.Operator == account && form.Operator == account, "Empty Operator autofilled again on save");
         form.Operator = "Field Tech"; form.SaveCommand.Execute(null);
@@ -388,6 +391,8 @@ internal static class Program
                 check.Open();
                 Check(Scalar(check, "PRAGMA user_version") == "4", "Schema version 4");
                 Check(Scalar(check, "SELECT COUNT(*) FROM MeasurementSessions WHERE DrillholeID = 'C-3'") == "1", "One row per Drillhole ID");
+                Check(Scalar(check, "SELECT DrillholeID || '|' || DrillholeName || '|' || Project || '|' || \"operator\" FROM MeasurementSessions WHERE id = '" + captured + "'")
+                    == "DH-001|North Ridge|Campaign 7|Field Tech", "Drillhole / Project / Campaign / Operator stored in their original columns");
                 Check(Scalar(check, "SELECT group_concat(name) FROM pragma_index_info('UX_MeasurementSessions_DrillholeID')") == "DrillholeID",
                     "DrillholeID is unique");
                 Check(Scalar(check, "SELECT \"from\" || '-' || \"to\" || '/' || step FROM MeasurementRecords WHERE CaptureNo = 4 AND session_id = '" + captured + "'")
