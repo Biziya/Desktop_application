@@ -48,7 +48,7 @@ public static class MeasurementColumns
     public static readonly MeasurementColumn DoseRate =
         new(Reading + nameof(DeviceReading.DoseRate), "dose_rate", "dose_rate", true, r => r.Reading.DoseRate);
     public static readonly MeasurementColumn SessionId =
-        new(nameof(MeasurementResult.MeasurementSessionId), "Session", "MeasurementSessionId", true, r => r.MeasurementSessionId);
+        new(nameof(MeasurementResult.SessionId), "Session", "session_id", true, r => r.SessionId);
 
     // SessionId stays last so exported rows remain identifiable.
     public static IReadOnlyList<MeasurementColumn> All { get; } =

@@ -51,11 +51,11 @@ public sealed class CsvExportService : ICsvExportService
 
     /// <summary>
     /// Columns, order and headers come from MeasurementColumns.cs. Rows are written in the given (display) order and
-    /// must belong to one measurement session; MeasurementSessionId is the last column.
+    /// must belong to one measurement session; session_id is the last column.
     /// </summary>
     public static string Serialize(IReadOnlyList<MeasurementResult> rows)
     {
-        if (rows.Select(r => r.MeasurementSessionId).Distinct().Skip(1).Any())
+        if (rows.Select(r => r.SessionId).Distinct().Skip(1).Any())
         {
             throw new ArgumentException("A CSV export must contain a single measurement session.", nameof(rows));
         }

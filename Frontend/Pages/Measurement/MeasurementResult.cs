@@ -14,8 +14,8 @@ public sealed class MeasurementResult : ObservableObject
         set => Set(ref number, value);
     }
 
-    // Groups every row captured between one Start and the next Start. Not shown in the table.
-    public required Guid MeasurementSessionId { get; init; }
+    // Session the row belongs to (MeasurementRecords.session_id). Not shown in the table.
+    public required Guid SessionId { get; init; }
 
     // Stable within a session: never reused after delete or reorder.
     public required int CaptureNumber { get; init; }

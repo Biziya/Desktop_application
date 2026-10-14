@@ -69,7 +69,7 @@ Fonts, row heights, paddings, the drag-handle and Delete columns stay in `Measur
 | hdm | Yes | Yes | `Reading.Hdm` | `Hdm` |
 | hdm_raw | Yes | Yes | `Reading.HdmRaw` | `HdmRaw` |
 | dose_rate | Yes | Yes | `Reading.DoseRate` | `DoseRate` |
-| MeasurementSessionId | No | Yes (last) | `MeasurementSessionId` | `MeasurementSessionId` |
+| session_id | No | Yes (last) | `SessionId` | `session_id` |
 
 **Missing mappings.** The capture pipeline had no source for ts_ms, count0, count0_raw, hdm, hdm_raw or dose_rate. They are now an optional `DeviceReading` on `CaptureData`, which a device service fills; raw and processed values are separate fields. `MockMeasurementService` does not invent them, so they are blank in the table and CSV and NULL in SQLite until a real CT007 service supplies them. Averaging and timing are unchanged.
 
@@ -79,17 +79,18 @@ The table builds these columns in `MeasurementPage.xaml.cs` between the drag han
 
 - **New Measurement** (table header, enabled while stopped) is the only action that starts a new session (new GUID). The table then shows only the new session and Capture No starts at 1; earlier sessions stay in the database.
 - **Start / Stop** only start and stop acquisition. Stop keeps every row; Start again continues the same session and appends new rows after the existing ones, with Capture No continuing. The very first Start, when no session exists yet, creates one. Navigation, editing Core Information and restoring stored rows never create a session.
-- Database: `%LocalAppData%\CT007 Measurement Studio\measurements.db` (shown on the Core Information page). Tables `MeasurementSessions (MeasurementSessionId, CreatedAt)` and `MeasurementRecords (MeasurementRecordId, MeasurementSessionId FK, SortOrder, CaptureNo, ...)`. A unique index on `(MeasurementSessionId, CaptureNo)` prevents duplicates and serves lookups by session.
+- Database: `%LocalAppData%\CT007_Measurement_Studio\measurements.db` (shown on the Core Information page). A database in the old `CT007 Measurement Studio` folder is moved there automatically on first start; if it cannot be moved (file open in another program), the old location keeps being used. One shared table for all sessions and one for all records: `MeasurementSessions (id, CreatedAt)` and `MeasurementRecords (id, session_id, SortOrder, CaptureNo, ...)`, with `MeasurementRecords.session_id → MeasurementSessions.id` (foreign keys enforced, no cascading delete). The unique index `UX_MeasurementRecords_Session_CaptureNo (session_id, CaptureNo)` prevents duplicates and, with session_id first, is the index used for lookups by session.
 - Row order: drag-and-drop reordering (column-header sorting is disabled) is stored as `SortOrder` within the session. After each capture, reorder and delete the ViewModel queues a save of the table; in one transaction it inserts new rows and rewrites `SortOrder` only for rows that moved. Record IDs, capture numbers, times and values never change. Loading, restart and CSV all use `SortOrder`; No is just the displayed position.
+- The database uses WAL journal mode, so external tools (DBeaver, `tools/check-db.ps1`) can read it while the app is running and the app keeps saving meanwhile. SQLite has no users or permissions: any program running as the same Windows user can open the file. Keep `measurements.db`, `measurements.db-wal` and `measurements.db-shm` together if you copy it.
 - Saves run in order on the thread pool, never on the UI thread, with parameterized SQL. Delete removes the row from the database too.
 - If a save fails, a notification shows the error and the rows stay in the table. The next change, Stop or closing saves them again. New Measurement refuses to switch sessions until they are saved. A failed delete is reported but not retried. Closing waits up to five seconds for queued saves.
 - On startup the most recently stored session is shown again in its saved order (Idle). Start continues it; New Measurement starts another. Earlier sessions can be loaded by ID through the repository (`LoadAsync`); there is no session picker in the UI.
-- Schema version is kept in `PRAGMA user_version` (now 2). Migrations add only missing steps inside a transaction, so existing data is kept: version 2 renames `DisplayNo` to `SortOrder`, keeping the stored order. A database from a newer app version is refused rather than changed.
+- Schema version is kept in `PRAGMA user_version` (now 3). Migrations add only missing steps inside a transaction, so existing data is kept: version 2 renames `DisplayNo` to `SortOrder`; version 3 renames `MeasurementSessionId`/`MeasurementRecordId` to `id` and `session_id` with `ALTER TABLE ... RENAME COLUMN`, keeping every ID, value, link and the index. After migrating, a foreign-key check must find no record without a session, or the upgrade is rolled back. A database from a newer app version is refused rather than changed.
 - Timestamps are stored as ISO 8601 round-trip text (O) with full sub-second precision and offset; device values as INTEGER/REAL.
 
 ## Export
 
-CSV contains the columns above in order (including the hidden Capture No, Start Time and End Time), with MeasurementSessionId last, for the current session only, in the saved row order. Timestamps use the round-trip format (O); numbers use invariant culture and round-trip precision; missing device values are empty cells. Every cell is quoted with embedded quotes doubled; lines end in CRLF; UTF-8 BOM and temporary-file replacement are unchanged. Export rejects rows from more than one session.
+CSV contains the columns above in order (including the hidden Capture No, Start Time and End Time), with session_id last, for the current session only, in the saved row order. Timestamps use the round-trip format (O); numbers use invariant culture and round-trip precision; missing device values are empty cells. Every cell is quoted with embedded quotes doubled; lines end in CRLF; UTF-8 BOM and temporary-file replacement are unchanged. Export rejects rows from more than one session.
 
 ## Device Status and shared styling
 

@@ -116,7 +116,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     public bool NeedsCore => savedCore is null;
 
     /// <summary>Session shown in the table and exported. Hidden from the table; null until the first Start or a restore.</summary>
-    public Guid? MeasurementSessionId => session?.Id;
+    public Guid? SessionId => session?.Id;
 
     /// <summary>
     /// Shows the most recently stored session after a restart, in its saved order. Start then continues it.
@@ -140,7 +140,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
             session = latest;
             nextCapture = rows.Count == 0 ? 1 : rows.Max(r => r.CaptureNumber) + 1;
-            Changed(nameof(MeasurementSessionId));
+            Changed(nameof(SessionId));
 
             foreach (var row in rows)
             {
@@ -268,7 +268,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         session = MeasurementSession.New();
         nextCapture = 1;
         Results.Clear();
-        Changed(nameof(MeasurementSessionId));
+        Changed(nameof(SessionId));
     }
 
     private void StopMeasurementMode()
@@ -339,7 +339,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
             Results.Add(new MeasurementResult
             {
-                MeasurementSessionId = current.Id,
+                SessionId = current.Id,
                 CaptureNumber = nextCapture++,
                 StartTime = data.StartTime,
                 EndTime = data.EndTime,
@@ -390,7 +390,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
         Results.Remove(row);
         Renumber();
-        _ = Persist(() => repository.DeleteAsync(row.MeasurementSessionId, row.CaptureNumber));
+        _ = Persist(() => repository.DeleteAsync(row.SessionId, row.CaptureNumber));
         SaveSession();
         Notify("Measurement deleted.");
     }

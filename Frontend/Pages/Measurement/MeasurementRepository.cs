@@ -37,7 +37,7 @@ public interface IMeasurementRepository
 public sealed class SqliteMeasurementRepository : IMeasurementRepository
 {
     // Raise when the schema changes, and add a step to Migrate that alters existing tables without dropping data.
-    private const int SchemaVersion = 2;
+    private const int SchemaVersion = 3;
 
     private const string RecordColumns =
         "SortOrder, CaptureNo, StartTime, EndTime, Sample, TsMs, Count0, Count0Raw, Hdm, HdmRaw, DoseRate";
@@ -54,10 +54,52 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
 
     public string DatabasePath { get; }
 
-    public static string DefaultPath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "CT007 Measurement Studio",
-        "measurements.db");
+    /// <summary>%LocalAppData%\CT007_Measurement_Studio\measurements.db — no spaces, so it is easy to use in tools.</summary>
+    public static string DefaultPath { get; } = ResolveDefaultPath(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+
+    // Earlier versions used a folder name with spaces. Their database (with its WAL files) is moved once into the
+    // new folder. If the move is not possible (e.g. another program has the file open), the old location keeps
+    // being used, so no stored measurements are ever left behind.
+    internal static string ResolveDefaultPath(string localAppData)
+    {
+        var path = Path.Combine(localAppData, "CT007_Measurement_Studio", "measurements.db");
+        var legacy = Path.Combine(localAppData, "CT007 Measurement Studio", "measurements.db");
+
+        if (File.Exists(path) || !File.Exists(legacy))
+        {
+            return path;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+            foreach (var suffix in new[] { "-wal", "-shm" })
+            {
+                if (File.Exists(legacy + suffix))
+                {
+                    File.Move(legacy + suffix, path + suffix);
+                }
+            }
+
+            File.Move(legacy, path);
+            return path;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // Put back anything already moved so the old database stays complete.
+            foreach (var suffix in new[] { "-wal", "-shm" })
+            {
+                if (File.Exists(path + suffix) && !File.Exists(legacy + suffix))
+                {
+                    File.Move(path + suffix, legacy + suffix);
+                }
+            }
+
+            return legacy;
+        }
+    }
 
     public Task SaveAsync(MeasurementSession session, IReadOnlyList<MeasurementResult> rows) => Run(connection =>
     {
@@ -67,20 +109,20 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
         {
             insertSession.Transaction = transaction;
             insertSession.CommandText =
-                "INSERT OR IGNORE INTO MeasurementSessions (MeasurementSessionId, CreatedAt) VALUES ($session, $createdAt)";
+                "INSERT OR IGNORE INTO MeasurementSessions (id, CreatedAt) VALUES ($session, $createdAt)";
             insertSession.Parameters.AddWithValue("$session", Key(session.Id));
             insertSession.Parameters.AddWithValue("$createdAt", Time(session.CreatedAt));
             insertSession.ExecuteNonQuery();
         }
 
-        // (MeasurementSessionId, CaptureNo) is unique: saving a stored row again never duplicates it and only
+        // (session_id, CaptureNo) is unique: saving a stored row again never duplicates it and only
         // rewrites its SortOrder when the user moved it. IDs, capture numbers, times and values stay unchanged.
         using var upsert = connection.CreateCommand();
         upsert.Transaction = transaction;
         upsert.CommandText = $"""
-            INSERT INTO MeasurementRecords (MeasurementSessionId, {RecordColumns})
+            INSERT INTO MeasurementRecords (session_id, {RecordColumns})
             VALUES ($session, $sortOrder, $captureNo, $startTime, $endTime, $sample, $tsMs, $count0, $count0Raw, $hdm, $hdmRaw, $doseRate)
-            ON CONFLICT (MeasurementSessionId, CaptureNo) DO UPDATE SET SortOrder = excluded.SortOrder
+            ON CONFLICT (session_id, CaptureNo) DO UPDATE SET SortOrder = excluded.SortOrder
                 WHERE SortOrder <> excluded.SortOrder
             """;
 
@@ -88,7 +130,7 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
         {
             var row = rows[i];
 
-            if (row.MeasurementSessionId != session.Id)
+            if (row.SessionId != session.Id)
             {
                 throw new ArgumentException($"Capture {row.CaptureNumber} belongs to another measurement session.", nameof(rows));
             }
@@ -116,7 +158,7 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
     public Task DeleteAsync(Guid sessionId, int captureNumber) => Run(connection =>
     {
         using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM MeasurementRecords WHERE MeasurementSessionId = $session AND CaptureNo = $captureNo";
+        command.CommandText = "DELETE FROM MeasurementRecords WHERE session_id = $session AND CaptureNo = $captureNo";
         command.Parameters.AddWithValue("$session", Key(sessionId));
         command.Parameters.AddWithValue("$captureNo", captureNumber);
         command.ExecuteNonQuery();
@@ -127,10 +169,10 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
     {
         using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT s.MeasurementSessionId, s.CreatedAt
+            SELECT s.id, s.CreatedAt
             FROM MeasurementRecords r
-            JOIN MeasurementSessions s ON s.MeasurementSessionId = r.MeasurementSessionId
-            ORDER BY r.MeasurementRecordId DESC
+            JOIN MeasurementSessions s ON s.id = r.session_id
+            ORDER BY r.id DESC
             LIMIT 1
             """;
         using var reader = command.ExecuteReader();
@@ -146,7 +188,7 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
         command.CommandText = $"""
             SELECT {RecordColumns}
             FROM MeasurementRecords
-            WHERE MeasurementSessionId = $session
+            WHERE session_id = $session
             ORDER BY SortOrder, CaptureNo
             """;
         command.Parameters.AddWithValue("$session", Key(sessionId));
@@ -158,7 +200,7 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
             rows.Add(new MeasurementResult
             {
                 Number = reader.GetInt32(0),
-                MeasurementSessionId = sessionId,
+                SessionId = sessionId,
                 CaptureNumber = reader.GetInt32(1),
                 StartTime = ParseTime(reader.GetString(2)),
                 EndTime = ParseTime(reader.GetString(3)),
@@ -191,6 +233,14 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
         {
             if (!schemaReady)
             {
+                // WAL lets other tools (DBeaver, check-db.ps1) read the file while the app writes, and the app keep
+                // writing while they read. The setting is stored in the file; it cannot change inside a transaction.
+                using (var wal = connection.CreateCommand())
+                {
+                    wal.CommandText = "PRAGMA journal_mode = WAL";
+                    wal.ExecuteNonQuery();
+                }
+
                 Migrate(connection);
                 schemaReady = true;
             }
@@ -214,8 +264,9 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
 
         if (version < 1)
         {
-            // Times are ISO 8601 round-trip text ("O"): full sub-second precision and the original UTC offset.
-            // The unique index prevents duplicate rows and also serves lookups by MeasurementSessionId.
+            // Original (version 1) schema; later steps rename columns. Times are ISO 8601 round-trip text ("O"):
+            // full sub-second precision and the original UTC offset. The unique index (session, CaptureNo) prevents
+            // duplicate rows and, because the session column comes first, is also the index for lookups by session.
             command.CommandText = """
                 CREATE TABLE IF NOT EXISTS MeasurementSessions (
                     MeasurementSessionId TEXT NOT NULL PRIMARY KEY,
@@ -247,6 +298,30 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
             // Explicit user-defined row order. Renaming keeps the order already stored by version 1.
             command.CommandText = "ALTER TABLE MeasurementRecords RENAME COLUMN DisplayNo TO SortOrder";
             command.ExecuteNonQuery();
+        }
+
+        if (version < 3)
+        {
+            // Short, consistent ID names: MeasurementSessions.id, MeasurementRecords.id and
+            // MeasurementRecords.session_id -> MeasurementSessions.id. RENAME COLUMN keeps every value and row in place,
+            // and SQLite updates the foreign key and the unique index to the new names (no table is recreated).
+            command.CommandText = """
+                ALTER TABLE MeasurementSessions RENAME COLUMN MeasurementSessionId TO id;
+                ALTER TABLE MeasurementRecords RENAME COLUMN MeasurementRecordId TO id;
+                ALTER TABLE MeasurementRecords RENAME COLUMN MeasurementSessionId TO session_id;
+                """;
+            command.ExecuteNonQuery();
+        }
+
+        // Every record must point at an existing session; otherwise roll the upgrade back rather than store bad links.
+        command.CommandText = "PRAGMA foreign_key_check";
+
+        using (var orphans = command.ExecuteReader())
+        {
+            if (orphans.Read())
+            {
+                throw new InvalidOperationException("The measurement database has records without a session.");
+            }
         }
 
         command.CommandText = $"PRAGMA user_version = {SchemaVersion}";
