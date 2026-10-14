@@ -15,7 +15,7 @@ param(
     [string]$Sql,
     [string]$Value,
     [switch]$Grid,
-    [string]$Database = (Join-Path $env:LOCALAPPDATA 'CT007-Measurement-Studio\measurements.db')
+    [string]$Database = (Join-Path $env:LOCALAPPDATA 'CT007_Measurement_Studio\measurements.db')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -132,25 +132,25 @@ function Invoke-Sqlite([string]$Query, [string]$Parameter, [string]$Title) {
 }
 
 $records = 'SELECT SortOrder, CaptureNo, StartTime, EndTime, Sample, TsMs, Count0, Count0Raw, Hdm, HdmRaw, DoseRate
-            FROM MeasurementRecords WHERE MeasurementSessionId = ? ORDER BY SortOrder'
+            FROM MeasurementRecords WHERE session_id = ? ORDER BY SortOrder'
 
 Write-Host "Database: $Database"
 
 if ($Sql) { Invoke-Sqlite $Sql $Value 'Query'; return }
 if ($Session) { Invoke-Sqlite $records $Session "Session $Session"; return }
 
-Invoke-Sqlite 'PRAGMA user_version' '' 'Schema version (expected 2)'
+Invoke-Sqlite 'PRAGMA user_version' '' 'Schema version (expected 3)'
 
-Invoke-Sqlite 'SELECT s.MeasurementSessionId, s.CreatedAt, COUNT(r.MeasurementRecordId) AS Records
+Invoke-Sqlite 'SELECT s.id, s.CreatedAt, COUNT(r.id) AS Records
                FROM MeasurementSessions s
-               LEFT JOIN MeasurementRecords r ON r.MeasurementSessionId = s.MeasurementSessionId
-               GROUP BY s.MeasurementSessionId ORDER BY s.rowid' '' 'Sessions (oldest first)'
+               LEFT JOIN MeasurementRecords r ON r.session_id = s.id
+               GROUP BY s.id ORDER BY s.rowid' '' 'Sessions (oldest first)'
 
 $latest = [CtSqlite]::Query($Database,
-    'SELECT MeasurementSessionId FROM MeasurementRecords ORDER BY MeasurementRecordId DESC LIMIT 1', '').Rows
+    'SELECT session_id FROM MeasurementRecords ORDER BY id DESC LIMIT 1', '').Rows
 if ($latest.Count -gt 0) {
     Invoke-Sqlite $records $latest[0][0] "Latest session $($latest[0][0])"
 }
 
-Invoke-Sqlite 'SELECT MeasurementSessionId, CaptureNo, COUNT(*) AS Copies FROM MeasurementRecords
-               GROUP BY MeasurementSessionId, CaptureNo HAVING COUNT(*) > 1' '' 'Duplicate check (expected 0 rows)'
+Invoke-Sqlite 'SELECT session_id, CaptureNo, COUNT(*) AS Copies FROM MeasurementRecords
+               GROUP BY session_id, CaptureNo HAVING COUNT(*) > 1' '' 'Duplicate check (expected 0 rows)'

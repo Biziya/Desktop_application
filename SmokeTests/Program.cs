@@ -62,7 +62,7 @@ internal static class Program
         var store = new MemoryRepository();
         using var vm = new MeasurementViewModel(fake, export, dialogs, store);
         Check(!vm.ToggleMeasurementCommand.CanExecute(null), "Capture requires saved core");
-        Check(vm.MeasurementSessionId is null, "No session before Start");
+        Check(vm.SessionId is null, "No session before Start");
         Check(!vm.ExportCommand.CanExecute(null), "Empty export disabled");
         vm.TriggerCommand.Execute(null);
         Check(fake.Calls == 0, "Idle triggers ignored");
@@ -70,7 +70,7 @@ internal static class Program
         vm.ToggleMeasurementCommand.Execute(null);
         Check(vm.State == MeasurementState.Ready && vm.IsMeasurementModeActive && fake.Calls == 0 &&
             vm.Results.Count == 0 && vm.Countdown == "00:05" && vm.CaptureProgress == 0, "Start arms without capturing");
-        var firstSession = vm.MeasurementSessionId ?? throw new InvalidOperationException("Start creates a session");
+        var firstSession = vm.SessionId ?? throw new InvalidOperationException("Start creates a session");
         var triggerTime = new DateTimeOffset(2026,10,11,11,16,10,851,TimeSpan.FromHours(8));
         vm.TriggerCommand.Execute(triggerTime); vm.TriggerCommand.Execute(triggerTime);
         Check(fake.Calls == 1 && vm.IsCapturing && !vm.TriggerCommand.CanExecute(null) &&
@@ -96,7 +96,7 @@ internal static class Program
         Check(vm.Results.Count == 2 && third.Number == 2 && third.CaptureNumber == 3, "Deletion renumbers display only");
         vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger);
         Check(vm.Results[2].CaptureNumber == 4, "Deleted capture numbers are not reused");
-        Check(vm.MeasurementSessionId == firstSession && vm.Results.All(r => r.MeasurementSessionId == firstSession),
+        Check(vm.SessionId == firstSession && vm.Results.All(r => r.SessionId == firstSession),
             "One session ID for every capture of the session");
         await Until(() => store.Rows(firstSession).Select(r => r.CaptureNumber).SequenceEqual(vm.Results.Select(r => r.CaptureNumber)));
         Check(store.SaveCount > store.Rows(firstSession).Count, "Re-saving the same rows does not duplicate them");
@@ -108,19 +108,19 @@ internal static class Program
         var csv = CsvExportService.Serialize(vm.Results.ToArray());
         var lines = csv.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
         Check(lines[0] == "\"No\",\"Capture No\",\"Start Time\",\"End Time\",\"Sample\",\"ts_ms\",\"count0\",\"count0_raw\"," +
-            "\"hdm\",\"hdm_raw\",\"dose_rate\",\"MeasurementSessionId\"", "CSV header order and session ID last");
+            "\"hdm\",\"hdm_raw\",\"dose_rate\",\"session_id\"", "CSV header order and session ID last");
         Check(lines[1].StartsWith("\"1\",\"4\",") && lines[1].EndsWith($",\"{firstSession}\"") && lines.Length == 4,
             "CSV display/capture numbers and session ID");
         Check(CsvExportService.Serialize(new[] {first}).Contains(triggerTime.ToString("O") + "\",\"" + triggerTime.AddSeconds(5).ToString("O")),
             "CSV retains fractional seconds and offset for start/end");
         Check(!csv.Contains("Average") && !csv.Contains("Completed At"), "CSV has only configured columns");
         var reading = new DeviceReading(1760152570851, 0.1 + 0.2, 125, 1.5e-7, -3, 12.25);
-        var withReading = new MeasurementResult { MeasurementSessionId=firstSession, CaptureNumber=99, StartTime=first.StartTime,
+        var withReading = new MeasurementResult { SessionId=firstSession, CaptureNumber=99, StartTime=first.StartTime,
             EndTime=first.EndTime, SampleCount=5, Reading=reading };
         Check(CsvExportService.Serialize(new[] {withReading}).Contains(
             "\"1760152570851\",\"0.30000000000000004\",\"125\",\"1.5E-07\",\"-3\",\"12.25\""), "CSV device values keep full precision");
         Check(CsvExportService.Serialize(new[] {first}).Contains("\"5\",\"\",\"\",\"\",\"\",\"\",\"\","), "Missing device values are empty cells");
-        var otherSession = new MeasurementResult { MeasurementSessionId=Guid.NewGuid(), CaptureNumber=1, StartTime=first.StartTime,
+        var otherSession = new MeasurementResult { SessionId=Guid.NewGuid(), CaptureNumber=1, StartTime=first.StartTime,
             EndTime=first.EndTime, SampleCount=5 };
         try { CsvExportService.Serialize(new[] {first, otherSession}); throw new Exception("Mixed-session export accepted"); }
         catch (ArgumentException) { }
@@ -130,7 +130,7 @@ internal static class Program
             "Hidden columns stay in CSV");
         Check(MeasurementColumns.All.All(c => Resolve(c.Binding, withReading) is { } bound && Equals(bound, c.Value(withReading))),
             "Every binding resolves to the same value the CSV writes");
-        Check(MeasurementColumns.All.Last() is { Label: "Session", CsvHeader: "MeasurementSessionId" },
+        Check(MeasurementColumns.All.Last() is { Label: "Session", CsvHeader: "session_id" },
             "Labels are independent of CSV headers");
         var count = vm.Results.Count;
         vm.ToggleMeasurementCommand.Execute(null);
@@ -138,7 +138,7 @@ internal static class Program
         vm.TriggerCommand.Execute(null); Check(vm.Results.Count == count, "Stopped trigger ignored");
         Check(vm.NewMeasurementCommand.CanExecute(null), "New Measurement available while stopped");
         vm.ToggleMeasurementCommand.Execute(null);
-        Check(vm.MeasurementSessionId == firstSession && vm.Results.Count == count && !vm.NewMeasurementCommand.CanExecute(null),
+        Check(vm.SessionId == firstSession && vm.Results.Count == count && !vm.NewMeasurementCommand.CanExecute(null),
             "Stop then Start keeps the session and its rows");
         vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger);
         count++;
@@ -157,14 +157,14 @@ internal static class Program
         vm.TriggerCommand.Execute(null); fake.Fail(); await Until(() => vm.CanTrigger);
         Check(vm.Results.Count == count && vm.Countdown == "00:05" && vm.Notification.StartsWith("Capture failed"), "Failure recovers Ready without row");
         vm.SetCore(null); Check(!vm.ToggleMeasurementCommand.CanExecute(null) && vm.State == MeasurementState.Idle, "Editing invalidates saved form and disarms");
-        Check(vm.MeasurementSessionId == firstSession && vm.Results.Count == count, "Disarming keeps the session");
+        Check(vm.SessionId == firstSession && vm.Results.Count == count, "Disarming keeps the session");
         vm.NewMeasurementCommand.Execute(null);
-        var secondSession = vm.MeasurementSessionId;
+        var secondSession = vm.SessionId;
         Check(secondSession is not null && secondSession != firstSession && vm.Results.Count == 0 &&
             store.Rows(firstSession).Count == count, "New Measurement begins a new session; the previous one stays stored");
         vm.SetCore(core); vm.ToggleMeasurementCommand.Execute(null);
         vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger);
-        Check(vm.Results.Single().CaptureNumber == 1 && vm.Results[0].MeasurementSessionId == secondSession, "New session numbers from 1");
+        Check(vm.Results.Single().CaptureNumber == 1 && vm.Results[0].SessionId == secondSession, "New session numbers from 1");
         await Until(() => store.Rows(secondSession!.Value).Count == 1);
         Check(store.Rows(firstSession).Count == count, "Sessions stay isolated");
         vm.ToggleMeasurementCommand.Execute(null);
@@ -199,10 +199,10 @@ internal static class Program
                 "Expand retains selected page");
             main.Measurement.SetCore(core); main.Measurement.ToggleMeasurementCommand.Execute(null);
             main.Measurement.TriggerCommand.Execute(null); main.ShowCoreCommand.Execute(null);
-            var navigationSession = main.Measurement.MeasurementSessionId;
+            var navigationSession = main.Measurement.SessionId;
             main.ShowMeasurementCommand.Execute(null); main.ShowCoreCommand.Execute(null);
             Check(main.Measurement.IsCapturing && main.CurrentPage == retainedCore &&
-                main.Measurement.MeasurementSessionId == navigationSession, "Navigation does not duplicate, reset or start a session");
+                main.Measurement.SessionId == navigationSession, "Navigation does not duplicate, reset or start a session");
             main.Measurement.ToggleMeasurementCommand.Execute(null);
         }
         var service = new MockMeasurementService(); var start = DateTimeOffset.Now; var elapsed = Stopwatch.StartNew();
@@ -232,9 +232,9 @@ internal static class Program
             Check(failingVm.Results.Count == 1, "New Measurement refuses to drop unsaved rows");
             failing.Fail = false;
             failingVm.ToggleMeasurementCommand.Execute(null);
-            await Until(() => failing.Rows(failingVm.MeasurementSessionId!.Value).Count == 1);
+            await Until(() => failing.Rows(failingVm.SessionId!.Value).Count == 1);
             failingVm.TriggerCommand.Execute(null); failingService.Complete(); await Until(() => failingVm.CanTrigger);
-            var id = failingVm.MeasurementSessionId!.Value;
+            var id = failingVm.SessionId!.Value;
             await Until(() => failing.Rows(id).Count == 2);
         }
 
@@ -250,7 +250,7 @@ internal static class Program
             var a = MeasurementSession.New(); var b = MeasurementSession.New();
             var start = new DateTimeOffset(2026,10,11,11,16,10,851,TimeSpan.FromHours(8)).AddTicks(1234);
             MeasurementResult Row(MeasurementSession s, int capture, DeviceReading reading) => new()
-            { MeasurementSessionId=s.Id, CaptureNumber=capture, StartTime=start, EndTime=start.AddSeconds(5), SampleCount=5, Reading=reading };
+            { SessionId=s.Id, CaptureNumber=capture, StartTime=start, EndTime=start.AddSeconds(5), SampleCount=5, Reading=reading };
             var a1 = Row(a, 1, new DeviceReading(1760152570851, 0.1 + 0.2, 125, 1.5e-7, -3, 12.25));
             var a2 = Row(a, 2, DeviceReading.Empty);
             var store = new SqliteMeasurementRepository(path);
@@ -266,7 +266,7 @@ internal static class Program
             Check(loaded[1].StartTime == start && loaded[1].StartTime.Offset == start.Offset && loaded[1].EndTime == start.AddSeconds(5) &&
                 loaded[1].Reading == a1.Reading && loaded[0].Reading == DeviceReading.Empty && loaded[1].SampleCount == 5,
                 "Stored values, precision and nulls survive a reopen");
-            Check((await reopened.LoadAsync(b.Id)).All(r => r.MeasurementSessionId == b.Id) && (await reopened.LoadAsync(b.Id)).Count == 1,
+            Check((await reopened.LoadAsync(b.Id)).All(r => r.SessionId == b.Id) && (await reopened.LoadAsync(b.Id)).Count == 1,
                 "Loading one session excludes others");
             Check((await reopened.LoadLatestSessionAsync())?.Id == b.Id, "Latest session");
             await reopened.DeleteAsync(a.Id, 2);
@@ -278,7 +278,7 @@ internal static class Program
             using (var vm = new MeasurementViewModel(service, new FakeExport(), new FakeDialogs(), reopened))
             {
                 vm.SetCore(core); vm.ToggleMeasurementCommand.Execute(null);
-                captured = vm.MeasurementSessionId!.Value;
+                captured = vm.SessionId!.Value;
                 for (int i=0; i<3; i++) { vm.TriggerCommand.Execute(null); service.Complete(); await Until(() => vm.CanTrigger); }
                 vm.Move(vm.Results[2], vm.Results[0], false);
             }
@@ -286,12 +286,12 @@ internal static class Program
                        new SqliteMeasurementRepository(path)))
             {
                 await restarted.RestoreLatestSessionAsync();
-                Check(restarted.MeasurementSessionId == captured && restarted.Results.Count == 3 && restarted.State == MeasurementState.Idle &&
+                Check(restarted.SessionId == captured && restarted.Results.Count == 3 && restarted.State == MeasurementState.Idle &&
                     restarted.Results.Select(r => r.CaptureNumber).SequenceEqual(new[] {3,1,2}) &&
                     restarted.Results.Select(r => r.Number).SequenceEqual(new[] {1,2,3}), "Saved order restored after restart");
                 Check(CsvExportService.Serialize(restarted.Results.ToArray()).Split("\r\n")[1].StartsWith("\"1\",\"3\","), "CSV follows saved order");
                 restarted.SetCore(core); restarted.ToggleMeasurementCommand.Execute(null);
-                Check(restarted.MeasurementSessionId == captured, "Start after restart continues the restored session");
+                Check(restarted.SessionId == captured, "Start after restart continues the restored session");
             }
             using (var continued = new MeasurementViewModel(service, new FakeExport(), new FakeDialogs(), new SqliteMeasurementRepository(path)))
             {
@@ -300,44 +300,99 @@ internal static class Program
                 continued.TriggerCommand.Execute(null); service.Complete(); await Until(() => continued.CanTrigger);
                 Check(continued.Results.Select(r => r.CaptureNumber).SequenceEqual(new[] {3,1,2,4}), "Appends after restored rows, numbers continue");
                 continued.ToggleMeasurementCommand.Execute(null); continued.NewMeasurementCommand.Execute(null);
-                Check(continued.MeasurementSessionId != captured && continued.Results.Count == 0, "New Measurement after restart gets a new ID");
+                Check(continued.SessionId != captured && continued.Results.Count == 0, "New Measurement after restart gets a new ID");
             }
             var final = await new SqliteMeasurementRepository(path).LoadAsync(captured);
             Check(final.Select(r => r.CaptureNumber).SequenceEqual(new[] {3,1,2,4}), "Stored order and rows complete, no duplicates");
 
-            // Schema v1 (DisplayNo) databases upgrade in place and keep their rows and order.
-            var legacy = Path.Combine(Path.GetTempPath(), $"ct007-legacy-{Guid.NewGuid():N}.db");
-            using (var connection = new SqliteConnection($"Data Source={legacy}"))
+            // Schema v3 on a new database: short ID names, enforced foreign key, index on session_id.
+            using (var check = new SqliteConnection($"Data Source={path};Foreign Keys=True"))
             {
-                connection.Open();
-                using var create = connection.CreateCommand();
-                create.CommandText = """
-                    CREATE TABLE MeasurementSessions (MeasurementSessionId TEXT NOT NULL PRIMARY KEY, CreatedAt TEXT NOT NULL);
-                    CREATE TABLE MeasurementRecords (MeasurementRecordId INTEGER PRIMARY KEY AUTOINCREMENT,
-                        MeasurementSessionId TEXT NOT NULL REFERENCES MeasurementSessions (MeasurementSessionId),
-                        DisplayNo INTEGER NOT NULL, CaptureNo INTEGER NOT NULL, StartTime TEXT NOT NULL, EndTime TEXT NOT NULL,
-                        Sample INTEGER NOT NULL, TsMs INTEGER, Count0 REAL, Count0Raw REAL, Hdm REAL, HdmRaw REAL, DoseRate REAL);
-                    CREATE UNIQUE INDEX UX_MeasurementRecords_Session_CaptureNo ON MeasurementRecords (MeasurementSessionId, CaptureNo);
-                    INSERT INTO MeasurementSessions VALUES ('11111111-1111-1111-1111-111111111111', '2026-10-11T11:16:10.8510000+08:00');
-                    INSERT INTO MeasurementRecords (MeasurementSessionId, DisplayNo, CaptureNo, StartTime, EndTime, Sample) VALUES
-                        ('11111111-1111-1111-1111-111111111111', 2, 1, '2026-10-11T11:16:10.8510000+08:00', '2026-10-11T11:16:15.8510000+08:00', 5),
-                        ('11111111-1111-1111-1111-111111111111', 1, 2, '2026-10-11T11:16:20.8510000+08:00', '2026-10-11T11:16:25.8510000+08:00', 5);
-                    PRAGMA user_version = 1;
-                    """;
-                create.ExecuteNonQuery();
+                check.Open();
+                Check(Scalar(check, "PRAGMA user_version") == "3", "Schema version 3");
+                Check(Scalar(check, "SELECT \"table\" || '.' || \"to\" || ' <- ' || \"from\" FROM pragma_foreign_key_list('MeasurementRecords')")
+                    == "MeasurementSessions.id <- session_id", "MeasurementRecords.session_id -> MeasurementSessions.id");
+                Check(Scalar(check, "SELECT on_delete FROM pragma_foreign_key_list('MeasurementRecords')") == "NO ACTION", "No cascading delete");
+                Check(Column(check, "PRAGMA foreign_key_check", 0).Count == 0, "Every record references an existing session");
+                Check(Scalar(check, "SELECT COUNT(*) FROM (SELECT id FROM MeasurementRecords GROUP BY id HAVING COUNT(*) > 1)") == "0" &&
+                      Scalar(check, "SELECT COUNT(*) FROM (SELECT id FROM MeasurementSessions GROUP BY id HAVING COUNT(*) > 1)") == "0",
+                    "Unique session and record IDs");
+                Check(Scalar(check, "SELECT group_concat(name) FROM pragma_index_info('UX_MeasurementRecords_Session_CaptureNo')") == "session_id,CaptureNo" &&
+                      string.Join(" ", Column(check, "EXPLAIN QUERY PLAN SELECT * FROM MeasurementRecords WHERE session_id = 'x'", 3))
+                        .Contains("USING INDEX UX_MeasurementRecords_Session_CaptureNo"), "session_id is indexed and lookups use the index");
+                try
+                {
+                    Scalar(check, "INSERT INTO MeasurementRecords (session_id, SortOrder, CaptureNo, StartTime, EndTime, Sample) VALUES ('missing', 1, 1, 'a', 'b', 5)");
+                    throw new Exception("Orphan record accepted");
+                }
+                catch (SqliteException) { }
             }
-            try
+
+            // Older databases upgrade in place: v1 (DisplayNo, long ID names) and v2 (SortOrder, long ID names).
+            foreach (var (version, orderColumn) in new[] { (1, "DisplayNo"), (2, "SortOrder") })
             {
-                var upgraded = await new SqliteMeasurementRepository(legacy).LoadAsync(Guid.Parse("11111111-1111-1111-1111-111111111111"));
-                Check(upgraded.Select(r => r.CaptureNumber).SequenceEqual(new[] {2,1}), "v1 database upgraded with data and order kept");
+                var legacy = Path.Combine(Path.GetTempPath(), $"ct007-legacy-{Guid.NewGuid():N}.db");
+                using (var connection = new SqliteConnection($"Data Source={legacy}"))
+                {
+                    connection.Open();
+                    using var create = connection.CreateCommand();
+                    create.CommandText = $"""
+                        CREATE TABLE MeasurementSessions (MeasurementSessionId TEXT NOT NULL PRIMARY KEY, CreatedAt TEXT NOT NULL);
+                        CREATE TABLE MeasurementRecords (MeasurementRecordId INTEGER PRIMARY KEY AUTOINCREMENT,
+                            MeasurementSessionId TEXT NOT NULL REFERENCES MeasurementSessions (MeasurementSessionId),
+                            {orderColumn} INTEGER NOT NULL, CaptureNo INTEGER NOT NULL, StartTime TEXT NOT NULL, EndTime TEXT NOT NULL,
+                            Sample INTEGER NOT NULL, TsMs INTEGER, Count0 REAL, Count0Raw REAL, Hdm REAL, HdmRaw REAL, DoseRate REAL);
+                        CREATE UNIQUE INDEX UX_MeasurementRecords_Session_CaptureNo ON MeasurementRecords (MeasurementSessionId, CaptureNo);
+                        INSERT INTO MeasurementSessions VALUES ('11111111-1111-1111-1111-111111111111', '2026-10-11T11:16:10.8510000+08:00');
+                        INSERT INTO MeasurementSessions VALUES ('22222222-2222-2222-2222-222222222222', '2026-10-12T09:00:00.0000000+08:00');
+                        INSERT INTO MeasurementRecords (MeasurementRecordId, MeasurementSessionId, {orderColumn}, CaptureNo, StartTime, EndTime, Sample, Count0) VALUES
+                            (7, '11111111-1111-1111-1111-111111111111', 2, 1, '2026-10-11T11:16:10.8510000+08:00', '2026-10-11T11:16:15.8510000+08:00', 5, 12.5),
+                            (9, '11111111-1111-1111-1111-111111111111', 1, 2, '2026-10-11T11:16:20.8510000+08:00', '2026-10-11T11:16:25.8510000+08:00', 5, NULL),
+                            (12, '22222222-2222-2222-2222-222222222222', 1, 1, '2026-10-12T09:00:00.0000000+08:00', '2026-10-12T09:00:05.0000000+08:00', 5, 3);
+                        PRAGMA user_version = {version};
+                        """;
+                    create.ExecuteNonQuery();
+                }
+                try
+                {
+                    var upgraded = new SqliteMeasurementRepository(legacy);
+                    var first = await upgraded.LoadAsync(Guid.Parse("11111111-1111-1111-1111-111111111111"));
+                    Check(first.Select(r => r.CaptureNumber).SequenceEqual(new[] {2,1}) && first[1].Reading.Count0 == 12.5 &&
+                        (await upgraded.LoadAsync(Guid.Parse("22222222-2222-2222-2222-222222222222"))).Single().Reading.Count0 == 3,
+                        $"v{version} database upgraded with values, order and session isolation kept");
+                    using var check = new SqliteConnection($"Data Source={legacy}");
+                    check.Open();
+                    Check(Scalar(check, "PRAGMA user_version") == "3" &&
+                          Scalar(check, "SELECT group_concat(id || ':' || session_id || ':' || CaptureNo, ' ') FROM (SELECT * FROM MeasurementRecords ORDER BY id)") ==
+                          "7:11111111-1111-1111-1111-111111111111:1 9:11111111-1111-1111-1111-111111111111:2 12:22222222-2222-2222-2222-222222222222:1" &&
+                          Scalar(check, "SELECT group_concat(id, ' ') FROM (SELECT id FROM MeasurementSessions ORDER BY id)") ==
+                          "11111111-1111-1111-1111-111111111111 22222222-2222-2222-2222-222222222222",
+                        $"v{version} upgrade keeps record IDs, session IDs and links");
+                    Check(Scalar(check, "SELECT \"to\" FROM pragma_foreign_key_list('MeasurementRecords')") == "id", $"v{version} foreign key renamed");
+                    // Reopening must not run the migration again.
+                    Check((await new SqliteMeasurementRepository(legacy).LoadAsync(Guid.Parse("11111111-1111-1111-1111-111111111111"))).Count == 2,
+                        "Migration runs only once");
+                }
+                finally { SqliteConnection.ClearAllPools(); File.Delete(legacy); }
             }
-            finally { SqliteConnection.ClearAllPools(); File.Delete(legacy); }
         }
         finally
         {
             SqliteConnection.ClearAllPools();
             File.Delete(path);
         }
+    }
+
+    private static string Scalar(SqliteConnection connection, string sql) => Column(connection, sql, 0).FirstOrDefault() ?? "";
+
+    private static List<string> Column(SqliteConnection connection, string sql, int ordinal)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        using var reader = command.ExecuteReader();
+        var values = new List<string>();
+        while (reader.Read()) values.Add(reader.IsDBNull(ordinal) ? "" : Convert.ToString(reader.GetValue(ordinal), CultureInfo.InvariantCulture)!);
+        return values;
     }
 
     // Follows a binding path the way WPF does, to prove the configured table bindings exist.
