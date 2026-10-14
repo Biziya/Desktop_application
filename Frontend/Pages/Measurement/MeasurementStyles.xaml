@@ -13,7 +13,8 @@
         <Setter Property="AlternatingRowBackground" Value="{StaticResource SidebarSurface}"/>
         <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource Line}"/>
         <Setter Property="VerticalGridLinesBrush" Value="{StaticResource Line}"/>
-        <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+        <!-- Vertical lines between every column use the same brush as the row lines and header border. -->
+        <Setter Property="GridLinesVisibility" Value="All"/>
         <Setter Property="HeadersVisibility" Value="Column"/>
         <!-- Row text size is set once here; header, cells and the columns inherit it. -->
         <Setter Property="FontSize" Value="{local:Scale TableRowFontSize}"/>
@@ -35,7 +36,8 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="FontSize" Value="{local:Scale TableHeaderFontSize}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <!-- Right edge continues the column's vertical grid line through the header row. -->
+        <Setter Property="BorderThickness" Value="0,0,1,1"/>
         <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
     </Style>
 

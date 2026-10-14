@@ -35,7 +35,6 @@
     <sys:Double x:Key="TableCellPaddingMultiplier">1.0</sys:Double>      <!-- also scales header padding -->
     <sys:Double x:Key="DragHandleSizeMultiplier">1.0</sys:Double>        <!-- handle glyph + its column width -->
     <sys:Double x:Key="DeleteIconSizeMultiplier">1.0</sys:Double>        <!-- delete glyph + its button size -->
-    <sys:Double x:Key="TableValueColumnMinWidthMultiplier">1.0</sys:Double> <!-- measurement value columns -->
 
     <!-- Other page elements -->
     <sys:Double x:Key="SectionHeadingFontSizeMultiplier">1.0</sys:Double>
@@ -71,9 +70,6 @@
     <sys:Double x:Key="DragHandleColumnWidth">34</sys:Double>
     <sys:Double x:Key="DeleteIconFontSize">14</sys:Double>
     <sys:Double x:Key="DeleteButtonSize">28</sys:Double>
-    <!-- Minimum width of each measurement value column (No ... dose_rate); they share the remaining width equally.
-         Which columns exist, their order and labels are set in MeasurementColumns.cs. -->
-    <sys:Double x:Key="TableValueColumnMinWidth">84</sys:Double>
 
     <!-- Other page elements. Export Width/Height are applied as MinWidth/MinHeight; 42.62 is the original natural height
          (14px line + 2x11 padding + border). 130 approximates the original natural width. -->

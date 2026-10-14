@@ -26,8 +26,17 @@ public sealed record DeviceReading(
     public static DeviceReading Empty { get; } = new();
 }
 
+/// <summary>Identity of the connected CT007, as reported by the connection.</summary>
+public sealed record DeviceConnection(string Name, string Identifier);
+
 public interface IMeasurementService
 {
+    /// <summary>The connected CT007, or null when no device is connected.</summary>
+    DeviceConnection? ConnectedDevice { get; }
+
+    /// <summary>Raised when a device connects or disconnects (may be raised on any thread).</summary>
+    event EventHandler? ConnectionChanged;
+
     /// <summary>Length of one capture. The ViewModel derives its countdown text and progress from this.</summary>
     TimeSpan Duration { get; }
 
@@ -40,6 +49,15 @@ public interface IMeasurementService
 public sealed class MockMeasurementService : IMeasurementService
 {
     public TimeSpan Duration { get; } = TimeSpan.FromSeconds(5);
+
+    // Simulation only: there is no hardware connection, so no device is ever reported.
+    public DeviceConnection? ConnectedDevice => null;
+
+    public event EventHandler? ConnectionChanged
+    {
+        add { }
+        remove { }
+    }
 
     public async Task<CaptureData> CaptureAsync(
         DateTimeOffset start,

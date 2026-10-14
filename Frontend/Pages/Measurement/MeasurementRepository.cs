@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 
 namespace Frontend.Pages.Measurement;
 
-/// <summary>One measurement session: every capture between one Start and the next Start.</summary>
+/// <summary>One measurement session: every capture until the user starts a new measurement.</summary>
 public sealed record MeasurementSession(Guid Id, DateTimeOffset CreatedAt)
 {
     public static MeasurementSession New() => new(Guid.NewGuid(), DateTimeOffset.Now);
@@ -12,7 +12,13 @@ public sealed record MeasurementSession(Guid Id, DateTimeOffset CreatedAt)
 
 public interface IMeasurementRepository
 {
-    /// <summary>Inserts new rows and updates the display number of rows already stored. Rows are in display order.</summary>
+    /// <summary>Full path of the database file in use.</summary>
+    string DatabasePath { get; }
+
+    /// <summary>
+    /// Inserts new rows and stores the user-defined order (SortOrder = position in <paramref name="rows"/>) of rows
+    /// already stored. Nothing else of a stored row changes.
+    /// </summary>
     Task SaveAsync(MeasurementSession session, IReadOnlyList<MeasurementResult> rows);
 
     Task DeleteAsync(Guid sessionId, int captureNumber);
@@ -20,7 +26,7 @@ public interface IMeasurementRepository
     /// <summary>The session that received the most recent stored row, or null when nothing is stored.</summary>
     Task<MeasurementSession?> LoadLatestSessionAsync();
 
-    /// <summary>Rows of one session only, in display order.</summary>
+    /// <summary>Rows of one session only, in saved order.</summary>
     Task<IReadOnlyList<MeasurementResult>> LoadAsync(Guid sessionId);
 }
 
@@ -31,21 +37,22 @@ public interface IMeasurementRepository
 public sealed class SqliteMeasurementRepository : IMeasurementRepository
 {
     // Raise when the schema changes, and add a step to Migrate that alters existing tables without dropping data.
-    private const int SchemaVersion = 1;
+    private const int SchemaVersion = 2;
 
     private const string RecordColumns =
-        "DisplayNo, CaptureNo, StartTime, EndTime, Sample, TsMs, Count0, Count0Raw, Hdm, HdmRaw, DoseRate";
+        "SortOrder, CaptureNo, StartTime, EndTime, Sample, TsMs, Count0, Count0Raw, Hdm, HdmRaw, DoseRate";
 
-    private readonly string databasePath;
     private readonly string connectionString;
     private readonly object schemaGate = new();
     private bool schemaReady;
 
     public SqliteMeasurementRepository(string databasePath)
     {
-        this.databasePath = Path.GetFullPath(databasePath);
-        connectionString = new SqliteConnectionStringBuilder { DataSource = this.databasePath, ForeignKeys = true }.ToString();
+        DatabasePath = Path.GetFullPath(databasePath);
+        connectionString = new SqliteConnectionStringBuilder { DataSource = DatabasePath, ForeignKeys = true }.ToString();
     }
+
+    public string DatabasePath { get; }
 
     public static string DefaultPath { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -66,13 +73,15 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
             insertSession.ExecuteNonQuery();
         }
 
-        // (MeasurementSessionId, CaptureNo) is unique, so saving the same row again only refreshes its display number.
+        // (MeasurementSessionId, CaptureNo) is unique: saving a stored row again never duplicates it and only
+        // rewrites its SortOrder when the user moved it. IDs, capture numbers, times and values stay unchanged.
         using var upsert = connection.CreateCommand();
         upsert.Transaction = transaction;
         upsert.CommandText = $"""
             INSERT INTO MeasurementRecords (MeasurementSessionId, {RecordColumns})
-            VALUES ($session, $no, $captureNo, $startTime, $endTime, $sample, $tsMs, $count0, $count0Raw, $hdm, $hdmRaw, $doseRate)
-            ON CONFLICT (MeasurementSessionId, CaptureNo) DO UPDATE SET DisplayNo = excluded.DisplayNo
+            VALUES ($session, $sortOrder, $captureNo, $startTime, $endTime, $sample, $tsMs, $count0, $count0Raw, $hdm, $hdmRaw, $doseRate)
+            ON CONFLICT (MeasurementSessionId, CaptureNo) DO UPDATE SET SortOrder = excluded.SortOrder
+                WHERE SortOrder <> excluded.SortOrder
             """;
 
         for (var i = 0; i < rows.Count; i++)
@@ -86,7 +95,7 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
 
             upsert.Parameters.Clear();
             upsert.Parameters.AddWithValue("$session", Key(session.Id));
-            upsert.Parameters.AddWithValue("$no", i + 1);
+            upsert.Parameters.AddWithValue("$sortOrder", i + 1);
             upsert.Parameters.AddWithValue("$captureNo", row.CaptureNumber);
             upsert.Parameters.AddWithValue("$startTime", Time(row.StartTime));
             upsert.Parameters.AddWithValue("$endTime", Time(row.EndTime));
@@ -138,7 +147,7 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
             SELECT {RecordColumns}
             FROM MeasurementRecords
             WHERE MeasurementSessionId = $session
-            ORDER BY DisplayNo, CaptureNo
+            ORDER BY SortOrder, CaptureNo
             """;
         command.Parameters.AddWithValue("$session", Key(sessionId));
         using var reader = command.ExecuteReader();
@@ -169,7 +178,7 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
 
     private Task<T> Run<T>(Func<SqliteConnection, T> work) => Task.Run(() =>
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(DatabasePath)!);
         using var connection = new SqliteConnection(connectionString);
         connection.Open();
         EnsureSchema(connection);
@@ -230,6 +239,13 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
                 CREATE UNIQUE INDEX IF NOT EXISTS UX_MeasurementRecords_Session_CaptureNo
                     ON MeasurementRecords (MeasurementSessionId, CaptureNo);
                 """;
+            command.ExecuteNonQuery();
+        }
+
+        if (version < 2)
+        {
+            // Explicit user-defined row order. Renaming keeps the order already stored by version 1.
+            command.CommandText = "ALTER TABLE MeasurementRecords RENAME COLUMN DisplayNo TO SortOrder";
             command.ExecuteNonQuery();
         }
 

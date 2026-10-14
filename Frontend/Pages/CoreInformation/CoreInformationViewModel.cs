@@ -1,4 +1,5 @@
 using System.Globalization;
+using Frontend.Pages.Measurement;
 using Frontend.Shared.Infrastructure;
 using Frontend.Shared.Models;
 
@@ -15,13 +16,38 @@ public sealed class CoreInformationViewModel : ObservableObject
     private string operatorName = "";
     private string notes = "";
     private bool showErrors;
+    private readonly IMeasurementService device;
 
-    public CoreInformationViewModel(Action<CoreSnapshot> saved) =>
+    public CoreInformationViewModel(Action<CoreSnapshot> saved, IMeasurementService device, string databasePath)
+    {
+        this.device = device;
+        DatabasePath = databasePath;
         SaveCommand = new RelayCommand(_ => Save(saved));
+
+        // Values are always read from the live connection, so a disconnect never leaves stale details on screen.
+        device.ConnectionChanged += (_, _) =>
+        {
+            Changed(nameof(IsDeviceConnected));
+            Changed(nameof(DeviceStatus));
+            Changed(nameof(DeviceName));
+            Changed(nameof(DeviceIdentifier));
+        };
+    }
 
     public event Action? Edited;
 
     public RelayCommand SaveCommand { get; }
+
+    /// <summary>Path of the SQLite database actually in use.</summary>
+    public string DatabasePath { get; }
+
+    public bool IsDeviceConnected => device.ConnectedDevice is not null;
+
+    public string DeviceStatus => IsDeviceConnected ? "Connected" : "Disconnected";
+
+    public string DeviceName => device.ConnectedDevice?.Name ?? "No CT007 device connected";
+
+    public string DeviceIdentifier => device.ConnectedDevice?.Identifier ?? "";
 
     public string DrillholeId
     {

@@ -40,20 +40,29 @@ public partial class MeasurementPage : UserControl
         Unloaded += (_, _) => StopObservingResults();
     }
 
-    // Visible columns, their order, labels and bindings come from MeasurementColumns.cs; sizes from MeasurementUiConstants.xaml.
-    // They go between the drag handle (first) and Delete (last) columns declared in XAML.
+    // Columns, order, labels and bindings come from MeasurementColumns.cs; visibility and widths from
+    // MeasurementColumnLayout.cs. They go between the drag handle (first) and Delete (last) columns declared in XAML.
     private void AddMeasurementColumns()
     {
         var index = 1;
+        var widths = new DataGridLengthConverter();
 
-        foreach (var column in MeasurementColumns.All.Where(c => c.ShowInTable))
+        foreach (var column in MeasurementColumns.All)
         {
+            var layout = MeasurementColumnLayout.For(column);
+
+            if (!layout.Visible)
+            {
+                continue;
+            }
+
             ResultsGrid.Columns.Insert(index++, new DataGridTextColumn
             {
                 Header = column.Label,
                 Binding = new Binding(column.Binding) { Mode = BindingMode.OneWay, StringFormat = column.DisplayFormat },
-                Width = new DataGridLength(1, DataGridLengthUnitType.Star),
-                MinWidth = ScaleExtension.Size("TableValueColumnMinWidth"),
+                Width = (DataGridLength)widths.ConvertFromInvariantString(layout.Width)!,
+                MinWidth = layout.MinWidth,
+                MaxWidth = layout.MaxWidth,
                 ElementStyle = (Style)FindResource("CenteredTableText"),
                 HeaderStyle = (Style)FindResource("CenteredTableHeader")
             });

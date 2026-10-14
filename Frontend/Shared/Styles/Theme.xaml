@@ -7,6 +7,14 @@
     <SolidColorBrush x:Key="Surface" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="Canvas" Color="#F4F7FB"/>
     <SolidColorBrush x:Key="SidebarSurface" Color="#F9FBFF"/>
+    <!-- Sidebar shell: a cool blue-grey that sets the navigation apart from the lighter content canvas. -->
+    <SolidColorBrush x:Key="SidebarBackground" Color="#E3EAF5"/>
+    <SolidColorBrush x:Key="SidebarHover" Color="#D3DEEF"/>
+    <SolidColorBrush x:Key="SidebarBorder" Color="#CBD5E1"/>
+    <!-- Darker than Muted so unselected navigation text stays readable (about 6:1) on SidebarBackground. -->
+    <SolidColorBrush x:Key="SidebarText" Color="#475569"/>
+    <!-- Outer ring drawn on every enabled button under the mouse. -->
+    <SolidColorBrush x:Key="ButtonHoverOutline" Color="#172C4B"/>
     <SolidColorBrush x:Key="SoftBlue" Color="#E7EFFF"/>
     <SolidColorBrush x:Key="HoverSurface" Color="#EEF3FB"/>
     <SolidColorBrush x:Key="InputBorder" Color="#CBD5E1"/>
@@ -108,21 +116,33 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Frame" CornerRadius="{StaticResource ControlRadius}"
-                            Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
-                        <Grid>
-                            <Border x:Name="Feedback" CornerRadius="{StaticResource ControlRadius}" Background="White" Opacity="0" IsHitTestVisible="False"/>
-                            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True"/>
-                            <Border x:Name="FocusRing" CornerRadius="6" BorderBrush="{StaticResource Navy}" BorderThickness="1" Margin="3" Visibility="Collapsed" IsHitTestVisible="False"/>
-                        </Grid>
-                    </Border>
+                    <Grid>
+                        <Border x:Name="Frame" CornerRadius="{StaticResource ControlRadius}"
+                                Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <Border x:Name="Feedback" CornerRadius="{StaticResource ControlRadius}" Background="White" Opacity="0" IsHitTestVisible="False"/>
+                                <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True"/>
+                                <Border x:Name="FocusRing" CornerRadius="6" BorderBrush="{StaticResource Navy}" BorderThickness="1" Margin="3" Visibility="Collapsed" IsHitTestVisible="False"/>
+                            </Grid>
+                        </Border>
+                        <!-- Hover ring overlays the outer edge, so it never changes the button's size or moves its content. -->
+                        <Border x:Name="HoverRing" CornerRadius="{StaticResource ControlRadius}" BorderBrush="{StaticResource ButtonHoverOutline}"
+                                BorderThickness="2" Visibility="Collapsed" IsHitTestVisible="False"/>
+                    </Grid>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Feedback" Property="Opacity" Value="0.13"/></Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Feedback" Property="Opacity" Value="0.13"/>
+                            <Setter TargetName="HoverRing" Property="Visibility" Value="Visible"/>
+                        </Trigger>
                         <Trigger Property="IsPressed" Value="True"><Setter TargetName="Feedback" Property="Background" Value="{StaticResource Navy}"/><Setter TargetName="Feedback" Property="Opacity" Value="0.12"/></Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
-                        <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Frame" Property="Opacity" Value="0.45"/><Setter Property="Cursor" Value="Arrow"/></Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Frame" Property="Opacity" Value="0.45"/>
+                            <Setter TargetName="HoverRing" Property="Visibility" Value="Collapsed"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -136,17 +156,18 @@
     </Style>
     <Style x:Key="NavigationButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+        <Setter Property="Foreground" Value="{StaticResource SidebarText}"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="Height" Value="44"/>
         <Setter Property="Margin" Value="0,4"/>
         <Setter Property="Padding" Value="0"/>
         <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{StaticResource HoverSurface}"/><Setter Property="Foreground" Value="{StaticResource Navy}"/></Trigger>
+            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{StaticResource SidebarHover}"/><Setter Property="Foreground" Value="{StaticResource Navy}"/></Trigger>
+            <!-- Selected page: white tile with blue text and border stands out on the sidebar background. -->
             <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
-                <Setter Property="Background" Value="{StaticResource SoftBlue}"/>
+                <Setter Property="Background" Value="{StaticResource Surface}"/>
                 <Setter Property="Foreground" Value="{StaticResource Blue}"/>
-                <Setter Property="BorderBrush" Value="{StaticResource SoftBlue}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource Blue}"/>
             </DataTrigger>
         </Style.Triggers>
     </Style>

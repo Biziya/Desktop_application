@@ -8,7 +8,7 @@
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <Border Background="{StaticResource SidebarSurface}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0">
+        <Border Background="{StaticResource SidebarBackground}" BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,1,0">
             <Border.Style>
                 <Style TargetType="Border">
                     <Setter Property="Width" Value="224"/>

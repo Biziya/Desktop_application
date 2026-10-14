@@ -32,28 +32,18 @@ public sealed class ScaleExtension : MarkupExtension
         this.multiplierName = multiplierName;
     }
 
-    /// <summary>Scaled double for UI built in code, such as the generated measurement table columns.</summary>
-    public static double Size(string name) =>
-        new ScaleExtension(name).Scaled() is double size
-            ? size
-            : throw new InvalidOperationException($"MeasurementUiConstants.xaml: '{name}' is not a double.");
-
     public override object ProvideValue(IServiceProvider serviceProvider)
-    {
-        var scaled = Scaled();
-        return scaled is double length && NeedsGridLength(serviceProvider) ? new DataGridLength(length) : scaled;
-    }
-
-    private object Scaled()
     {
         var multiplier = Multiplier();
 
-        return Constants.Value[name] switch
+        object scaled = Constants.Value[name] switch
         {
             double size => size * multiplier,
             Thickness t => new Thickness(t.Left * multiplier, t.Top * multiplier, t.Right * multiplier, t.Bottom * multiplier),
             _ => throw new InvalidOperationException($"MeasurementUiConstants.xaml: '{name}' is missing or is not a double/Thickness.")
         };
+
+        return scaled is double length && NeedsGridLength(serviceProvider) ? new DataGridLength(length) : scaled;
     }
 
     private double Multiplier()

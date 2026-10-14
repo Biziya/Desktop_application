@@ -89,12 +89,22 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Averaged Measurements"
                                FontSize="{local:Scale SectionHeadingFontSize}"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
+                    <!-- Starts a new measurement session (only while stopped). Start/Stop keeps the current one. -->
                     <Button Grid.Column="1"
+                            Content="+   New Measurement"
+                            Style="{StaticResource SecondaryButton}"
+                            FontSize="{local:Scale ExportButtonFontSize}"
+                            MinHeight="{local:Scale ExportButtonHeight}"
+                            Margin="0,0,10,0"
+                            ToolTip="Start a new measurement session. Current rows stay stored."
+                            Command="{Binding NewMeasurementCommand}"/>
+                    <Button Grid.Column="2"
                             Content="↓   Export CSV"
                             Style="{StaticResource SecondaryButton}"
                             FontSize="{local:Scale ExportButtonFontSize}"

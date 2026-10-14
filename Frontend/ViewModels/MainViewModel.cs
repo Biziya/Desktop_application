@@ -17,14 +17,17 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public MainViewModel(IMeasurementRepository repository)
     {
-        Measurement = new MeasurementViewModel(
-            new MockMeasurementService(), new CsvExportService(), new DialogService(), repository);
+        var device = new MockMeasurementService();
+        Measurement = new MeasurementViewModel(device, new CsvExportService(), new DialogService(), repository);
         _ = Measurement.RestoreLatestSessionAsync();
-        Core = new CoreInformationViewModel(core =>
-        {
-            Measurement.SetCore(core);
-            Navigate(Measurement);
-        });
+        Core = new CoreInformationViewModel(
+            core =>
+            {
+                Measurement.SetCore(core);
+                Navigate(Measurement);
+            },
+            device,
+            repository.DatabasePath);
         Core.Edited += () => Measurement.SetCore(null);
         currentPage = Core;
 

@@ -21,7 +21,7 @@ Replace the old Frontend folder rather than overlaying it, because earlier versi
 3. Right-click anywhere in the active **main application window** to begin a five-second capture, including the panel, table, sidebar or other main-window controls.
 4. The ring displays elapsed progress clockwise from the top while the centered timer counts down from 00:05 to 00:00.
 5. Five simulated samples are averaged into one row. The ring and timer reset and measurement mode stays active.
-6. Right-click again for another capture, or click Stop to leave measurement mode.
+6. Right-click again for another capture, or click Stop to leave measurement mode. Start again later continues the same measurement; click **New Measurement** (while stopped) to begin a separate one.
 
 A single PreviewMouseDown registration on MainWindow with handledEventsToo enabled detects right-button-down events while measurement mode is active. It works across the main window, including when navigating between pages. Inactive, minimized or disabled main windows, separate dialogs and other applications never trigger captures. There are no global hooks or per-page subscriptions to leak or duplicate. While armed, right-click is reserved for measurement triggering; while Idle, normal right-click behavior is untouched. Additional right-clicks during capture/processing are consumed and ignored. Left-click navigation, Start/Stop and other controls continue working normally.
 
@@ -49,12 +49,17 @@ Start Time and End Time are stored and exported but hidden in the table. Complet
 
 ## Columns
 
-`Pages/Measurement/MeasurementColumns.cs` is the single column definition. Each entry has a stable binding path, a table label, a CSV header, table visibility, CSV inclusion and the value reader used by CSV export; list order is the column order for both table and CSV. Changing a label changes only the table header: bindings, CSV headers and SQLite column names are separate.
+Two files in `Pages/Measurement`, each with one job:
+
+- `MeasurementColumns.cs` — what a column is: stable identifier (binding path), table label, CSV header, CSV inclusion and the value CSV export writes. List order is the column order for table and CSV. Changing a label changes only the table header.
+- `MeasurementColumnLayout.cs` — how the table shows it: visibility, width (pixels, star share or Auto), minimum and maximum width. It is the only place table visibility is set. Hiding a column never removes it from SQLite or CSV.
+
+Fonts, row heights, paddings, the drag-handle and Delete columns stay in `MeasurementUiConstants.xaml`.
 
 | Column | Table | CSV | Model field | SQLite column |
 |---|---|---|---|---|
-| No | Yes | Yes | `Number` (display position) | `DisplayNo` |
-| Capture No | Yes | Yes | `CaptureNumber` | `CaptureNo` |
+| No | Yes (52 px) | Yes | `Number` (displayed row position) | `SortOrder` |
+| Capture No | No | Yes | `CaptureNumber` | `CaptureNo` |
 | Start Time | No | Yes | `StartTime` | `StartTime` |
 | End Time | No | Yes | `EndTime` | `EndTime` |
 | Sample | Yes | Yes | `SampleCount` (samples in the capture) | `Sample` |
@@ -68,22 +73,30 @@ Start Time and End Time are stored and exported but hidden in the table. Complet
 
 **Missing mappings.** The capture pipeline had no source for ts_ms, count0, count0_raw, hdm, hdm_raw or dose_rate. They are now an optional `DeviceReading` on `CaptureData`, which a device service fills; raw and processed values are separate fields. `MockMeasurementService` does not invent them, so they are blank in the table and CSV and NULL in SQLite until a real CT007 service supplies them. Averaging and timing are unchanged.
 
-The table builds these columns in `MeasurementPage.xaml.cs` between the drag handle and Delete columns. Their minimum width (`TableValueColumnMinWidth`) and its multiplier are in `MeasurementUiConstants.xaml` with the other sizes.
+The table builds these columns in `MeasurementPage.xaml.cs` between the drag handle and Delete columns. Device-value columns use Auto width (with a minimum) so full-precision values and headers are not clipped; Sample takes the remaining width. Vertical grid lines separate every column and continue through the header, in the same `Line` brush as the row lines.
 
 ## Measurement sessions and SQLite
 
-- **Start** begins a new measurement session with a new GUID. Every capture until the next Start gets that `MeasurementSessionId`. Stop, navigation, editing Core Information and restoring stored rows never create one.
-- The table shows the current session only. Start clears the table (the previous session stays in the database) and Capture No starts again at 1; within a session it is never reused after delete or reorder.
-- Database: `%LocalAppData%\CT007 Measurement Studio\measurements.db`. Tables `MeasurementSessions (MeasurementSessionId, CreatedAt)` and `MeasurementRecords (MeasurementRecordId, MeasurementSessionId FK, ...)`. A unique index on `(MeasurementSessionId, CaptureNo)` prevents duplicates and serves lookups by session.
-- After each capture, reorder and delete, the ViewModel queues a save of the whole table. Saves run in order on the thread pool, never on the UI thread, in one transaction each, with parameterized SQL. Saving a row again only updates its No. Delete removes the row from the database too.
-- If a save fails, a notification shows the error, the rows stay in the table and the next change saves them again. A failed delete is reported but not retried. Closing waits up to five seconds for queued saves.
-- On startup the most recently stored session is shown again (Idle; it can be reordered, deleted and exported). Start then begins a new session.
-- Schema version is kept in `PRAGMA user_version`. Migrations add only missing steps inside a transaction, so existing data is kept; a database from a newer app version is refused rather than changed.
+- **New Measurement** (table header, enabled while stopped) is the only action that starts a new session (new GUID). The table then shows only the new session and Capture No starts at 1; earlier sessions stay in the database.
+- **Start / Stop** only start and stop acquisition. Stop keeps every row; Start again continues the same session and appends new rows after the existing ones, with Capture No continuing. The very first Start, when no session exists yet, creates one. Navigation, editing Core Information and restoring stored rows never create a session.
+- Database: `%LocalAppData%\CT007 Measurement Studio\measurements.db` (shown on the Core Information page). Tables `MeasurementSessions (MeasurementSessionId, CreatedAt)` and `MeasurementRecords (MeasurementRecordId, MeasurementSessionId FK, SortOrder, CaptureNo, ...)`. A unique index on `(MeasurementSessionId, CaptureNo)` prevents duplicates and serves lookups by session.
+- Row order: drag-and-drop reordering (column-header sorting is disabled) is stored as `SortOrder` within the session. After each capture, reorder and delete the ViewModel queues a save of the table; in one transaction it inserts new rows and rewrites `SortOrder` only for rows that moved. Record IDs, capture numbers, times and values never change. Loading, restart and CSV all use `SortOrder`; No is just the displayed position.
+- Saves run in order on the thread pool, never on the UI thread, with parameterized SQL. Delete removes the row from the database too.
+- If a save fails, a notification shows the error and the rows stay in the table. The next change, Stop or closing saves them again. New Measurement refuses to switch sessions until they are saved. A failed delete is reported but not retried. Closing waits up to five seconds for queued saves.
+- On startup the most recently stored session is shown again in its saved order (Idle). Start continues it; New Measurement starts another. Earlier sessions can be loaded by ID through the repository (`LoadAsync`); there is no session picker in the UI.
+- Schema version is kept in `PRAGMA user_version` (now 2). Migrations add only missing steps inside a transaction, so existing data is kept: version 2 renames `DisplayNo` to `SortOrder`, keeping the stored order. A database from a newer app version is refused rather than changed.
 - Timestamps are stored as ISO 8601 round-trip text (O) with full sub-second precision and offset; device values as INTEGER/REAL.
 
 ## Export
 
-CSV contains the columns above in order, with MeasurementSessionId last, for the current session only, in the table's display order. Timestamps use the round-trip format (O); numbers use invariant culture and round-trip precision; missing device values are empty cells. Every cell is quoted with embedded quotes doubled; lines end in CRLF; UTF-8 BOM and temporary-file replacement are unchanged. Export rejects rows from more than one session.
+CSV contains the columns above in order (including the hidden Capture No, Start Time and End Time), with MeasurementSessionId last, for the current session only, in the saved row order. Timestamps use the round-trip format (O); numbers use invariant culture and round-trip precision; missing device values are empty cells. Every cell is quoted with embedded quotes doubled; lines end in CRLF; UTF-8 BOM and temporary-file replacement are unchanged. Export rejects rows from more than one session.
+
+## Device Status and shared styling
+
+- The Core Information page's Device Status shows the SQLite database path in use (from the repository configuration, selectable for copying) and the CT007 connection from `IMeasurementService.ConnectedDevice` (name and identifier). When no device is connected it shows a red "Disconnected" row with no name or ID; details are re-read whenever `ConnectionChanged` is raised, so they are never stale. The mock service has no hardware link and always reports Disconnected; captures still work in simulation.
+- The Bluetooth Trigger indicator is no longer shown. The trigger itself (right-click in the main window while armed) is unchanged.
+- All buttons share the base button template in `Shared/Styles/Theme.xaml`: hovering an enabled button draws a 2 px navy outer ring as an overlay, so size and content never move. Pressed (darker fill), keyboard focus (inner ring) and disabled (faded, no ring) remain distinct.
+- The sidebar uses its own background (`SidebarBackground`), darker text (`SidebarText`), a hover fill and a white, blue-bordered selected item. It is part of the main window, so both pages share it.
 
 ## Existing features preserved
 
@@ -114,6 +127,7 @@ Frontend/
 │       ├── IDialogService.cs
 │       ├── CsvExportService.cs
 │       ├── MeasurementColumns.cs
+│       ├── MeasurementColumnLayout.cs
 │       ├── MeasurementRepository.cs
 │       ├── MeasurementStyles.xaml
 │       ├── MeasurementUiConstants.xaml
@@ -137,6 +151,8 @@ SmokeTests/
 ```
 
 ## Validation
+
+Device/table/persistence revision: same method — ViewModels, repository (including the v1 → v2 upgrade), column configuration and layout, and CSV export were compiled and the smoke tests passed on Linux with real SQLite; XAML, code-behind and styles were checked by review and XML parsing only. Build and run on Windows to confirm.
 
 Columns/SQLite revision: the ViewModel, repository, column configuration, CSV export and models were compiled with the .NET 10 SDK (warnings as errors) and the full smoke-test sequence passed against a real SQLite database on Linux. That environment had no NuGet access or Windows desktop pack, so SQLite was reached through a test-only stand-in for the `Microsoft.Data.Sqlite` calls, and the WPF project itself (XAML, `MeasurementPage.xaml.cs`, `ScaleExtension.cs`) was not compiled. XAML files parse as XML. Run the build and smoke tests on Windows to confirm.
 
