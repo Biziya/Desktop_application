@@ -40,7 +40,14 @@ internal static class Program
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CoreSnapshot? saved = null;
-        var form = new CoreInformationViewModel(core => saved = core);
+        var link = new ControlledMeasurements();
+        var form = new CoreInformationViewModel(core => saved = core, link, @"C:\data\measurements.db");
+        Check(form.DatabasePath == @"C:\data\measurements.db", "Device Status shows the configured database path");
+        Check(!form.IsDeviceConnected && form.DeviceStatus == "Disconnected" && form.DeviceIdentifier == "", "Clear disconnected state");
+        link.Connect(new DeviceConnection("CT007-A1", "00:1B:44:11:3A:B7"));
+        Check(form.IsDeviceConnected && form.DeviceName == "CT007-A1" && form.DeviceIdentifier == "00:1B:44:11:3A:B7", "Connected device name and ID");
+        link.Connect(null);
+        Check(!form.IsDeviceConnected && form.DeviceName == "No CT007 device connected" && form.DeviceIdentifier == "", "No stale device details");
         form.SaveCommand.Execute(null);
         Check(saved is null && form.DrillholeIdError.Length > 0, "Required field validation");
         form.DrillholeId = "DH-001"; form.DrillholeName = "North Ridge"; form.CoreId = "C-001";
@@ -117,21 +124,28 @@ internal static class Program
             EndTime=first.EndTime, SampleCount=5 };
         try { CsvExportService.Serialize(new[] {first, otherSession}); throw new Exception("Mixed-session export accepted"); }
         catch (ArgumentException) { }
-        Check(MeasurementColumns.All.Where(c => c.ShowInTable).Select(c => c.Label).SequenceEqual(
-            new[] {"No","Capture No","Sample","ts_ms","count0","count0_raw","hdm","hdm_raw","dose_rate"}), "Table column order; times and session hidden");
+        Check(MeasurementColumns.All.Where(c => MeasurementColumnLayout.For(c).Visible).Select(c => c.Label).SequenceEqual(
+            new[] {"No","Sample","ts_ms","count0","count0_raw","hdm","hdm_raw","dose_rate"}), "Table column order; Capture No, times and session hidden");
+        Check(MeasurementColumns.All.All(c => c.IncludeInCsv) && lines[0].Contains("\"Capture No\",\"Start Time\""),
+            "Hidden columns stay in CSV");
         Check(MeasurementColumns.All.All(c => Resolve(c.Binding, withReading) is { } bound && Equals(bound, c.Value(withReading))),
             "Every binding resolves to the same value the CSV writes");
-        Check(MeasurementColumns.All.Last() is { Label: "Session", CsvHeader: "MeasurementSessionId", ShowInTable: false },
+        Check(MeasurementColumns.All.Last() is { Label: "Session", CsvHeader: "MeasurementSessionId" },
             "Labels are independent of CSV headers");
         var count = vm.Results.Count;
         vm.ToggleMeasurementCommand.Execute(null);
         Check(vm.State == MeasurementState.Idle && vm.Results.Count == count, "Stop keeps completed rows");
         vm.TriggerCommand.Execute(null); Check(vm.Results.Count == count, "Stopped trigger ignored");
+        Check(vm.NewMeasurementCommand.CanExecute(null), "New Measurement available while stopped");
         vm.ToggleMeasurementCommand.Execute(null);
-        var secondSession = vm.MeasurementSessionId;
-        Check(secondSession is not null && secondSession != firstSession && vm.Results.Count == 0 &&
-            store.Rows(firstSession).Count == count, "Start begins a new session; the previous one stays stored");
-        count = 0;
+        Check(vm.MeasurementSessionId == firstSession && vm.Results.Count == count && !vm.NewMeasurementCommand.CanExecute(null),
+            "Stop then Start keeps the session and its rows");
+        vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger);
+        count++;
+        Check(vm.Results.Count == count && vm.Results[^1].CaptureNumber == 5 && vm.Results[^1].Number == count &&
+            vm.Results.Select(r => r.CaptureNumber).Take(3).SequenceEqual(new[] {4,1,3}), "Restart appends after the saved order");
+        await Until(() => store.Rows(firstSession).Select(r => r.CaptureNumber).SequenceEqual(new[] {4,1,3,5}));
+        Check(store.Rows(firstSession).Count == count, "No duplicates after Stop/Start");
         vm.TriggerCommand.Execute(null);
         vm.ToggleMeasurementCommand.Execute(null);
         Check(vm.State == MeasurementState.Idle && vm.Countdown == "00:05" && vm.CaptureProgress == 0, "Stop immediately resets active capture");
@@ -143,6 +157,17 @@ internal static class Program
         vm.TriggerCommand.Execute(null); fake.Fail(); await Until(() => vm.CanTrigger);
         Check(vm.Results.Count == count && vm.Countdown == "00:05" && vm.Notification.StartsWith("Capture failed"), "Failure recovers Ready without row");
         vm.SetCore(null); Check(!vm.ToggleMeasurementCommand.CanExecute(null) && vm.State == MeasurementState.Idle, "Editing invalidates saved form and disarms");
+        Check(vm.MeasurementSessionId == firstSession && vm.Results.Count == count, "Disarming keeps the session");
+        vm.NewMeasurementCommand.Execute(null);
+        var secondSession = vm.MeasurementSessionId;
+        Check(secondSession is not null && secondSession != firstSession && vm.Results.Count == 0 &&
+            store.Rows(firstSession).Count == count, "New Measurement begins a new session; the previous one stays stored");
+        vm.SetCore(core); vm.ToggleMeasurementCommand.Execute(null);
+        vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger);
+        Check(vm.Results.Single().CaptureNumber == 1 && vm.Results[0].MeasurementSessionId == secondSession, "New session numbers from 1");
+        await Until(() => store.Rows(secondSession!.Value).Count == 1);
+        Check(store.Rows(firstSession).Count == count, "Sessions stay isolated");
+        vm.ToggleMeasurementCommand.Execute(null);
 
         // A future service may return or report progress after cancellation. Ignore it and prevent overlap.
         var late = new ControlledMeasurements { HonorCancellation = false };
@@ -202,7 +227,12 @@ internal static class Program
             failingVm.TriggerCommand.Execute(null); failingService.Complete();
             await Until(() => failingVm.Notification.StartsWith("Saving to the database failed"));
             Check(failingVm.Results.Count == 1, "Save failure keeps the captured row");
+            failingVm.ToggleMeasurementCommand.Execute(null);
+            failingVm.NewMeasurementCommand.Execute(null);
+            Check(failingVm.Results.Count == 1, "New Measurement refuses to drop unsaved rows");
             failing.Fail = false;
+            failingVm.ToggleMeasurementCommand.Execute(null);
+            await Until(() => failing.Rows(failingVm.MeasurementSessionId!.Value).Count == 1);
             failingVm.TriggerCommand.Execute(null); failingService.Complete(); await Until(() => failingVm.CanTrigger);
             var id = failingVm.MeasurementSessionId!.Value;
             await Until(() => failing.Rows(id).Count == 2);
@@ -232,7 +262,7 @@ internal static class Program
 
             var reopened = new SqliteMeasurementRepository(path);
             var loaded = await reopened.LoadAsync(a.Id);
-            Check(loaded.Select(r => r.CaptureNumber).SequenceEqual(new[] {2,1}) && loaded[0].Number == 1, "Upsert: no duplicates, display order kept");
+            Check(loaded.Select(r => r.CaptureNumber).SequenceEqual(new[] {2,1}) && loaded[0].Number == 1, "Upsert: no duplicates, saved order kept");
             Check(loaded[1].StartTime == start && loaded[1].StartTime.Offset == start.Offset && loaded[1].EndTime == start.AddSeconds(5) &&
                 loaded[1].Reading == a1.Reading && loaded[0].Reading == DeviceReading.Empty && loaded[1].SampleCount == 5,
                 "Stored values, precision and nulls survive a reopen");
@@ -242,24 +272,66 @@ internal static class Program
             await reopened.DeleteAsync(a.Id, 2);
             Check((await reopened.LoadAsync(a.Id)).Count == 1, "Delete removes only that capture");
 
-            // Restart: a new ViewModel shows the last session without creating one; Start then creates a new one.
+            // Restart: a new ViewModel shows the last session, in its saved order, without creating one.
             var service = new ControlledMeasurements();
             Guid captured;
             using (var vm = new MeasurementViewModel(service, new FakeExport(), new FakeDialogs(), reopened))
             {
                 vm.SetCore(core); vm.ToggleMeasurementCommand.Execute(null);
                 captured = vm.MeasurementSessionId!.Value;
-                for (int i=0; i<2; i++) { vm.TriggerCommand.Execute(null); service.Complete(); await Until(() => vm.CanTrigger); }
+                for (int i=0; i<3; i++) { vm.TriggerCommand.Execute(null); service.Complete(); await Until(() => vm.CanTrigger); }
+                vm.Move(vm.Results[2], vm.Results[0], false);
             }
             using (var restarted = new MeasurementViewModel(new ControlledMeasurements(), new FakeExport(), new FakeDialogs(),
                        new SqliteMeasurementRepository(path)))
             {
                 await restarted.RestoreLatestSessionAsync();
-                Check(restarted.MeasurementSessionId == captured && restarted.Results.Count == 2 && restarted.State == MeasurementState.Idle &&
-                    restarted.Results.Select(r => r.CaptureNumber).SequenceEqual(new[] {1,2}), "Records available after restart");
+                Check(restarted.MeasurementSessionId == captured && restarted.Results.Count == 3 && restarted.State == MeasurementState.Idle &&
+                    restarted.Results.Select(r => r.CaptureNumber).SequenceEqual(new[] {3,1,2}) &&
+                    restarted.Results.Select(r => r.Number).SequenceEqual(new[] {1,2,3}), "Saved order restored after restart");
+                Check(CsvExportService.Serialize(restarted.Results.ToArray()).Split("\r\n")[1].StartsWith("\"1\",\"3\","), "CSV follows saved order");
                 restarted.SetCore(core); restarted.ToggleMeasurementCommand.Execute(null);
-                Check(restarted.MeasurementSessionId != captured && restarted.Results.Count == 0, "New session after restart gets a new ID");
+                Check(restarted.MeasurementSessionId == captured, "Start after restart continues the restored session");
             }
+            using (var continued = new MeasurementViewModel(service, new FakeExport(), new FakeDialogs(), new SqliteMeasurementRepository(path)))
+            {
+                await continued.RestoreLatestSessionAsync();
+                continued.SetCore(core); continued.ToggleMeasurementCommand.Execute(null);
+                continued.TriggerCommand.Execute(null); service.Complete(); await Until(() => continued.CanTrigger);
+                Check(continued.Results.Select(r => r.CaptureNumber).SequenceEqual(new[] {3,1,2,4}), "Appends after restored rows, numbers continue");
+                continued.ToggleMeasurementCommand.Execute(null); continued.NewMeasurementCommand.Execute(null);
+                Check(continued.MeasurementSessionId != captured && continued.Results.Count == 0, "New Measurement after restart gets a new ID");
+            }
+            var final = await new SqliteMeasurementRepository(path).LoadAsync(captured);
+            Check(final.Select(r => r.CaptureNumber).SequenceEqual(new[] {3,1,2,4}), "Stored order and rows complete, no duplicates");
+
+            // Schema v1 (DisplayNo) databases upgrade in place and keep their rows and order.
+            var legacy = Path.Combine(Path.GetTempPath(), $"ct007-legacy-{Guid.NewGuid():N}.db");
+            using (var connection = new SqliteConnection($"Data Source={legacy}"))
+            {
+                connection.Open();
+                using var create = connection.CreateCommand();
+                create.CommandText = """
+                    CREATE TABLE MeasurementSessions (MeasurementSessionId TEXT NOT NULL PRIMARY KEY, CreatedAt TEXT NOT NULL);
+                    CREATE TABLE MeasurementRecords (MeasurementRecordId INTEGER PRIMARY KEY AUTOINCREMENT,
+                        MeasurementSessionId TEXT NOT NULL REFERENCES MeasurementSessions (MeasurementSessionId),
+                        DisplayNo INTEGER NOT NULL, CaptureNo INTEGER NOT NULL, StartTime TEXT NOT NULL, EndTime TEXT NOT NULL,
+                        Sample INTEGER NOT NULL, TsMs INTEGER, Count0 REAL, Count0Raw REAL, Hdm REAL, HdmRaw REAL, DoseRate REAL);
+                    CREATE UNIQUE INDEX UX_MeasurementRecords_Session_CaptureNo ON MeasurementRecords (MeasurementSessionId, CaptureNo);
+                    INSERT INTO MeasurementSessions VALUES ('11111111-1111-1111-1111-111111111111', '2026-10-11T11:16:10.8510000+08:00');
+                    INSERT INTO MeasurementRecords (MeasurementSessionId, DisplayNo, CaptureNo, StartTime, EndTime, Sample) VALUES
+                        ('11111111-1111-1111-1111-111111111111', 2, 1, '2026-10-11T11:16:10.8510000+08:00', '2026-10-11T11:16:15.8510000+08:00', 5),
+                        ('11111111-1111-1111-1111-111111111111', 1, 2, '2026-10-11T11:16:20.8510000+08:00', '2026-10-11T11:16:25.8510000+08:00', 5);
+                    PRAGMA user_version = 1;
+                    """;
+                create.ExecuteNonQuery();
+            }
+            try
+            {
+                var upgraded = await new SqliteMeasurementRepository(legacy).LoadAsync(Guid.Parse("11111111-1111-1111-1111-111111111111"));
+                Check(upgraded.Select(r => r.CaptureNumber).SequenceEqual(new[] {2,1}), "v1 database upgraded with data and order kept");
+            }
+            finally { SqliteConnection.ClearAllPools(); File.Delete(legacy); }
         }
         finally
         {
@@ -282,6 +354,7 @@ internal static class Program
     { public bool Confirm { get; set; } public bool ConfirmDelete() => Confirm; }
     private sealed class MemoryRepository : IMeasurementRepository
     {
+        public string DatabasePath => ":memory:";
         private readonly object gate = new();
         private readonly Dictionary<(Guid, int), MeasurementResult> rows = new();
         private readonly Dictionary<(Guid, int), int> numbers = new();
@@ -308,6 +381,9 @@ internal static class Program
     private sealed class ControlledMeasurements : IMeasurementService
     {
         public TimeSpan Duration => TimeSpan.FromSeconds(5);
+        public DeviceConnection? ConnectedDevice { get; private set; }
+        public event EventHandler? ConnectionChanged;
+        public void Connect(DeviceConnection? device) { ConnectedDevice = device; ConnectionChanged?.Invoke(this, EventArgs.Empty); }
         public int Calls { get; private set; }
         public bool HonorCancellation { get; init; } = true;
         private TaskCompletionSource<CaptureData>? pending;
