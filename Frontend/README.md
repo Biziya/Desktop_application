@@ -77,16 +77,25 @@ The table builds these columns in `MeasurementPage.xaml.cs` between the drag han
 
 ## Measurement sessions and SQLite
 
-- **New Measurement** (table header, enabled while stopped) is the only action that starts a new session (new GUID). The table then shows only the new session and Capture No starts at 1; earlier sessions stay in the database.
-- **Start / Stop** only start and stop acquisition. Stop keeps every row; Start again continues the same session and appends new rows after the existing ones, with Capture No continuing. The very first Start, when no session exists yet, creates one. Navigation, editing Core Information and restoring stored rows never create a session.
+- **One session per drillhole.** Save & Continue on Core Information looks up the Drillhole ID in `MeasurementSessions`: an existing session is reused (same `id`, original `CreatedAt`, stored metadata kept — differing name/project/operator/comment are reported, not written), otherwise a session is created with DrillholeID, DrillholeName, Project, operator and comment. A unique index on DrillholeID plus `INSERT … ON CONFLICT (DrillholeID) DO NOTHING` means concurrent saves can never create two sessions for one drillhole. The same Drillhole ID always resolves to the same session, also after a restart; the table then shows that session's rows.
+- **Start / Stop** only start and stop acquisition. Stop keeps every row; Start again continues the same session, appending rows (Capture No continues) from the saved next depth and step.
+- **New Measurement** (table header, enabled while stopped) closes the current drillhole; enter the next drillhole in Core Information and click Save & Continue. Saving the same Drillhole ID again reopens the same session.
 - Database: `%LocalAppData%\CT007_Measurement_Studio\measurements.db` (shown on the Core Information page). A database in the old `CT007 Measurement Studio` folder is moved there automatically on first start; if it cannot be moved (file open in another program), the old location keeps being used. One shared table for all sessions and one for all records: `MeasurementSessions (id, CreatedAt)` and `MeasurementRecords (id, session_id, SortOrder, CaptureNo, ...)`, with `MeasurementRecords.session_id → MeasurementSessions.id` (foreign keys enforced, no cascading delete). The unique index `UX_MeasurementRecords_Session_CaptureNo (session_id, CaptureNo)` prevents duplicates and, with session_id first, is the index used for lookups by session.
 - Row order: drag-and-drop reordering (column-header sorting is disabled) is stored as `SortOrder` within the session. After each capture, reorder and delete the ViewModel queues a save of the table; in one transaction it inserts new rows and rewrites `SortOrder` only for rows that moved. Record IDs, capture numbers, times and values never change. Loading, restart and CSV all use `SortOrder`; No is just the displayed position.
 - The database uses WAL journal mode, so external tools (DBeaver, `tools/check-db.ps1`) can read it while the app is running and the app keeps saving meanwhile. SQLite has no users or permissions: any program running as the same Windows user can open the file. Keep `measurements.db`, `measurements.db-wal` and `measurements.db-shm` together if you copy it.
 - Saves run in order on the thread pool, never on the UI thread, with parameterized SQL. Delete removes the row from the database too.
 - If a save fails, a notification shows the error and the rows stay in the table. The next change, Stop or closing saves them again. New Measurement refuses to switch sessions until they are saved. A failed delete is reported but not retried. Closing waits up to five seconds for queued saves.
 - On startup the most recently stored session is shown again in its saved order (Idle). Start continues it; New Measurement starts another. Earlier sessions can be loaded by ID through the repository (`LoadAsync`); there is no session picker in the UI.
-- Schema version is kept in `PRAGMA user_version` (now 3). Migrations add only missing steps inside a transaction, so existing data is kept: version 2 renames `DisplayNo` to `SortOrder`; version 3 renames `MeasurementSessionId`/`MeasurementRecordId` to `id` and `session_id` with `ALTER TABLE ... RENAME COLUMN`, keeping every ID, value, link and the index. After migrating, a foreign-key check must find no record without a session, or the upgrade is rolled back. A database from a newer app version is refused rather than changed.
+- Schema version is kept in `PRAGMA user_version` (now 4; version 4 adds the session metadata columns, the DrillholeID unique index, the record depth columns and `MeasurementProgress`, all without changing existing rows. If a DrillholeID column already existed with duplicate values — only possible if the file was edited outside the app — the upgrade stops, names them and changes nothing, because merging would require renumbering captures). Migrations add only missing steps inside a transaction, so existing data is kept: version 2 renames `DisplayNo` to `SortOrder`; version 3 renames `MeasurementSessionId`/`MeasurementRecordId` to `id` and `session_id` with `ALTER TABLE ... RENAME COLUMN`, keeping every ID, value, link and the index. After migrating, a foreign-key check must find no record without a session, or the upgrade is rolled back. A database from a newer app version is refused rather than changed.
 - Timestamps are stored as ISO 8601 round-trip text (O) with full sub-second precision and offset; device values as INTEGER/REAL.
+
+## Depth intervals
+
+- **Units.** Depths are stored and calculated as whole millimetres (INTEGER) and shown in metres (`Depth.cs`: 1 m = 1000 mm). Input finer than 1 mm is rejected, so intervals add up exactly with no floating-point drift. `"from"`, `"to"` and `step` in SQLite are millimetres.
+- **Inputs.** One row on the Measurement page holds **Starting Depth (m)** (the next capture's `from`), **Step (m)**, the countdown and Start / Stop. There is no To input: `to = from + step`. Both inputs start from the session's saved progress; a session without progress starts empty and Start needs both. Depth entry is only on this page — Core Information has no From/To fields.
+- **Per capture.** When a capture begins, its interval is fixed: `from` = Starting Depth, `to = from + step`, `step` = Step. The completed row stores all three; Starting Depth then becomes that `to` — once per completed capture (one row per capture). Changing Step or Starting Depth during a capture applies to the next capture; a starting depth typed during the capture is not overwritten by the advance. Cancelled, stopped or failed captures do not advance.
+- **Progress.** Starting Depth and Step are saved per session in `MeasurementProgress (session_id, next_from, step)` — in the same transaction as the rows, so a capture and its depth advance commit together and a retried save cannot advance twice. They are restored after Stop → Start, when reopening the drillhole and after a restart. (There was no earlier settings storage to reuse.)
+- Reordering changes only `SortOrder`; depths never change. Rows stored before this version keep null `from`/`to`/`step` and sessions null metadata — nothing is invented. The table shows each row's saved depths as read-only **From (m)**, **To (m)** and **Step (m)** columns (fields `FromMetres`/`ToMetres`/`StepMetres`, exact mm ÷ 1000; layout in `MeasurementColumnLayout.cs`). They are not exported, so the CSV columns are unchanged (one `IncludeInCsv` flag each to change that).
 
 ## Export
 
@@ -101,7 +110,7 @@ CSV contains the columns above in order (including the hidden Capture No, Start 
 
 ## Existing features preserved
 
-- Required form validation, decimal typing/paste filtering, live depth calculation and saved core snapshots.
+- Required form validation and saved core snapshots. Operator is pre-filled with the signed-in Windows account (`DOMAIN\Username` for a domain account, otherwise the user name — never the computer name alone); it stays editable, an emptied field is filled again on Save & Continue, and a drillhole's stored operator is never overwritten.
 - Blue/white theme, collapsible sidebar, active navigation, icon tooltips and retained sidebar state.
 - Drag handle and Delete columns around the configured measurement columns; 36-pixel rows (at the default 1.0 multipliers) and alternating backgrounds.
 - Measurement page sizes are Default x Multiplier values in `Pages/Measurement/MeasurementUiConstants.xaml`; every multiplier is 1.0 by default, which is the original look. They are applied with `{local:Scale ...}` (`ScaleExtension.cs`).
@@ -129,6 +138,7 @@ Frontend/
 │       ├── CsvExportService.cs
 │       ├── MeasurementColumns.cs
 │       ├── MeasurementColumnLayout.cs
+│       ├── Depth.cs
 │       ├── MeasurementRepository.cs
 │       ├── MeasurementStyles.xaml
 │       ├── MeasurementUiConstants.xaml

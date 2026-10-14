@@ -17,16 +17,33 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Countdown + Start / Stop -->
+        <!-- One row: Starting Depth, Step, countdown, Start / Stop. "to" is calculated (from + step), so there is no To input.
+             Depth edits, also during acquisition, apply from the next capture. -->
         <Border Style="{StaticResource Card}">
             <StackPanel>
                 <Grid>
+                    <!-- Inputs share the free width (124-180 px each; the minimum fits the smallest window with the
+                         sidebar open); the empty third column pushes countdown and Start / Stop to the right. -->
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="124" MaxWidth="180"/>
+                        <ColumnDefinition Width="*" MinWidth="124" MaxWidth="180"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel HorizontalAlignment="Center">
+                    <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
+                        <TextBlock Text="Starting Depth (m)" FontSize="{local:Scale LabelFontSize}" TextWrapping="Wrap"/>
+                        <TextBox Text="{Binding NextFrom, UpdateSourceTrigger=PropertyChanged}"
+                                 AutomationProperties.Name="Starting depth in metres"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <TextBlock Text="Step (m)" FontSize="{local:Scale LabelFontSize}" TextWrapping="Wrap"/>
+                        <TextBox Text="{Binding Step, UpdateSourceTrigger=PropertyChanged}"
+                                 AutomationProperties.Name="Depth step in metres"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="3" HorizontalAlignment="Center">
                         <TextBlock Text="Capture Countdown"
                                    FontSize="{local:Scale CountdownLabelFontSize}"
                                    Foreground="{StaticResource Muted}"
@@ -48,7 +65,7 @@
                         </Grid>
                     </StackPanel>
 
-                    <Button Grid.Column="1"
+                    <Button Grid.Column="4"
                             Margin="24,0,0,0"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -67,6 +84,22 @@
                         <TextBlock><Run Style="{StaticResource StartStopIconRun}"/><Run Style="{StaticResource StartStopLabelRun}"/></TextBlock>
                     </Button>
                 </Grid>
+
+                <TextBlock Text="{Binding DepthError}"
+                           FontSize="{local:Scale LabelFontSize}"
+                           Foreground="{StaticResource Warning}"
+                           TextWrapping="Wrap"
+                           Margin="0,8,0,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <Trigger Property="Text" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
 
                 <TextBlock Text="Complete Core Information and click Save &amp; Continue to enable Start."
                            FontSize="{local:Scale LabelFontSize}"
@@ -102,7 +135,7 @@
                             FontSize="{local:Scale ExportButtonFontSize}"
                             MinHeight="{local:Scale ExportButtonHeight}"
                             Margin="0,0,10,0"
-                            ToolTip="Start a new measurement session. Current rows stay stored."
+                            ToolTip="Finish this drillhole. Its measurements stay stored; enter the next drillhole in Core Information."
                             Command="{Binding NewMeasurementCommand}"/>
                     <Button Grid.Column="2"
                             Content="↓   Export CSV"

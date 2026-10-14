@@ -22,6 +22,11 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     private int nextCapture = 1;
     private MeasurementSession? session;
     private bool hasUnsavedRows;
+    private bool openingSession;
+    private string nextFrom = "";
+    private string step = "";
+    private long? nextFromMm;
+    private long? stepMm;
 
     // Database writes run one after another, in the order they were requested. Never faults.
     private Task persistence = Task.CompletedTask;
@@ -40,7 +45,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
         ToggleMeasurementCommand = new RelayCommand(
             _ => ToggleMeasurementMode(),
-            _ => IsMeasurementModeActive || savedCore is not null);
+            _ => IsMeasurementModeActive || (SessionMatchesCore && HasValidDepths && !openingSession));
 
         TriggerCommand = new RelayCommand(
             parameter =>
@@ -73,7 +78,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     public RelayCommand DeleteCommand { get; }
 
-    /// <summary>The only action that starts a new measurement session.</summary>
+    /// <summary>Closes the current drillhole: the next Save &amp; Continue opens the session of the drillhole entered then.</summary>
     public RelayCommand NewMeasurementCommand { get; }
 
     public MeasurementState State
@@ -93,7 +98,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     public bool IsCapturing => State is MeasurementState.Capturing or MeasurementState.Processing;
 
-    public bool CanTrigger => State == MeasurementState.Ready && savedCore is not null && activeCapture is null;
+    public bool CanTrigger =>
+        State == MeasurementState.Ready && SessionMatchesCore && HasValidDepths && activeCapture is null;
 
     public string Countdown
     {
@@ -115,8 +121,44 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     public bool NeedsCore => savedCore is null;
 
-    /// <summary>Session shown in the table and exported. Hidden from the table; null until the first Start or a restore.</summary>
+    /// <summary>Session shown in the table and exported: the session of the saved Drillhole ID (or a restored one).</summary>
     public Guid? SessionId => session?.Id;
+
+    /// <summary>Starting depth (metres, the next capture's "from"). A change applies from the next capture.</summary>
+    public string NextFrom
+    {
+        get => nextFrom;
+        set
+        {
+            if (Set(ref nextFrom, value))
+            {
+                DepthInputsChanged(save: true);
+            }
+        }
+    }
+
+    /// <summary>Depth step (metres) of each capture. A change applies from the next capture.</summary>
+    public string Step
+    {
+        get => step;
+        set
+        {
+            if (Set(ref step, value))
+            {
+                DepthInputsChanged(save: true);
+            }
+        }
+    }
+
+    public string DepthError =>
+        nextFrom.Length > 0 && nextFromMm is null ? "Starting depth: enter a depth in metres (at most 3 decimals)." :
+        step.Length > 0 && stepMm is null ? "Step: enter a depth greater than 0 m (at most 3 decimals)." :
+        nextFromMm is null || stepMm is null ? "Enter the starting depth and step to enable Start." : "";
+
+    private bool HasValidDepths => nextFromMm is not null && stepMm is not null;
+
+    private bool SessionMatchesCore =>
+        session is { DrillholeId: { } drillhole } && savedCore is { } core && drillhole == core.DrillholeId;
 
     /// <summary>
     /// Shows the most recently stored session after a restart, in its saved order. Start then continues it.
@@ -132,22 +174,14 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             }
 
             var rows = await repository.LoadAsync(latest.Id);
+            var progress = await repository.LoadProgressAsync(latest.Id);
 
-            if (disposed || session is not null)
+            if (disposed || session is not null || openingSession)
             {
                 return;
             }
 
-            session = latest;
-            nextCapture = rows.Count == 0 ? 1 : rows.Max(r => r.CaptureNumber) + 1;
-            Changed(nameof(SessionId));
-
-            foreach (var row in rows)
-            {
-                Results.Add(row);
-            }
-
-            Renumber();
+            ShowSession(latest, rows, progress);
         }
         catch (Exception error)
         {
@@ -163,9 +197,111 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         {
             StopMeasurementMode();
         }
+        else if (!SessionMatchesCore)
+        {
+            _ = OpenDrillholeAsync(core);
+        }
 
         Changed(nameof(NeedsCore));
         RefreshCommands();
+    }
+
+    // Looks up the session of the core's Drillhole ID (creating it only if none exists) and shows its rows and
+    // saved progress. The same Drillhole ID always resolves to the same session, also after a restart.
+    private async Task OpenDrillholeAsync(CoreSnapshot core)
+    {
+        openingSession = true;
+        RefreshCommands();
+
+        try
+        {
+            // Queued saves of the current session finish first, so nothing is reloaded half-saved.
+            await persistence;
+
+            if (hasUnsavedRows)
+            {
+                SaveSession();
+                Notify("Measurements of the previous drillhole are not saved yet. Retrying — click Save & Continue again once saving succeeds.");
+                return;
+            }
+
+            var candidate = new MeasurementSession(
+                Guid.NewGuid(), DateTimeOffset.Now, core.DrillholeId, core.DrillholeName, core.ProjectArea, core.Operator, core.Notes);
+            var resolved = await repository.ResolveSessionAsync(candidate);
+            var rows = await repository.LoadAsync(resolved.Id);
+            var progress = await repository.LoadProgressAsync(resolved.Id);
+
+            if (disposed || savedCore != core)
+            {
+                return;
+            }
+
+            ShowSession(resolved, rows, progress);
+
+            if (resolved.Id != candidate.Id && resolved.MetadataDiffers(candidate))
+            {
+                Notify($"Drillhole {core.DrillholeId} already exists. Its stored name, project, operator and comment are kept; the edited values were not saved.");
+            }
+        }
+        catch (Exception error)
+        {
+            Notify($"The drillhole session could not be opened: {error.Message}");
+        }
+        finally
+        {
+            openingSession = false;
+            RefreshCommands();
+        }
+    }
+
+    // Shows a stored session: its rows in saved order and its saved starting depth and step. Without saved progress
+    // the starting depth is empty (to be entered on the Measurement page) and the step stays as entered.
+    private void ShowSession(MeasurementSession shown, IReadOnlyList<MeasurementResult> rows, DepthProgress? progress)
+    {
+        session = shown;
+        nextCapture = rows.Count == 0 ? 1 : rows.Max(r => r.CaptureNumber) + 1;
+        Results.Clear();
+
+        foreach (var row in rows)
+        {
+            Results.Add(row);
+        }
+
+        Renumber();
+        Changed(nameof(SessionId));
+
+        if (progress is not null)
+        {
+            SetDepthInputs(Depth.Format(progress.NextFromMm), Depth.Format(progress.StepMm));
+        }
+        else
+        {
+            SetDepthInputs("", step);
+        }
+    }
+
+    // Sets both inputs without saving (used when values come from storage or a completed capture).
+    private void SetDepthInputs(string from, string size)
+    {
+        nextFrom = from;
+        step = size;
+        Changed(nameof(NextFrom));
+        Changed(nameof(Step));
+        DepthInputsChanged(save: false);
+    }
+
+    private void DepthInputsChanged(bool save)
+    {
+        nextFromMm = Depth.TryParseMetres(nextFrom, out var from) ? from : null;
+        stepMm = Depth.TryParseMetres(step, out var size) && size > 0 ? size : null;
+        Changed(nameof(DepthError));
+        RefreshCommands();
+
+        // A user change is stored as the progress of the drillhole's session (rows are re-saved unchanged).
+        if (save && HasValidDepths && SessionMatchesCore && !openingSession)
+        {
+            SaveSession();
+        }
     }
 
     public void Move(MeasurementResult source, MeasurementResult target, bool after)
@@ -237,20 +373,16 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             return;
         }
 
-        // Start (also after Stop) continues the current session and appends to its rows. Only the very first
-        // Start, when there is no session at all, creates one.
-        if (session is null)
-        {
-            BeginSession();
-        }
-
+        // Start (also after Stop) continues the drillhole's session, its rows and its next depth and step.
         ResetCountdown();
         State = MeasurementState.Ready;
     }
 
+    // Sessions follow the Drillhole ID, so a new measurement means entering the next drillhole: this closes the
+    // current one (it stays stored with its progress) and asks for Core Information to be saved again.
     private void NewMeasurement()
     {
-        // Switching sessions clears the table, so unsaved rows must reach the database first.
+        // Closing clears the table, so unsaved rows must reach the database first.
         if (hasUnsavedRows)
         {
             SaveSession();
@@ -258,17 +390,13 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             return;
         }
 
-        BeginSession();
-        Notify("New measurement started. Previous measurements remain stored.");
-    }
-
-    // Creates a session. The previous session stays in the database; the table shows only the new one.
-    private void BeginSession()
-    {
-        session = MeasurementSession.New();
+        session = null;
         nextCapture = 1;
         Results.Clear();
         Changed(nameof(SessionId));
+        SetDepthInputs("", "");
+        SetCore(null);
+        Notify("Enter the next drillhole in Core Information and click Save & Continue. Earlier measurements remain stored.");
     }
 
     private void StopMeasurementMode()
@@ -293,10 +421,13 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     private async Task CaptureAsync(DateTimeOffset start)
     {
-        if (savedCore is not { } core || session is not { } current)
+        if (savedCore is not { } core || session is not { } current || nextFromMm is not { } fromMm || stepMm is not { } stepValue)
         {
             return;
         }
+
+        // The interval is fixed now: later step or depth edits apply to the next capture only.
+        var toMm = fromMm + stepValue;
 
         using var capture = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         var token = capture.Token;
@@ -348,9 +479,20 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
                 Reading = data.Reading ?? DeviceReading.Empty,
                 AverageValue = average,
                 Unit = data.Unit,
-                Core = core
+                Core = core,
+                FromMm = fromMm,
+                ToMm = toMm,
+                StepMm = stepValue
             });
             Renumber();
+
+            // Advance once per completed capture — unless the user typed a new starting depth meanwhile,
+            // which then applies to the next capture. Saved in the same transaction as the new row.
+            if (nextFromMm == fromMm)
+            {
+                SetDepthInputs(Depth.Format(toMm), step);
+            }
+
             SaveSession();
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -413,7 +555,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
 
         var rows = Results.ToArray();
-        var saved = await Persist(() => repository.SaveAsync(current, rows));
+        var progress = nextFromMm is { } from && stepMm is { } size ? new DepthProgress(from, size) : null;
+        var saved = await Persist(() => repository.SaveAsync(current, rows, progress));
 
         // Saves complete in request order, so the latest result describes the table.
         if (session == current)

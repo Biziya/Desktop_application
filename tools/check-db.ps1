@@ -131,7 +131,7 @@ function Invoke-Sqlite([string]$Query, [string]$Parameter, [string]$Title) {
     }
 }
 
-$records = 'SELECT SortOrder, CaptureNo, StartTime, EndTime, Sample, TsMs, Count0, Count0Raw, Hdm, HdmRaw, DoseRate
+$records = 'SELECT SortOrder, CaptureNo, "from" AS from_mm, "to" AS to_mm, step AS step_mm, StartTime, EndTime, Sample, TsMs, Count0, Count0Raw, Hdm, HdmRaw, DoseRate
             FROM MeasurementRecords WHERE session_id = ? ORDER BY SortOrder'
 
 Write-Host "Database: $Database"
@@ -139,11 +139,12 @@ Write-Host "Database: $Database"
 if ($Sql) { Invoke-Sqlite $Sql $Value 'Query'; return }
 if ($Session) { Invoke-Sqlite $records $Session "Session $Session"; return }
 
-Invoke-Sqlite 'PRAGMA user_version' '' 'Schema version (expected 3)'
+Invoke-Sqlite 'PRAGMA user_version' '' 'Schema version (expected 4)'
 
-Invoke-Sqlite 'SELECT s.id, s.CreatedAt, COUNT(r.id) AS Records
+Invoke-Sqlite 'SELECT s.id, s.DrillholeID, s.DrillholeName, s.CreatedAt, p.next_from AS next_from_mm, p.step AS step_mm, COUNT(r.id) AS Records
                FROM MeasurementSessions s
                LEFT JOIN MeasurementRecords r ON r.session_id = s.id
+               LEFT JOIN MeasurementProgress p ON p.session_id = s.id
                GROUP BY s.id ORDER BY s.rowid' '' 'Sessions (oldest first)'
 
 $latest = [CtSqlite]::Query($Database,

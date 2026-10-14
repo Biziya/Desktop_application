@@ -60,6 +60,7 @@ public partial class MeasurementPage : UserControl
             {
                 Header = column.Label,
                 Binding = new Binding(column.Binding) { Mode = BindingMode.OneWay, StringFormat = column.DisplayFormat },
+                IsReadOnly = true,
                 Width = (DataGridLength)widths.ConvertFromInvariantString(layout.Width)!,
                 MinWidth = layout.MinWidth,
                 MaxWidth = layout.MaxWidth,

@@ -84,36 +84,6 @@
                                  AutomationProperties.Name="Core ID"/>
                         <TextBlock Style="{StaticResource ErrorText}" Text="{Binding CoreIdError}"/>
                     </StackPanel>
-                    <UniformGrid Columns="3">
-                        <StackPanel Style="{StaticResource FieldPanel}">
-                            <TextBlock><Run Text="Core Depth From (m)"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
-                            <TextBox Style="{StaticResource ValidatedInput}"
-                                     Tag="{Binding DepthError}"
-                                     Text="{Binding DepthFrom, UpdateSourceTrigger=PropertyChanged}"
-                                     AutomationProperties.Name="Core Depth From (m)"
-                                     PreviewTextInput="DepthInput"
-                                     DataObject.Pasting="DepthPaste"/>
-                        </StackPanel>
-                        <StackPanel Style="{StaticResource FieldPanel}">
-                            <TextBlock><Run Text="Core Depth To (m)"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
-                            <TextBox Style="{StaticResource ValidatedInput}"
-                                     Tag="{Binding DepthError}"
-                                     Text="{Binding DepthTo, UpdateSourceTrigger=PropertyChanged}"
-                                     AutomationProperties.Name="Core Depth To (m)"
-                                     PreviewTextInput="DepthInput"
-                                     DataObject.Pasting="DepthPaste"/>
-                        </StackPanel>
-                        <StackPanel Style="{StaticResource FieldPanel}">
-                            <TextBlock Text="Core Depth (m)"/>
-                            <TextBox Text="{Binding CoreDepth, Mode=OneWay}"
-                                     AutomationProperties.Name="Core Depth (m)"
-                                     IsReadOnly="True"
-                                     IsTabStop="False"/>
-                        </StackPanel>
-                    </UniformGrid>
-                    <TextBlock Style="{StaticResource ErrorText}"
-                               Text="{Binding DepthError}"
-                               Margin="0,0,0,14"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition/>

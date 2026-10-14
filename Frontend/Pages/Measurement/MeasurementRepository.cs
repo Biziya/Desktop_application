@@ -4,11 +4,26 @@ using Microsoft.Data.Sqlite;
 
 namespace Frontend.Pages.Measurement;
 
-/// <summary>One measurement session: every capture until the user starts a new measurement.</summary>
-public sealed record MeasurementSession(Guid Id, DateTimeOffset CreatedAt)
+/// <summary>
+/// One measurement session per drillhole (MeasurementSessions row). Sessions stored before drillhole metadata existed
+/// have null metadata.
+/// </summary>
+public sealed record MeasurementSession(
+    Guid Id,
+    DateTimeOffset CreatedAt,
+    string? DrillholeId = null,
+    string? DrillholeName = null,
+    string? Project = null,
+    string? Operator = null,
+    string? Comment = null)
 {
-    public static MeasurementSession New() => new(Guid.NewGuid(), DateTimeOffset.Now);
+    /// <summary>True when name, project, operator or comment differ from <paramref name="other"/>.</summary>
+    public bool MetadataDiffers(MeasurementSession other) =>
+        DrillholeName != other.DrillholeName || Project != other.Project || Operator != other.Operator || Comment != other.Comment;
 }
+
+/// <summary>Where the next capture of a session starts and the selected step, both in millimetres (see Depth.cs).</summary>
+public sealed record DepthProgress(long NextFromMm, long StepMm);
 
 public interface IMeasurementRepository
 {
@@ -16,10 +31,20 @@ public interface IMeasurementRepository
     string DatabasePath { get; }
 
     /// <summary>
-    /// Inserts new rows and stores the user-defined order (SortOrder = position in <paramref name="rows"/>) of rows
-    /// already stored. Nothing else of a stored row changes.
+    /// Returns the session of <paramref name="candidate"/>'s DrillholeId: the stored one when it exists (its id,
+    /// CreatedAt and metadata are kept), otherwise <paramref name="candidate"/> is stored and returned.
     /// </summary>
-    Task SaveAsync(MeasurementSession session, IReadOnlyList<MeasurementResult> rows);
+    Task<MeasurementSession> ResolveSessionAsync(MeasurementSession candidate);
+
+    /// <summary>
+    /// In one transaction: inserts new rows, stores the user-defined order (SortOrder = position in
+    /// <paramref name="rows"/>) of rows already stored, and stores <paramref name="progress"/> when given.
+    /// Nothing else of a stored row changes.
+    /// </summary>
+    Task SaveAsync(MeasurementSession session, IReadOnlyList<MeasurementResult> rows, DepthProgress? progress);
+
+    /// <summary>Saved next depth and step of a session, or null when none is stored.</summary>
+    Task<DepthProgress?> LoadProgressAsync(Guid sessionId);
 
     Task DeleteAsync(Guid sessionId, int captureNumber);
 
@@ -37,10 +62,13 @@ public interface IMeasurementRepository
 public sealed class SqliteMeasurementRepository : IMeasurementRepository
 {
     // Raise when the schema changes, and add a step to Migrate that alters existing tables without dropping data.
-    private const int SchemaVersion = 3;
+    private const int SchemaVersion = 4;
 
+    // "from" and "to" are SQL keywords, so they are always quoted. Depths are whole millimetres.
     private const string RecordColumns =
-        "SortOrder, CaptureNo, StartTime, EndTime, Sample, TsMs, Count0, Count0Raw, Hdm, HdmRaw, DoseRate";
+        "SortOrder, CaptureNo, StartTime, EndTime, Sample, TsMs, Count0, Count0Raw, Hdm, HdmRaw, DoseRate, \"from\", \"to\", step";
+
+    private const string SessionColumns = "id, CreatedAt, DrillholeID, DrillholeName, Project, \"operator\", comment";
 
     private readonly string connectionString;
     private readonly object schemaGate = new();
@@ -101,18 +129,75 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
         }
     }
 
-    public Task SaveAsync(MeasurementSession session, IReadOnlyList<MeasurementResult> rows) => Run(connection =>
+    public Task<MeasurementSession> ResolveSessionAsync(MeasurementSession candidate) => Run(connection =>
     {
+        if (string.IsNullOrWhiteSpace(candidate.DrillholeId))
+        {
+            throw new ArgumentException("A measurement session needs a Drillhole ID.", nameof(candidate));
+        }
+
+        // The unique index on DrillholeID decides: if another insert (this or another process) got there first,
+        // DO NOTHING keeps that row, and the SELECT returns it. Existing rows are never updated.
+        using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = $"""
+            INSERT INTO MeasurementSessions ({SessionColumns})
+            VALUES ($id, $createdAt, $drillholeId, $drillholeName, $project, $operator, $comment)
+            ON CONFLICT (DrillholeID) DO NOTHING;
+            SELECT {SessionColumns} FROM MeasurementSessions WHERE DrillholeID = $drillholeId;
+            """;
+        command.Parameters.AddWithValue("$id", Key(candidate.Id));
+        command.Parameters.AddWithValue("$createdAt", Time(candidate.CreatedAt));
+        command.Parameters.AddWithValue("$drillholeId", candidate.DrillholeId);
+        command.Parameters.AddWithValue("$drillholeName", OrDbNull(candidate.DrillholeName));
+        command.Parameters.AddWithValue("$project", OrDbNull(candidate.Project));
+        command.Parameters.AddWithValue("$operator", OrDbNull(candidate.Operator));
+        command.Parameters.AddWithValue("$comment", OrDbNull(candidate.Comment));
+
+        MeasurementSession session;
+
+        using (var reader = command.ExecuteReader())
+        {
+            if (!reader.Read())
+            {
+                throw new InvalidOperationException($"Drillhole {candidate.DrillholeId} could not be stored.");
+            }
+
+            session = ReadSession(reader);
+        }
+
+        transaction.Commit();
+        return session;
+    });
+
+    public Task<DepthProgress?> LoadProgressAsync(Guid sessionId) => Run(connection =>
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT next_from, step FROM MeasurementProgress WHERE session_id = $session";
+        command.Parameters.AddWithValue("$session", Key(sessionId));
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? new DepthProgress(reader.GetInt64(0), reader.GetInt64(1)) : null;
+    });
+
+    public Task SaveAsync(MeasurementSession session, IReadOnlyList<MeasurementResult> rows, DepthProgress? progress) => Run(connection =>
+    {
+        // The session row already exists (ResolveSessionAsync or an earlier version created it).
         using var transaction = connection.BeginTransaction();
 
-        using (var insertSession = connection.CreateCommand())
+        if (progress is not null)
         {
-            insertSession.Transaction = transaction;
-            insertSession.CommandText =
-                "INSERT OR IGNORE INTO MeasurementSessions (id, CreatedAt) VALUES ($session, $createdAt)";
-            insertSession.Parameters.AddWithValue("$session", Key(session.Id));
-            insertSession.Parameters.AddWithValue("$createdAt", Time(session.CreatedAt));
-            insertSession.ExecuteNonQuery();
+            // Saved with the rows it follows from, so a capture and the depth advance it causes commit together.
+            using var saveProgress = connection.CreateCommand();
+            saveProgress.Transaction = transaction;
+            saveProgress.CommandText = """
+                INSERT INTO MeasurementProgress (session_id, next_from, step) VALUES ($session, $nextFrom, $step)
+                ON CONFLICT (session_id) DO UPDATE SET next_from = excluded.next_from, step = excluded.step
+                """;
+            saveProgress.Parameters.AddWithValue("$session", Key(session.Id));
+            saveProgress.Parameters.AddWithValue("$nextFrom", progress.NextFromMm);
+            saveProgress.Parameters.AddWithValue("$step", progress.StepMm);
+            saveProgress.ExecuteNonQuery();
         }
 
         // (session_id, CaptureNo) is unique: saving a stored row again never duplicates it and only
@@ -121,7 +206,8 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
         upsert.Transaction = transaction;
         upsert.CommandText = $"""
             INSERT INTO MeasurementRecords (session_id, {RecordColumns})
-            VALUES ($session, $sortOrder, $captureNo, $startTime, $endTime, $sample, $tsMs, $count0, $count0Raw, $hdm, $hdmRaw, $doseRate)
+            VALUES ($session, $sortOrder, $captureNo, $startTime, $endTime, $sample, $tsMs, $count0, $count0Raw, $hdm, $hdmRaw, $doseRate,
+                    $from, $to, $step)
             ON CONFLICT (session_id, CaptureNo) DO UPDATE SET SortOrder = excluded.SortOrder
                 WHERE SortOrder <> excluded.SortOrder
             """;
@@ -148,6 +234,9 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
             upsert.Parameters.AddWithValue("$hdm", OrDbNull(row.Reading.Hdm));
             upsert.Parameters.AddWithValue("$hdmRaw", OrDbNull(row.Reading.HdmRaw));
             upsert.Parameters.AddWithValue("$doseRate", OrDbNull(row.Reading.DoseRate));
+            upsert.Parameters.AddWithValue("$from", OrDbNull(row.FromMm));
+            upsert.Parameters.AddWithValue("$to", OrDbNull(row.ToMm));
+            upsert.Parameters.AddWithValue("$step", OrDbNull(row.StepMm));
             upsert.ExecuteNonQuery();
         }
 
@@ -169,7 +258,7 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
     {
         using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT s.id, s.CreatedAt
+            SELECT s.id, s.CreatedAt, s.DrillholeID, s.DrillholeName, s.Project, s."operator", s.comment
             FROM MeasurementRecords r
             JOIN MeasurementSessions s ON s.id = r.session_id
             ORDER BY r.id DESC
@@ -177,9 +266,7 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
             """;
         using var reader = command.ExecuteReader();
 
-        return reader.Read()
-            ? new MeasurementSession(Guid.Parse(reader.GetString(0)), ParseTime(reader.GetString(1)))
-            : null;
+        return reader.Read() ? ReadSession(reader) : null;
     });
 
     public Task<IReadOnlyList<MeasurementResult>> LoadAsync(Guid sessionId) => Run<IReadOnlyList<MeasurementResult>>(connection =>
@@ -206,12 +293,15 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
                 EndTime = ParseTime(reader.GetString(3)),
                 SampleCount = reader.GetInt32(4),
                 Reading = new DeviceReading(
-                    reader.IsDBNull(5) ? null : reader.GetInt64(5),
+                    NullableLong(reader, 5),
                     NullableDouble(reader, 6),
                     NullableDouble(reader, 7),
                     NullableDouble(reader, 8),
                     NullableDouble(reader, 9),
-                    NullableDouble(reader, 10))
+                    NullableDouble(reader, 10)),
+                FromMm = NullableLong(reader, 11),
+                ToMm = NullableLong(reader, 12),
+                StepMm = NullableLong(reader, 13)
             });
         }
 
@@ -313,6 +403,11 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
             command.ExecuteNonQuery();
         }
 
+        if (version < 4)
+        {
+            AddDrillholeMetadataAndDepths(command);
+        }
+
         // Every record must point at an existing session; otherwise roll the upgrade back rather than store bad links.
         command.CommandText = "PRAGMA foreign_key_check";
 
@@ -328,6 +423,93 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
         command.ExecuteNonQuery();
         transaction.Commit();
     }
+
+    // Version 4. Only adds columns, one unique index and the progress table: existing ids, links and values stay.
+    // Sessions stored earlier keep null metadata and their records null depths — no drillhole IDs, intervals or steps
+    // are invented. (Earlier schemas never had session-level from/to, so there is nothing to map onto records.)
+    private static void AddDrillholeMetadataAndDepths(SqliteCommand command)
+    {
+        AddMissingColumns(command, "MeasurementSessions",
+            ["DrillholeID TEXT", "DrillholeName TEXT", "Project TEXT", "\"operator\" TEXT", "comment TEXT"]);
+        AddMissingColumns(command, "MeasurementRecords", ["\"from\" INTEGER", "\"to\" INTEGER", "step INTEGER"]);
+
+        // A DrillholeID column can only already hold values if the file was changed outside this app. Merging such
+        // duplicates would mean renumbering their captures, so the upgrade stops (and rolls back) and names them.
+        command.CommandText = """
+            SELECT DrillholeID || ' (' || COUNT(*) || ' sessions' ||
+                   CASE WHEN COUNT(DISTINCT IFNULL(DrillholeName, '') || '|' || IFNULL(Project, '') || '|' ||
+                                      IFNULL("operator", '') || '|' || IFNULL(comment, '')) > 1
+                        THEN ', conflicting metadata' ELSE '' END || ')'
+            FROM MeasurementSessions WHERE DrillholeID IS NOT NULL GROUP BY DrillholeID HAVING COUNT(*) > 1
+            """;
+        var duplicates = new List<string>();
+
+        using (var reader = command.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                duplicates.Add(reader.GetString(0));
+            }
+        }
+
+        if (duplicates.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "The measurement database has more than one session per Drillhole ID: " + string.Join(", ", duplicates) +
+                ". Nothing was changed. Merge or rename these sessions, then restart the app.");
+        }
+
+        // next_from and step: where the session's next capture starts and the selected step (millimetres).
+        command.CommandText = """
+            CREATE UNIQUE INDEX IF NOT EXISTS UX_MeasurementSessions_DrillholeID ON MeasurementSessions (DrillholeID);
+            CREATE TABLE IF NOT EXISTS MeasurementProgress (
+                session_id TEXT    NOT NULL PRIMARY KEY REFERENCES MeasurementSessions (id),
+                next_from  INTEGER NOT NULL,
+                step       INTEGER NOT NULL
+            );
+            """;
+        command.ExecuteNonQuery();
+    }
+
+    private static void AddMissingColumns(SqliteCommand command, string table, string[] definitions)
+    {
+        command.CommandText = $"SELECT name FROM pragma_table_info('{table}')";
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        using (var reader = command.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                existing.Add(reader.GetString(0));
+            }
+        }
+
+        foreach (var definition in definitions)
+        {
+            if (!existing.Contains(definition.Split(' ')[0].Trim('"')))
+            {
+                command.CommandText = $"ALTER TABLE {table} ADD COLUMN {definition}";
+                command.ExecuteNonQuery();
+            }
+        }
+    }
+
+    private static MeasurementSession ReadSession(SqliteDataReader reader) => new(
+        Guid.Parse(reader.GetString(0)),
+        ParseTime(reader.GetString(1)),
+        NullableString(reader, 2),
+        NullableString(reader, 3),
+        NullableString(reader, 4),
+        NullableString(reader, 5),
+        NullableString(reader, 6));
+
+    private static string? NullableString(SqliteDataReader reader, int ordinal) =>
+        reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
+
+    private static long? NullableLong(SqliteDataReader reader, int ordinal) =>
+        reader.IsDBNull(ordinal) ? null : reader.GetInt64(ordinal);
+
+    private static object OrDbNull(string? value) => value is null ? DBNull.Value : value;
 
     private static string Key(Guid id) => id.ToString("D");
 

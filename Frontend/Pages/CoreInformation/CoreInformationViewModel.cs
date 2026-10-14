@@ -1,4 +1,3 @@
-using System.Globalization;
 using Frontend.Pages.Measurement;
 using Frontend.Shared.Infrastructure;
 using Frontend.Shared.Models;
@@ -11,8 +10,6 @@ public sealed class CoreInformationViewModel : ObservableObject
     private string drillholeName = "";
     private string projectArea = "";
     private string coreId = "";
-    private string depthFrom = "";
-    private string depthTo = "";
     private string operatorName = "";
     private string notes = "";
     private bool showErrors;
@@ -22,6 +19,7 @@ public sealed class CoreInformationViewModel : ObservableObject
     {
         this.device = device;
         DatabasePath = databasePath;
+        operatorName = CurrentWindowsAccount();
         SaveCommand = new RelayCommand(_ => Save(saved));
 
         // Values are always read from the live connection, so a disconnect never leaves stale details on screen.
@@ -73,18 +71,6 @@ public sealed class CoreInformationViewModel : ObservableObject
         set { if (Set(ref coreId, value)) Update(); }
     }
 
-    public string DepthFrom
-    {
-        get => depthFrom;
-        set { if (Set(ref depthFrom, value)) Update(); }
-    }
-
-    public string DepthTo
-    {
-        get => depthTo;
-        set { if (Set(ref depthTo, value)) Update(); }
-    }
-
     public string Operator
     {
         get => operatorName;
@@ -97,13 +83,21 @@ public sealed class CoreInformationViewModel : ObservableObject
         set { if (Set(ref notes, value)) Update(); }
     }
 
-    public static bool TryDepth(string text, out decimal value) =>
-        decimal.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.CurrentCulture, out value) && value >= 0;
+    public bool IsValid => HasRequiredText;
 
-    public string CoreDepth =>
-        DepthRange() is { } range ? (range.To - range.From).ToString("0.00", CultureInfo.CurrentCulture) : "—";
+    /// <summary>
+    /// The Windows account running the app: DOMAIN\Username for a domain account, otherwise the user name
+    /// (a local account's "domain" is just the computer name, so it is left out).
+    /// </summary>
+    public static string CurrentWindowsAccount()
+    {
+        var user = Environment.UserName;
+        var domain = Environment.UserDomainName;
 
-    public bool IsValid => HasRequiredText && DepthRange() is not null;
+        return string.IsNullOrWhiteSpace(domain) || string.Equals(domain, Environment.MachineName, StringComparison.OrdinalIgnoreCase)
+            ? user
+            : $"{domain}\\{user}";
+    }
 
     public string DrillholeIdError =>
         showErrors && string.IsNullOrWhiteSpace(DrillholeId) ? "Enter a drillhole ID." : "";
@@ -114,28 +108,25 @@ public sealed class CoreInformationViewModel : ObservableObject
     public string CoreIdError =>
         showErrors && string.IsNullOrWhiteSpace(CoreId) ? "Enter a core ID." : "";
 
-    public string DepthError =>
-        (showErrors || DepthFrom.Length > 0 || DepthTo.Length > 0) && DepthRange() is null
-            ? "Enter valid depths. To must be greater than From."
-            : "";
-
     private bool HasRequiredText =>
         !string.IsNullOrWhiteSpace(DrillholeId) &&
         !string.IsNullOrWhiteSpace(DrillholeName) &&
         !string.IsNullOrWhiteSpace(CoreId);
-
-    /// <summary>Parses both depths once. Null when either is invalid or To is not greater than From.</summary>
-    private (decimal From, decimal To)? DepthRange() =>
-        TryDepth(DepthFrom, out var from) && TryDepth(DepthTo, out var to) && to > from ? (from, to) : null;
 
     private void Save(Action<CoreSnapshot> saved)
     {
         showErrors = true;
         RefreshValidation();
 
-        if (!HasRequiredText || DepthRange() is not { } range)
+        if (!HasRequiredText)
         {
             return;
+        }
+
+        // An emptied Operator is filled with the signed-in account again; an edited one is kept as entered.
+        if (string.IsNullOrWhiteSpace(Operator))
+        {
+            Operator = CurrentWindowsAccount();
         }
 
         saved(new CoreSnapshot(
@@ -143,8 +134,6 @@ public sealed class CoreInformationViewModel : ObservableObject
             DrillholeName.Trim(),
             ProjectArea.Trim(),
             CoreId.Trim(),
-            range.From,
-            range.To,
             Operator.Trim(),
             Notes.Trim()));
     }
@@ -157,10 +146,8 @@ public sealed class CoreInformationViewModel : ObservableObject
 
     private void RefreshValidation()
     {
-        Changed(nameof(CoreDepth));
         Changed(nameof(DrillholeIdError));
         Changed(nameof(DrillholeNameError));
         Changed(nameof(CoreIdError));
-        Changed(nameof(DepthError));
     }
 }

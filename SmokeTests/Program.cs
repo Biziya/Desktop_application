@@ -48,15 +48,22 @@ internal static class Program
         Check(form.IsDeviceConnected && form.DeviceName == "CT007-A1" && form.DeviceIdentifier == "00:1B:44:11:3A:B7", "Connected device name and ID");
         link.Connect(null);
         Check(!form.IsDeviceConnected && form.DeviceName == "No CT007 device connected" && form.DeviceIdentifier == "", "No stale device details");
+        var account = CoreInformationViewModel.CurrentWindowsAccount();
+        Check(account.Length > 0 && account.EndsWith(Environment.UserName) &&
+            (account == Environment.UserName || account == $"{Environment.UserDomainName}\\{Environment.UserName}") &&
+            account != Environment.MachineName, "Windows account: DOMAIN\\user or user, never the computer name alone");
+        Check(form.Operator == account, "Operator autofilled for a new form");
         form.SaveCommand.Execute(null);
         Check(saved is null && form.DrillholeIdError.Length > 0, "Required field validation");
         form.DrillholeId = "DH-001"; form.DrillholeName = "North Ridge"; form.CoreId = "C-001";
-        form.DepthFrom = "150"; form.DepthTo = "150";
-        Check(!form.IsValid, "Zero length rejected");
-        form.DepthTo = "149"; Check(!form.IsValid, "Reversed range rejected");
-        form.DepthTo = "151.25"; form.SaveCommand.Execute(null);
-        Check(saved is { CoreDepth: 1.25m } && form.CoreDepth == "1.25", "Calculated depth and save");
-        Check(!CoreInformationViewModel.TryDepth("invalid",out _), "Invalid numeric input");
+        Check(form.IsValid, "Valid without depth fields");
+        form.Operator = "Field Tech"; form.SaveCommand.Execute(null);
+        Check(saved is { Operator: "Field Tech" }, "Edited Operator kept and saved");
+        form.Operator = "  "; form.SaveCommand.Execute(null);
+        Check(saved?.Operator == account && form.Operator == account, "Empty Operator autofilled again on save");
+        form.Operator = "Field Tech"; form.SaveCommand.Execute(null);
+        Check(typeof(CoreInformationViewModel).GetProperty("DepthFrom") is null && typeof(CoreInformationViewModel).GetProperty("DepthTo") is null &&
+            typeof(CoreSnapshot).GetProperty("DepthFrom") is null, "Core Information has no From/To fields");
         var core = saved ?? throw new InvalidOperationException("No saved core");
         var fake = new ControlledMeasurements(); var dialogs = new FakeDialogs(); var export = new FakeExport();
         var store = new MemoryRepository();
@@ -67,10 +74,15 @@ internal static class Program
         vm.TriggerCommand.Execute(null);
         Check(fake.Calls == 0, "Idle triggers ignored");
         vm.SetCore(core);
+        var firstSession = vm.SessionId ?? throw new InvalidOperationException("Saving the core opens the drillhole session");
+        Check(vm.NextFrom == "" && vm.Step == "" && !vm.ToggleMeasurementCommand.CanExecute(null),
+            "A new session has no saved progress: Start needs a starting depth and step");
+        vm.NextFrom = "150"; Check(!vm.ToggleMeasurementCommand.CanExecute(null), "Start still needs a step");
+        vm.Step = "0.5";
+        Check(vm.ToggleMeasurementCommand.CanExecute(null) && vm.DepthError == "", "Starting depth and step entered");
         vm.ToggleMeasurementCommand.Execute(null);
         Check(vm.State == MeasurementState.Ready && vm.IsMeasurementModeActive && fake.Calls == 0 &&
             vm.Results.Count == 0 && vm.Countdown == "00:05" && vm.CaptureProgress == 0, "Start arms without capturing");
-        var firstSession = vm.SessionId ?? throw new InvalidOperationException("Start creates a session");
         var triggerTime = new DateTimeOffset(2026,10,11,11,16,10,851,TimeSpan.FromHours(8));
         vm.TriggerCommand.Execute(triggerTime); vm.TriggerCommand.Execute(triggerTime);
         Check(fake.Calls == 1 && vm.IsCapturing && !vm.TriggerCommand.CanExecute(null) &&
@@ -85,6 +97,9 @@ internal static class Program
             vm.Results[0].CompletedAt == triggerTime.AddSeconds(5).AddMilliseconds(20), "Independent precise trigger/end/completion timestamps");
         Check(vm.Countdown == "00:05" && vm.CaptureProgress == 0 && vm.IsMeasurementModeActive, "Reset while staying armed");
         for (int i=0; i<2; i++) { vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger); }
+        Check(vm.Results.Select(r => (r.FromMm, r.ToMm, r.StepMm)).SequenceEqual(new (long?, long?, long?)[]
+            { (150000, 150500, 500), (150500, 151000, 500), (151000, 151500, 500) }) && vm.NextFrom == "151.50",
+            "Each capture stores from, to = from + step, and advances once");
         var first = vm.Results[0]; var second = vm.Results[1]; var third = vm.Results[2];
         vm.Move(third, first, false);
         Check(vm.Results[0] == third && third.Number == 1 && third.CaptureNumber == 3, "Reorder keeps capture identity");
@@ -94,8 +109,10 @@ internal static class Program
         Check(vm.Results.Count == 3, "Cancel deletion");
         dialogs.Confirm = true; vm.DeleteCommand.Execute(second);
         Check(vm.Results.Count == 2 && third.Number == 2 && third.CaptureNumber == 3, "Deletion renumbers display only");
-        vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger);
+        vm.TriggerCommand.Execute(null); vm.Step = "0.25"; fake.Complete(); await Until(() => vm.CanTrigger);
         Check(vm.Results[2].CaptureNumber == 4, "Deleted capture numbers are not reused");
+        Check(vm.Results[2] is { FromMm: 151500, ToMm: 152000, StepMm: 500 } && vm.NextFrom == "152.00" && vm.Step == "0.25",
+            "A step change during a capture applies to the next capture only");
         Check(vm.SessionId == firstSession && vm.Results.All(r => r.SessionId == firstSession),
             "One session ID for every capture of the session");
         await Until(() => store.Rows(firstSession).Select(r => r.CaptureNumber).SequenceEqual(vm.Results.Select(r => r.CaptureNumber)));
@@ -105,6 +122,9 @@ internal static class Program
         Check(export.Rows?.Select(r => r.CaptureNumber).SequenceEqual(new[] {4,1,3}) == true, "Export keeps display order");
         await Until(() => store.Rows(firstSession).Select(r => r.CaptureNumber).SequenceEqual(new[] {4,1,3}));
         Check(store.Rows(firstSession).Select(r => r.Number).SequenceEqual(new[] {1,2,3}), "Reorder updates stored No");
+        Check(store.Rows(firstSession).Select(r => (r.CaptureNumber, r.FromMm)).SequenceEqual(new (int, long?)[] {(4,151500),(1,150000),(3,151000)}),
+            "Reordering keeps each row's depths");
+        Check(store.Progress(firstSession) == new DepthProgress(152000, 250), "Next depth and step saved with the session");
         var csv = CsvExportService.Serialize(vm.Results.ToArray());
         var lines = csv.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
         Check(lines[0] == "\"No\",\"Capture No\",\"Start Time\",\"End Time\",\"Sample\",\"ts_ms\",\"count0\",\"count0_raw\"," +
@@ -116,7 +136,7 @@ internal static class Program
         Check(!csv.Contains("Average") && !csv.Contains("Completed At"), "CSV has only configured columns");
         var reading = new DeviceReading(1760152570851, 0.1 + 0.2, 125, 1.5e-7, -3, 12.25);
         var withReading = new MeasurementResult { SessionId=firstSession, CaptureNumber=99, StartTime=first.StartTime,
-            EndTime=first.EndTime, SampleCount=5, Reading=reading };
+            EndTime=first.EndTime, SampleCount=5, Reading=reading, FromMm=1000, ToMm=1500, StepMm=500 };
         Check(CsvExportService.Serialize(new[] {withReading}).Contains(
             "\"1760152570851\",\"0.30000000000000004\",\"125\",\"1.5E-07\",\"-3\",\"12.25\""), "CSV device values keep full precision");
         Check(CsvExportService.Serialize(new[] {first}).Contains("\"5\",\"\",\"\",\"\",\"\",\"\",\"\","), "Missing device values are empty cells");
@@ -125,9 +145,14 @@ internal static class Program
         try { CsvExportService.Serialize(new[] {first, otherSession}); throw new Exception("Mixed-session export accepted"); }
         catch (ArgumentException) { }
         Check(MeasurementColumns.All.Where(c => MeasurementColumnLayout.For(c).Visible).Select(c => c.Label).SequenceEqual(
-            new[] {"No","Sample","ts_ms","count0","count0_raw","hdm","hdm_raw","dose_rate"}), "Table column order; Capture No, times and session hidden");
-        Check(MeasurementColumns.All.All(c => c.IncludeInCsv) && lines[0].Contains("\"Capture No\",\"Start Time\""),
-            "Hidden columns stay in CSV");
+            new[] {"No","From (m)","To (m)","Step (m)","Sample","ts_ms","count0","count0_raw","hdm","hdm_raw","dose_rate"}),
+            "Table column order; From/To/Step shown; Capture No, times and session hidden");
+        Check(MeasurementColumns.All.Where(c => c.IncludeInCsv).Count() == 12 && lines[0].Contains("\"Capture No\",\"Start Time\""),
+            "Hidden columns stay in CSV; CSV columns unchanged");
+        Check(third is { FromMetres: 151.0m, ToMetres: 151.5m, StepMetres: 0.5m } &&
+            new[] { MeasurementColumns.From, MeasurementColumns.To, MeasurementColumns.Step }.All(c =>
+                c.Binding != c.Label && typeof(MeasurementResult).GetProperty(c.Binding)?.CanWrite == false),
+            "Depth columns show saved metres, are read-only and keep labels separate from field names");
         Check(MeasurementColumns.All.All(c => Resolve(c.Binding, withReading) is { } bound && Equals(bound, c.Value(withReading))),
             "Every binding resolves to the same value the CSV writes");
         Check(MeasurementColumns.All.Last() is { Label: "Session", CsvHeader: "session_id" },
@@ -142,6 +167,8 @@ internal static class Program
             "Stop then Start keeps the session and its rows");
         vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger);
         count++;
+        Check(vm.Results[^1] is { FromMm: 152000, ToMm: 152250, StepMm: 250 } && vm.NextFrom == "152.25",
+            "Stop → Start keeps the next depth and step");
         Check(vm.Results.Count == count && vm.Results[^1].CaptureNumber == 5 && vm.Results[^1].Number == count &&
             vm.Results.Select(r => r.CaptureNumber).Take(3).SequenceEqual(new[] {4,1,3}), "Restart appends after the saved order");
         await Until(() => store.Rows(firstSession).Select(r => r.CaptureNumber).SequenceEqual(new[] {4,1,3,5}));
@@ -156,24 +183,42 @@ internal static class Program
         Check(vm.Results.Count == count, "Stop in Processing prevents row commit");
         vm.TriggerCommand.Execute(null); fake.Fail(); await Until(() => vm.CanTrigger);
         Check(vm.Results.Count == count && vm.Countdown == "00:05" && vm.Notification.StartsWith("Capture failed"), "Failure recovers Ready without row");
+        Check(vm.NextFrom == "152.25", "Cancelled and failed captures do not advance the depth");
+        vm.TriggerCommand.Execute(null); vm.NextFrom = "160"; fake.Complete(); await Until(() => vm.CanTrigger);
+        count++;
+        Check(vm.Results[^1] is { FromMm: 152250, ToMm: 152500 } && vm.NextFrom == "160", "A manual starting depth applies to the next capture");
+        vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger);
+        count++;
+        Check(vm.Results[^1] is { FromMm: 160000, ToMm: 160250 } && vm.NextFrom == "160.25", "Next capture starts at the manual depth");
         vm.SetCore(null); Check(!vm.ToggleMeasurementCommand.CanExecute(null) && vm.State == MeasurementState.Idle, "Editing invalidates saved form and disarms");
         Check(vm.SessionId == firstSession && vm.Results.Count == count, "Disarming keeps the session");
+        await Until(() => store.Rows(firstSession).Count == count);
         vm.NewMeasurementCommand.Execute(null);
-        var secondSession = vm.SessionId;
-        Check(secondSession is not null && secondSession != firstSession && vm.Results.Count == 0 &&
-            store.Rows(firstSession).Count == count, "New Measurement begins a new session; the previous one stays stored");
-        vm.SetCore(core); vm.ToggleMeasurementCommand.Execute(null);
+        Check(vm.SessionId is null && vm.Results.Count == 0 && vm.NeedsCore && store.Rows(firstSession).Count == count,
+            "New Measurement closes the drillhole; its rows stay stored");
+        vm.SetCore(core); await Until(() => vm.SessionId is not null);
+        Check(vm.SessionId == firstSession && vm.Results.Count == count && vm.NextFrom == "160.25" && vm.Step == "0.25",
+            "The same Drillhole ID reopens the same session with its progress");
+        vm.NewMeasurementCommand.Execute(null);
+        var core2 = core with { DrillholeId = "DH-002" };
+        vm.SetCore(core2); await Until(() => vm.SessionId is not null);
+        var secondSession = vm.SessionId!.Value;
+        Check(secondSession != firstSession && vm.Results.Count == 0 && vm.NextFrom == "" && vm.Step == "",
+            "Another Drillhole ID gets its own session with its own (empty) progress");
+        vm.NextFrom = "10"; vm.Step = "0.5"; vm.ToggleMeasurementCommand.Execute(null);
         vm.TriggerCommand.Execute(null); fake.Complete(); await Until(() => vm.CanTrigger);
-        Check(vm.Results.Single().CaptureNumber == 1 && vm.Results[0].SessionId == secondSession, "New session numbers from 1");
-        await Until(() => store.Rows(secondSession!.Value).Count == 1);
-        Check(store.Rows(firstSession).Count == count, "Sessions stay isolated");
+        Check(vm.Results.Single() is { CaptureNumber: 1, FromMm: 10000, ToMm: 10500 } && vm.Results[0].SessionId == secondSession,
+            "New session numbers from 1 with its own depths");
+        await Until(() => store.Rows(secondSession).Count == 1);
+        Check(store.Rows(firstSession).Count == count && store.Progress(firstSession) == new DepthProgress(160250, 250),
+            "Sessions and their progress stay isolated");
         vm.ToggleMeasurementCommand.Execute(null);
 
         // A future service may return or report progress after cancellation. Ignore it and prevent overlap.
         var late = new ControlledMeasurements { HonorCancellation = false };
         using (var lateVm = new MeasurementViewModel(late, export, dialogs, new MemoryRepository()))
         {
-            lateVm.SetCore(core); lateVm.ToggleMeasurementCommand.Execute(null); lateVm.TriggerCommand.Execute(null);
+            lateVm.SetCore(core); lateVm.NextFrom = "150"; lateVm.Step = "0.5"; lateVm.ToggleMeasurementCommand.Execute(null); lateVm.TriggerCommand.Execute(null);
             lateVm.ToggleMeasurementCommand.Execute(null); lateVm.ToggleMeasurementCommand.Execute(null);
             late.Report(TimeSpan.FromSeconds(1)); lateVm.TriggerCommand.Execute(null);
             Check(!lateVm.CanTrigger && late.Calls == 1 && lateVm.Countdown == "00:05" && lateVm.CaptureProgress == 0,
@@ -197,7 +242,7 @@ internal static class Program
             main.ToggleSidebarCommand.Execute(null);
             Check(main.IsSidebarExpanded && main.SidebarToggleLabel == "Collapse sidebar" && main.CurrentPage == retainedMeasurement,
                 "Expand retains selected page");
-            main.Measurement.SetCore(core); main.Measurement.ToggleMeasurementCommand.Execute(null);
+            main.Measurement.SetCore(core); main.Measurement.NextFrom = "150"; main.Measurement.Step = "0.5"; main.Measurement.ToggleMeasurementCommand.Execute(null);
             main.Measurement.TriggerCommand.Execute(null); main.ShowCoreCommand.Execute(null);
             var navigationSession = main.Measurement.SessionId;
             main.ShowMeasurementCommand.Execute(null); main.ShowCoreCommand.Execute(null);
@@ -214,16 +259,19 @@ internal static class Program
         try { await service.CaptureAsync(start, _ => {}, cancel.Token); throw new Exception("Cancellation ignored"); }
         catch (OperationCanceledException) { }
         var closingService = new ControlledMeasurements();
-        var closingVm = new MeasurementViewModel(closingService, export, dialogs, new MemoryRepository()); closingVm.SetCore(core);
+        var closingVm = new MeasurementViewModel(closingService, export, dialogs, new MemoryRepository()); closingVm.SetCore(core); closingVm.NextFrom = "150"; closingVm.Step = "0.5";
         closingVm.ToggleMeasurementCommand.Execute(null); closingVm.TriggerCommand.Execute(null); closingVm.Dispose(); await Until(() => !closingVm.IsCapturing);
         Check(closingVm.Results.Count == 0, "Closing cancels without partial result");
 
         // Failed saves are reported and the rows stay in the table.
-        var failing = new MemoryRepository { Fail = true };
+        var failing = new MemoryRepository();
         var failingService = new ControlledMeasurements();
         using (var failingVm = new MeasurementViewModel(failingService, export, dialogs, failing))
         {
-            failingVm.SetCore(core); failingVm.ToggleMeasurementCommand.Execute(null);
+            failingVm.SetCore(core); failingVm.NextFrom = "150"; failingVm.Step = "0.5";
+            await Until(() => failing.Progress(failingVm.SessionId!.Value) is not null);
+            failing.Fail = true;
+            failingVm.ToggleMeasurementCommand.Execute(null);
             failingVm.TriggerCommand.Execute(null); failingService.Complete();
             await Until(() => failingVm.Notification.StartsWith("Saving to the database failed"));
             Check(failingVm.Results.Count == 1, "Save failure keeps the captured row");
@@ -247,17 +295,30 @@ internal static class Program
 
         try
         {
-            var a = MeasurementSession.New(); var b = MeasurementSession.New();
-            var start = new DateTimeOffset(2026,10,11,11,16,10,851,TimeSpan.FromHours(8)).AddTicks(1234);
-            MeasurementResult Row(MeasurementSession s, int capture, DeviceReading reading) => new()
-            { SessionId=s.Id, CaptureNumber=capture, StartTime=start, EndTime=start.AddSeconds(5), SampleCount=5, Reading=reading };
-            var a1 = Row(a, 1, new DeviceReading(1760152570851, 0.1 + 0.2, 125, 1.5e-7, -3, 12.25));
-            var a2 = Row(a, 2, DeviceReading.Empty);
             var store = new SqliteMeasurementRepository(path);
-            await store.SaveAsync(a, new[] {a1, a2});
-            await store.SaveAsync(a, new[] {a2, a1});
-            await store.SaveAsync(b, new[] {Row(b, 1, DeviceReading.Empty)});
-            try { await store.SaveAsync(b, new[] {a1}); throw new Exception("Cross-session save accepted"); }
+            MeasurementSession Candidate(string drillhole, string name = "Alpha") =>
+                new(Guid.NewGuid(), DateTimeOffset.Now, drillhole, name, "Project X", "Ann", "first pass");
+            var aCandidate = Candidate("A-1");
+            var a = await store.ResolveSessionAsync(aCandidate);
+            var b = await store.ResolveSessionAsync(Candidate("B-2", "Beta"));
+            Check(a == aCandidate && b.Id != a.Id, "A new Drillhole ID creates a session");
+            var again = await new SqliteMeasurementRepository(path).ResolveSessionAsync(Candidate("A-1", "Renamed") with { CreatedAt = DateTimeOffset.Now.AddDays(1) });
+            Check(again.Id == a.Id && again.CreatedAt == a.CreatedAt && again.DrillholeName == "Alpha" && again.MetadataDiffers(Candidate("A-1", "Renamed")),
+                "Same Drillhole ID → same session; CreatedAt and metadata kept");
+            var racers = await Task.WhenAll(Enumerable.Range(0, 8).Select(i =>
+                new SqliteMeasurementRepository(path).ResolveSessionAsync(Candidate("C-3"))));
+            Check(racers.Select(r => r.Id).Distinct().Count() == 1, "Concurrent lookups of one Drillhole ID create one session");
+
+            var start = new DateTimeOffset(2026,10,11,11,16,10,851,TimeSpan.FromHours(8)).AddTicks(1234);
+            MeasurementResult Row(MeasurementSession s, int capture, DeviceReading reading, long? from = null, long? step = null) => new()
+            { SessionId=s.Id, CaptureNumber=capture, StartTime=start, EndTime=start.AddSeconds(5), SampleCount=5, Reading=reading,
+              FromMm=from, ToMm=from + step, StepMm=step };
+            var a1 = Row(a, 1, new DeviceReading(1760152570851, 0.1 + 0.2, 125, 1.5e-7, -3, 12.25), 10000, 500);
+            var a2 = Row(a, 2, DeviceReading.Empty);
+            await store.SaveAsync(a, new[] {a1, a2}, new DepthProgress(10500, 500));
+            await store.SaveAsync(a, new[] {a2, a1}, new DepthProgress(10500, 250));
+            await store.SaveAsync(b, new[] {Row(b, 1, DeviceReading.Empty)}, null);
+            try { await store.SaveAsync(b, new[] {a1}, null); throw new Exception("Cross-session save accepted"); }
             catch (ArgumentException) { }
 
             var reopened = new SqliteMeasurementRepository(path);
@@ -266,20 +327,28 @@ internal static class Program
             Check(loaded[1].StartTime == start && loaded[1].StartTime.Offset == start.Offset && loaded[1].EndTime == start.AddSeconds(5) &&
                 loaded[1].Reading == a1.Reading && loaded[0].Reading == DeviceReading.Empty && loaded[1].SampleCount == 5,
                 "Stored values, precision and nulls survive a reopen");
+            Check(loaded[1] is { FromMm: 10000, ToMm: 10500, StepMm: 500 } && loaded[0] is { FromMm: null, ToMm: null, StepMm: null },
+                "Depth intervals stored in millimetres; reordering kept them");
+            Check(await reopened.LoadProgressAsync(a.Id) == new DepthProgress(10500, 250) && await reopened.LoadProgressAsync(b.Id) is null,
+                "Progress stored per session");
             Check((await reopened.LoadAsync(b.Id)).All(r => r.SessionId == b.Id) && (await reopened.LoadAsync(b.Id)).Count == 1,
                 "Loading one session excludes others");
-            Check((await reopened.LoadLatestSessionAsync())?.Id == b.Id, "Latest session");
+            Check((await reopened.LoadLatestSessionAsync()) is { DrillholeId: "B-2", DrillholeName: "Beta" } latestB && latestB.Id == b.Id,
+                "Latest session with its metadata");
             await reopened.DeleteAsync(a.Id, 2);
             Check((await reopened.LoadAsync(a.Id)).Count == 1, "Delete removes only that capture");
 
-            // Restart: a new ViewModel shows the last session, in its saved order, without creating one.
+            // Measuring, Stop → Start and restart keep rows, depths and progress (core = Drillhole DH-001 from 150 m).
             var service = new ControlledMeasurements();
             Guid captured;
             using (var vm = new MeasurementViewModel(service, new FakeExport(), new FakeDialogs(), reopened))
             {
-                vm.SetCore(core); vm.ToggleMeasurementCommand.Execute(null);
+                vm.SetCore(core); await Until(() => vm.SessionId is not null);
+                vm.NextFrom = "150"; vm.Step = "0.5"; vm.ToggleMeasurementCommand.Execute(null);
                 captured = vm.SessionId!.Value;
-                for (int i=0; i<3; i++) { vm.TriggerCommand.Execute(null); service.Complete(); await Until(() => vm.CanTrigger); }
+                for (int i=0; i<2; i++) { vm.TriggerCommand.Execute(null); service.Complete(); await Until(() => vm.CanTrigger); }
+                vm.ToggleMeasurementCommand.Execute(null); vm.Step = "0.25"; vm.ToggleMeasurementCommand.Execute(null);
+                vm.TriggerCommand.Execute(null); service.Complete(); await Until(() => vm.CanTrigger);
                 vm.Move(vm.Results[2], vm.Results[0], false);
             }
             using (var restarted = new MeasurementViewModel(new ControlledMeasurements(), new FakeExport(), new FakeDialogs(),
@@ -289,27 +358,40 @@ internal static class Program
                 Check(restarted.SessionId == captured && restarted.Results.Count == 3 && restarted.State == MeasurementState.Idle &&
                     restarted.Results.Select(r => r.CaptureNumber).SequenceEqual(new[] {3,1,2}) &&
                     restarted.Results.Select(r => r.Number).SequenceEqual(new[] {1,2,3}), "Saved order restored after restart");
+                Check(restarted.Results.Select(r => (r.FromMm, r.ToMm, r.StepMm)).SequenceEqual(new (long?, long?, long?)[]
+                    { (151000, 151250, 250), (150000, 150500, 500), (150500, 151000, 500) }), "Depths restored unchanged by reordering");
+                Check(restarted.NextFrom == "151.25" && restarted.Step == "0.25", "Next depth and step restored after restart");
                 Check(CsvExportService.Serialize(restarted.Results.ToArray()).Split("\r\n")[1].StartsWith("\"1\",\"3\","), "CSV follows saved order");
                 restarted.SetCore(core); restarted.ToggleMeasurementCommand.Execute(null);
-                Check(restarted.SessionId == captured, "Start after restart continues the restored session");
+                Check(restarted.SessionId == captured && restarted.State == MeasurementState.Ready, "Start after restart continues the restored session");
             }
             using (var continued = new MeasurementViewModel(service, new FakeExport(), new FakeDialogs(), new SqliteMeasurementRepository(path)))
             {
-                await continued.RestoreLatestSessionAsync();
-                continued.SetCore(core); continued.ToggleMeasurementCommand.Execute(null);
+                // Without restoring first: saving the same core still finds the same session by Drillhole ID.
+                continued.SetCore(core); await Until(() => continued.SessionId is not null);
+                Check(continued.SessionId == captured && continued.NextFrom == "151.25" && continued.Step == "0.25",
+                    "Same Drillhole ID after restart → same session and progress");
+                continued.ToggleMeasurementCommand.Execute(null);
                 continued.TriggerCommand.Execute(null); service.Complete(); await Until(() => continued.CanTrigger);
-                Check(continued.Results.Select(r => r.CaptureNumber).SequenceEqual(new[] {3,1,2,4}), "Appends after restored rows, numbers continue");
-                continued.ToggleMeasurementCommand.Execute(null); continued.NewMeasurementCommand.Execute(null);
-                Check(continued.SessionId != captured && continued.Results.Count == 0, "New Measurement after restart gets a new ID");
+                Check(continued.Results.Select(r => r.CaptureNumber).SequenceEqual(new[] {3,1,2,4}) &&
+                    continued.Results[^1] is { FromMm: 151250, ToMm: 151500 }, "Appends after restored rows, depth continues");
+                continued.ToggleMeasurementCommand.Execute(null);
             }
             var final = await new SqliteMeasurementRepository(path).LoadAsync(captured);
             Check(final.Select(r => r.CaptureNumber).SequenceEqual(new[] {3,1,2,4}), "Stored order and rows complete, no duplicates");
+            Check(await new SqliteMeasurementRepository(path).LoadProgressAsync(captured) == new DepthProgress(151500, 250),
+                "Progress advanced exactly once per capture");
 
             // Schema v3 on a new database: short ID names, enforced foreign key, index on session_id.
             using (var check = new SqliteConnection($"Data Source={path};Foreign Keys=True"))
             {
                 check.Open();
-                Check(Scalar(check, "PRAGMA user_version") == "3", "Schema version 3");
+                Check(Scalar(check, "PRAGMA user_version") == "4", "Schema version 4");
+                Check(Scalar(check, "SELECT COUNT(*) FROM MeasurementSessions WHERE DrillholeID = 'C-3'") == "1", "One row per Drillhole ID");
+                Check(Scalar(check, "SELECT group_concat(name) FROM pragma_index_info('UX_MeasurementSessions_DrillholeID')") == "DrillholeID",
+                    "DrillholeID is unique");
+                Check(Scalar(check, "SELECT \"from\" || '-' || \"to\" || '/' || step FROM MeasurementRecords WHERE CaptureNo = 4 AND session_id = '" + captured + "'")
+                    == "151250-151500/250", "from/to/step columns hold millimetres");
                 Check(Scalar(check, "SELECT \"table\" || '.' || \"to\" || ' <- ' || \"from\" FROM pragma_foreign_key_list('MeasurementRecords')")
                     == "MeasurementSessions.id <- session_id", "MeasurementRecords.session_id -> MeasurementSessions.id");
                 Check(Scalar(check, "SELECT on_delete FROM pragma_foreign_key_list('MeasurementRecords')") == "NO ACTION", "No cascading delete");
@@ -362,7 +444,9 @@ internal static class Program
                         $"v{version} database upgraded with values, order and session isolation kept");
                     using var check = new SqliteConnection($"Data Source={legacy}");
                     check.Open();
-                    Check(Scalar(check, "PRAGMA user_version") == "3" &&
+                    Check(Scalar(check, "PRAGMA user_version") == "4" &&
+                      Scalar(check, "SELECT COUNT(*) FROM MeasurementSessions WHERE DrillholeID IS NULL") == "2" &&
+                      Scalar(check, "SELECT COUNT(*) FROM MeasurementRecords WHERE \"from\" IS NULL AND \"to\" IS NULL AND step IS NULL") == "3" &&
                           Scalar(check, "SELECT group_concat(id || ':' || session_id || ':' || CaptureNo, ' ') FROM (SELECT * FROM MeasurementRecords ORDER BY id)") ==
                           "7:11111111-1111-1111-1111-111111111111:1 9:11111111-1111-1111-1111-111111111111:2 12:22222222-2222-2222-2222-222222222222:1" &&
                           Scalar(check, "SELECT group_concat(id, ' ') FROM (SELECT id FROM MeasurementSessions ORDER BY id)") ==
@@ -375,6 +459,37 @@ internal static class Program
                 }
                 finally { SqliteConnection.ClearAllPools(); File.Delete(legacy); }
             }
+
+            // A database whose DrillholeID column already has duplicates (changed outside the app) is not upgraded.
+            var duplicated = Path.Combine(Path.GetTempPath(), $"ct007-dup-{Guid.NewGuid():N}.db");
+            using (var connection = new SqliteConnection($"Data Source={duplicated}"))
+            {
+                connection.Open();
+                using var create = connection.CreateCommand();
+                create.CommandText = """
+                    CREATE TABLE MeasurementSessions (id TEXT NOT NULL PRIMARY KEY, CreatedAt TEXT NOT NULL, DrillholeID TEXT, DrillholeName TEXT);
+                    CREATE TABLE MeasurementRecords (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL REFERENCES MeasurementSessions (id),
+                        SortOrder INTEGER NOT NULL, CaptureNo INTEGER NOT NULL, StartTime TEXT NOT NULL, EndTime TEXT NOT NULL,
+                        Sample INTEGER NOT NULL, TsMs INTEGER, Count0 REAL, Count0Raw REAL, Hdm REAL, HdmRaw REAL, DoseRate REAL);
+                    INSERT INTO MeasurementSessions VALUES ('11111111-1111-1111-1111-111111111111', '2026-10-11T11:16:10.8510000+08:00', 'DH-9', 'North');
+                    INSERT INTO MeasurementSessions VALUES ('22222222-2222-2222-2222-222222222222', '2026-10-12T09:00:00.0000000+08:00', 'DH-9', 'South');
+                    INSERT INTO MeasurementRecords (session_id, SortOrder, CaptureNo, StartTime, EndTime, Sample)
+                        VALUES ('22222222-2222-2222-2222-222222222222', 1, 1, 'a', 'b', 5);
+                    PRAGMA user_version = 3;
+                    """;
+                create.ExecuteNonQuery();
+            }
+            try
+            {
+                try { await new SqliteMeasurementRepository(duplicated).LoadLatestSessionAsync(); throw new Exception("Duplicate Drillhole IDs accepted"); }
+                catch (InvalidOperationException error) when (error.Message.Contains("DH-9 (2 sessions, conflicting metadata)")) { }
+                using var check = new SqliteConnection($"Data Source={duplicated}");
+                check.Open();
+                Check(Scalar(check, "PRAGMA user_version") == "3" && Scalar(check, "SELECT COUNT(*) FROM MeasurementRecords") == "1" &&
+                      Scalar(check, "SELECT COUNT(*) FROM pragma_table_info('MeasurementRecords') WHERE name = 'step'") == "0",
+                    "Refused upgrade reports the duplicates and changes nothing");
+            }
+            finally { SqliteConnection.ClearAllPools(); File.Delete(duplicated); }
         }
         finally
         {
@@ -413,16 +528,26 @@ internal static class Program
         private readonly object gate = new();
         private readonly Dictionary<(Guid, int), MeasurementResult> rows = new();
         private readonly Dictionary<(Guid, int), int> numbers = new();
+        private readonly Dictionary<string, MeasurementSession> sessions = new();
+        private readonly Dictionary<Guid, DepthProgress> progress = new();
         public volatile bool Fail;
         public int SaveCount { get; private set; }
         public List<MeasurementResult> Rows(Guid session)
         { lock (gate) return rows.Where(p => p.Key.Item1 == session).OrderBy(p => numbers[p.Key]).Select(p => p.Value).ToList(); }
-        public Task SaveAsync(MeasurementSession session, IReadOnlyList<MeasurementResult> list)
+        public DepthProgress? Progress(Guid session) { lock (gate) return progress.GetValueOrDefault(session); }
+        public Task<MeasurementSession> ResolveSessionAsync(MeasurementSession candidate)
+        { lock (gate) return Task.FromResult(sessions.TryGetValue(candidate.DrillholeId!, out var found) ? found : sessions[candidate.DrillholeId!] = candidate); }
+        public Task SaveAsync(MeasurementSession session, IReadOnlyList<MeasurementResult> list, DepthProgress? next)
         {
             if (Fail) throw new IOException("disk full");
-            lock (gate) for (int i=0; i<list.Count; i++) { rows[(session.Id, list[i].CaptureNumber)] = list[i]; numbers[(session.Id, list[i].CaptureNumber)] = i+1; SaveCount++; }
+            lock (gate)
+            {
+                for (int i=0; i<list.Count; i++) { rows[(session.Id, list[i].CaptureNumber)] = list[i]; numbers[(session.Id, list[i].CaptureNumber)] = i+1; SaveCount++; }
+                if (next is not null) progress[session.Id] = next;
+            }
             return Task.CompletedTask;
         }
+        public Task<DepthProgress?> LoadProgressAsync(Guid session) => Task.FromResult(Progress(session));
         public Task DeleteAsync(Guid session, int capture) { lock (gate) { rows.Remove((session, capture)); numbers.Remove((session, capture)); } return Task.CompletedTask; }
         public Task<MeasurementSession?> LoadLatestSessionAsync() => Task.FromResult<MeasurementSession?>(null);
         public Task<IReadOnlyList<MeasurementResult>> LoadAsync(Guid session) => Task.FromResult<IReadOnlyList<MeasurementResult>>(Rows(session));

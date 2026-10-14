@@ -33,6 +33,14 @@ public static class MeasurementColumns
         new(nameof(MeasurementResult.StartTime), "Start Time", "Start Time", true, r => r.StartTime, "yyyy-MM-dd HH:mm:ss");
     public static readonly MeasurementColumn EndTime =
         new(nameof(MeasurementResult.EndTime), "End Time", "End Time", true, r => r.EndTime, "yyyy-MM-dd HH:mm:ss");
+    // Saved depth interval of each capture, shown in metres. Read-only: the step is changed with the Step (m) input.
+    // Not exported, so the CSV columns stay as they were (set IncludeInCsv to true to export them).
+    public static readonly MeasurementColumn From =
+        new(nameof(MeasurementResult.FromMetres), "From (m)", "from_m", false, r => r.FromMetres, "0.00#");
+    public static readonly MeasurementColumn To =
+        new(nameof(MeasurementResult.ToMetres), "To (m)", "to_m", false, r => r.ToMetres, "0.00#");
+    public static readonly MeasurementColumn Step =
+        new(nameof(MeasurementResult.StepMetres), "Step (m)", "step_m", false, r => r.StepMetres, "0.00#");
     public static readonly MeasurementColumn Sample =
         new(nameof(MeasurementResult.SampleCount), "Sample", "Sample", true, r => r.SampleCount);
     public static readonly MeasurementColumn TsMs =
@@ -52,5 +60,5 @@ public static class MeasurementColumns
 
     // SessionId stays last so exported rows remain identifiable.
     public static IReadOnlyList<MeasurementColumn> All { get; } =
-        [Number, CaptureNumber, StartTime, EndTime, Sample, TsMs, Count0, Count0Raw, Hdm, HdmRaw, DoseRate, SessionId];
+        [Number, CaptureNumber, StartTime, EndTime, From, To, Step, Sample, TsMs, Count0, Count0Raw, Hdm, HdmRaw, DoseRate, SessionId];
 }

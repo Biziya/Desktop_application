@@ -21,6 +21,9 @@ public static class MeasurementColumnLayout
         [MeasurementColumns.CaptureNumber.Binding] = new(Visible: false, Width: "Auto", MinWidth: 90),
         [MeasurementColumns.StartTime.Binding] = new(Visible: false, Width: "Auto", MinWidth: 160),
         [MeasurementColumns.EndTime.Binding] = new(Visible: false, Width: "Auto", MinWidth: 160),
+        [MeasurementColumns.From.Binding] = new(Visible: true, Width: "Auto", MinWidth: 80),
+        [MeasurementColumns.To.Binding] = new(Visible: true, Width: "Auto", MinWidth: 80),
+        [MeasurementColumns.Step.Binding] = new(Visible: true, Width: "Auto", MinWidth: 80),
         // Takes the remaining width so the table fills the card.
         [MeasurementColumns.Sample.Binding] = new(Visible: true, Width: "*", MinWidth: 72),
         // Device values size to their content so full-precision numbers are never clipped.

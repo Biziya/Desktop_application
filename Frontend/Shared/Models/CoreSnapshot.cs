@@ -5,10 +5,5 @@ public sealed record CoreSnapshot(
     string DrillholeName,
     string ProjectArea,
     string CoreId,
-    decimal DepthFrom,
-    decimal DepthTo,
     string Operator,
-    string Notes)
-{
-    public decimal CoreDepth => DepthTo - DepthFrom;
-}
+    string Notes);

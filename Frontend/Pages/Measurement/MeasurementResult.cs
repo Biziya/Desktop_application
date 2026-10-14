@@ -28,6 +28,21 @@ public sealed class MeasurementResult : ObservableObject
 
     public DeviceReading Reading { get; init; } = DeviceReading.Empty;
 
+    // Depth interval of the capture in millimetres (see Depth.cs): To = From + Step, fixed when the capture began.
+    // Null for rows stored before depths were recorded. Reordering never changes them.
+    public long? FromMm { get; init; }
+
+    public long? ToMm { get; init; }
+
+    public long? StepMm { get; init; }
+
+    // The same depths in metres, for display (table columns From (m), To (m), Step (m)). Exact: mm / 1000.
+    public decimal? FromMetres => FromMm / 1000m;
+
+    public decimal? ToMetres => ToMm / 1000m;
+
+    public decimal? StepMetres => StepMm / 1000m;
+
     // In-memory capture details. They are not part of the stored/exported column set,
     // so rows reloaded from SQLite leave them null.
 
