@@ -90,9 +90,10 @@
         <Setter Property="MinWidth" Value="{local:Scale StartStopButtonWidth}"/>
         <Setter Property="MinHeight" Value="{local:Scale StartStopButtonHeight}"/>
         <Setter Property="Padding" Value="{local:Scale StartStopButtonPadding}"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
     </Style>
 
-    <!-- Glyph and label of the Start / Stop button; they switch with IsMeasurementModeActive. -->
+    <!-- Glyph and label of the Start / Stop toggle; they switch with IsMeasurementModeActive. -->
     <Style x:Key="StartStopIconRun" TargetType="Run">
         <Setter Property="FontSize" Value="{local:Scale StartStopButtonIconFontSize}"/>
         <Setter Property="Text" Value="▶"/>

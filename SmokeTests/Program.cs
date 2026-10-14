@@ -90,7 +90,9 @@ internal static class Program
         vm.NextFrom = "150"; Check(!vm.ToggleMeasurementCommand.CanExecute(null), "Start still needs a step");
         vm.Step = "0.5";
         Check(vm.ToggleMeasurementCommand.CanExecute(null) && vm.DepthError == "", "Starting depth and step entered");
+        Check(!vm.IsMeasurementModeActive, "Toggle shows Start while stopped");
         vm.ToggleMeasurementCommand.Execute(null);
+        Check(vm.IsMeasurementModeActive && vm.ToggleMeasurementCommand.CanExecute(null), "Same toggle shows Stop and stays enabled while measuring");
         Check(vm.State == MeasurementState.Ready && vm.IsMeasurementModeActive && fake.Calls == 0 &&
             vm.Results.Count == 0 && vm.Countdown == "00:05" && vm.CaptureProgress == 0, "Start arms without capturing");
         var triggerTime = new DateTimeOffset(2026,10,11,11,16,10,851,TimeSpan.FromHours(8));
@@ -111,8 +113,18 @@ internal static class Program
             { (150000, 150500, 500), (150500, 151000, 500), (151000, 151500, 500) }) && vm.NextFrom == "151.50",
             "Each capture stores from, to = from + step, and advances once");
         var first = vm.Results[0]; var second = vm.Results[1]; var third = vm.Results[2];
+        await Until(() => store.Rows(firstSession).Count == 3);
+        dialogs.ConfirmMoves = false;
+        vm.Move(third, first, false);
+        Check(dialogs.LastMove == (3, 1) && vm.Results.SequenceEqual(new[] {first, second, third}) && third.Number == 3,
+            "Move asks \"from position 3 to position 1\"; Cancel leaves the order unchanged");
+        Check(store.Rows(firstSession).Select(r => r.CaptureNumber).SequenceEqual(new[] {1,2,3}), "Cancel leaves the saved order unchanged");
+        dialogs.LastMove = null; vm.Move(second, first, true);
+        Check(dialogs.LastMove is null, "Dropping a row on its own position asks nothing");
+        dialogs.ConfirmMoves = true;
         vm.Move(third, first, false);
         Check(vm.Results[0] == third && third.Number == 1 && third.CaptureNumber == 3, "Reorder keeps capture identity");
+        await Until(() => store.Rows(firstSession).Select(r => r.CaptureNumber).SequenceEqual(new[] {3,1,2}));
         vm.Move(third, second, true);
         Check(vm.Results[2] == third, "Drop after target");
         dialogs.Confirm = false; vm.DeleteCommand.Execute(second);
@@ -299,8 +311,10 @@ internal static class Program
             failingVm.NewMeasurementCommand.Execute(null);
             Check(failingVm.Results.Count == 1, "New Measurement refuses to drop unsaved rows");
             failing.Fail = false;
-            failingVm.ToggleMeasurementCommand.Execute(null);
+            failingVm.ToggleMeasurementCommand.Execute(null);   // Start
+            failingVm.ToggleMeasurementCommand.Execute(null);   // Stop retries the failed save
             await Until(() => failing.Rows(failingVm.SessionId!.Value).Count == 1);
+            failingVm.ToggleMeasurementCommand.Execute(null);   // Start again
             failingVm.TriggerCommand.Execute(null); failingService.Complete(); await Until(() => failingVm.CanTrigger);
             var id = failingVm.SessionId!.Value;
             await Until(() => failing.Rows(id).Count == 2);
@@ -338,6 +352,34 @@ internal static class Program
         using (var plain = new MeasurementViewModel(new ControlledMeasurements(), export, dialogs, new MemoryRepository()))
         {
             Check(!plain.ShowDemoTsMs, "Demo mode is off unless enabled");
+        }
+
+        // A failed save after a confirmed move or delete puts the row back, so the table matches the stored data.
+        var unreliable = new MemoryRepository();
+        var unreliableService = new ControlledMeasurements();
+        using (var rollbackVm = new MeasurementViewModel(unreliableService, export, dialogs, unreliable))
+        {
+            rollbackVm.SetCore(core with { DrillholeId = "ROLLBACK-1" }); rollbackVm.NextFrom = "0"; rollbackVm.Step = "1";
+            rollbackVm.ToggleMeasurementCommand.Execute(null);
+            for (int i=0; i<3; i++) { rollbackVm.TriggerCommand.Execute(null); unreliableService.Complete(); await Until(() => rollbackVm.CanTrigger); }
+            var id = rollbackVm.SessionId!.Value;
+            await Until(() => unreliable.Rows(id).Count == 3);
+            var original = rollbackVm.Results.ToList();
+            unreliable.Fail = true;
+            rollbackVm.Move(original[2], original[0], false);
+            Check(rollbackVm.Results[0] == original[2], "Confirmed move shows immediately");
+            await Until(() => rollbackVm.Notification.StartsWith("Moving the measurement failed"));
+            Check(rollbackVm.Results.SequenceEqual(original) && original.Select(r => r.Number).SequenceEqual(new[] {1,2,3}) &&
+                unreliable.Rows(id).Select(r => r.CaptureNumber).SequenceEqual(new[] {1,2,3}), "Failed move is undone: table equals the stored order");
+            dialogs.Confirm = true; rollbackVm.DeleteCommand.Execute(original[1]);
+            await Until(() => rollbackVm.Notification.StartsWith("Deleting the measurement failed"));
+            Check(rollbackVm.Results.SequenceEqual(original) && unreliable.Rows(id).Count == 3, "Failed delete shows the still-stored row again");
+            unreliable.Fail = false;
+            rollbackVm.DeleteCommand.Execute(original[1]);
+            await Until(() => unreliable.Rows(id).Count == 2);
+            Check(rollbackVm.Results.SequenceEqual(new[] {original[0], original[2]}) && original[2].FromMm == 2000 && original[2].Number == 2,
+                "Confirmed delete removes the row; other rows keep their values and depths");
+            rollbackVm.ToggleMeasurementCommand.Execute(null);
         }
 
         await SqliteChecks(core);
@@ -595,7 +637,13 @@ internal static class Program
         return source;
     }
     private sealed class FakeDialogs : IDialogService
-    { public bool Confirm { get; set; } public bool ConfirmDelete() => Confirm; }
+    {
+        public bool Confirm { get; set; }
+        public bool ConfirmMoves { get; set; } = true;
+        public (int From, int To)? LastMove { get; set; }
+        public bool ConfirmDelete() => Confirm;
+        public bool ConfirmMove(int from, int to) { LastMove = (from, to); return ConfirmMoves; }
+    }
     private sealed class MemoryRepository : IMeasurementRepository
     {
         public string DatabasePath => ":memory:";
@@ -622,7 +670,12 @@ internal static class Program
             return Task.CompletedTask;
         }
         public Task<DepthProgress?> LoadProgressAsync(Guid session) => Task.FromResult(Progress(session));
-        public Task DeleteAsync(Guid session, int capture) { lock (gate) { rows.Remove((session, capture)); numbers.Remove((session, capture)); } return Task.CompletedTask; }
+        public Task DeleteAsync(Guid session, int capture)
+        {
+            if (Fail) throw new IOException("database locked");
+            lock (gate) { rows.Remove((session, capture)); numbers.Remove((session, capture)); }
+            return Task.CompletedTask;
+        }
         public Task<MeasurementSession?> LoadLatestSessionAsync() => Task.FromResult<MeasurementSession?>(null);
         public Task<IReadOnlyList<MeasurementResult>> LoadAsync(Guid session) => Task.FromResult<IReadOnlyList<MeasurementResult>>(Rows(session));
     }

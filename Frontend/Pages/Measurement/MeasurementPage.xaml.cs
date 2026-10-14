@@ -242,7 +242,10 @@ public partial class MeasurementPage : UserControl
             e.Data.GetData(typeof(MeasurementResult)) is MeasurementResult source &&
             target?.Item is MeasurementResult destination)
         {
-            vm.Move(source, destination, e.GetPosition(target).Y > target.ActualHeight / 2);
+            // The ViewModel asks for confirmation before moving. Run it once the drag operation has ended, so the
+            // dialog does not open inside the drag-and-drop loop.
+            var after = e.GetPosition(target).Y > target.ActualHeight / 2;
+            Dispatcher.BeginInvoke(() => vm.Move(source, destination, after));
         }
     }
 }

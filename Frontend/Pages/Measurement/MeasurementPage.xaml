@@ -17,48 +17,54 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Control area, one row: depth inputs (stacked) | bar chart | countdown with Start / Stop below.
-             "to" is calculated (from + step), so there is no To input. Depth edits, also during acquisition, apply from
-             the next capture. The chart takes the remaining width (about 250 px at the smallest window). -->
+        <!-- Control area, one row: control column (Starting Depth, Step, Start / Stop toggle — all the same width) | bar chart |
+             countdown. "to" is calculated (from + step), so there is no To input. Depth edits, also during acquisition,
+             apply from the next capture. The chart takes the remaining width (about 240 px at the smallest window). -->
         <Border Style="{StaticResource Card}">
             <StackPanel>
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel VerticalAlignment="Center">
+                    <StackPanel Width="{local:Scale StartStopButtonWidth}" VerticalAlignment="Center">
                         <TextBlock Text="Starting Depth (m)" Style="{StaticResource FieldLabel}" FontSize="{local:Scale LabelFontSize}"/>
                         <TextBox Text="{Binding NextFrom, UpdateSourceTrigger=PropertyChanged}"
                                  AutomationProperties.Name="Starting depth in metres"/>
-                        <TextBlock Text="Step (m)" Style="{StaticResource FieldLabel}" FontSize="{local:Scale LabelFontSize}" Margin="0,16,0,0"/>
+                        <TextBlock Text="Step (m)" Style="{StaticResource FieldLabel}" FontSize="{local:Scale LabelFontSize}" Margin="0,14,0,0"/>
                         <TextBox Text="{Binding Step, UpdateSourceTrigger=PropertyChanged}"
                                  AutomationProperties.Name="Depth step in metres"/>
+                        <!-- One toggle: green "Start" while stopped, red "Stop" while measuring. -->
+                        <Button Margin="0,18,0,0" Command="{Binding ToggleMeasurementCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource StartStopButtonStyle}">
+                                    <Setter Property="Background" Value="{StaticResource Success}"/>
+                                    <Setter Property="AutomationProperties.Name" Value="Start measurement"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsMeasurementModeActive}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource Danger}"/>
+                                            <Setter Property="AutomationProperties.Name" Value="Stop measurement"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <!-- Runs stay on one line: whitespace between them would show as a space. -->
+                            <TextBlock><Run Style="{StaticResource StartStopIconRun}"/><Run Style="{StaticResource StartStopLabelRun}"/></TextBlock>
+                        </Button>
                     </StackPanel>
 
-                    <DockPanel Grid.Column="1" Margin="20,0" MinHeight="200">
-                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                            <!-- Demo badge: shown only while random preview ts_ms values are enabled. -->
-                            <Border DockPanel.Dock="Right"
-                                    Background="{StaticResource WarningSurface}"
-                                    CornerRadius="4"
-                                    Padding="7,2"
-                                    ToolTip="ts_ms values without a device reading are random previews: shown here and in the table only, never saved or exported."
-                                    Visibility="{Binding ShowDemoTsMs, Converter={StaticResource BoolVisibility}}">
-                                <TextBlock Text="DEMO ts_ms" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Warning}"/>
-                            </Border>
-                            <TextBlock Text="ts_ms by depth" Style="{StaticResource FieldLabel}" FontSize="{local:Scale LabelFontSize}"/>
-                        </DockPanel>
-                        <local:DepthBarChart ItemsSource="{Binding Results}"
-                                             BarBrush="{StaticResource Blue}"
-                                             BarSeparatorBrush="{StaticResource Surface}"
-                                             GridBrush="{StaticResource Line}"
-                                             AxisBrush="{StaticResource Muted}"
-                                             Foreground="{StaticResource LabelText}"
-                                             AutomationProperties.Name="Bar chart of ts_ms by depth"/>
-                    </DockPanel>
+                    <local:DepthBarChart Grid.Column="1"
+                                         Margin="24,0"
+                                         MinHeight="200"
+                                         ItemsSource="{Binding Results}"
+                                         BarBrush="{StaticResource Blue}"
+                                         BarSeparatorBrush="{StaticResource Surface}"
+                                         GridBrush="{StaticResource Line}"
+                                         AxisBrush="{StaticResource Muted}"
+                                         Foreground="{StaticResource LabelText}"
+                                         AutomationProperties.Name="Bar chart of ts_ms by depth"/>
 
                     <StackPanel Grid.Column="2" VerticalAlignment="Center">
                         <TextBlock Text="Capture Countdown"
@@ -80,22 +86,6 @@
                                        VerticalAlignment="Center"
                                        AutomationProperties.Name="Capture countdown"/>
                         </Grid>
-                        <Button Margin="0,14,0,0"
-                                HorizontalAlignment="Center"
-                                Command="{Binding ToggleMeasurementCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource StartStopButtonStyle}">
-                                    <Setter Property="Background" Value="{StaticResource Success}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsMeasurementModeActive}" Value="True">
-                                            <Setter Property="Background" Value="{StaticResource Danger}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <!-- Runs stay on one line: whitespace between them would show as a space. -->
-                            <TextBlock><Run Style="{StaticResource StartStopIconRun}"/><Run Style="{StaticResource StartStopLabelRun}"/></TextBlock>
-                        </Button>
                     </StackPanel>
                 </Grid>
 

@@ -10,11 +10,11 @@ none
 false
 TRACE;DEBUG;NET;NET10_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NET9_0_OR_GREATER;NET10_0_OR_GREATER;NETCOREAPP1_0_OR_GREATER;NETCOREAPP1_1_OR_GREATER;NETCOREAPP2_0_OR_GREATER;NETCOREAPP2_1_OR_GREATER;NETCOREAPP2_2_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
 C:\Users\Bek\Documents\Projects\Desktop_application\Frontend\App.xaml
-7-244249153
+71304781900
 
-28-703830904
+28-1458305391
 210-2018612611
-MainWindow.xaml;Pages\CoreInformation\CoreInformationPage.xaml;Pages\Measurement\MeasurementPage.xaml;Pages\Measurement\MeasurementStyles.xaml;Pages\Measurement\MeasurementUiConstants.xaml;Shared\Styles\Theme.xaml;Windows\ConfirmationWindow\DeleteConfirmationWindow.xaml;
+MainWindow.xaml;Pages\CoreInformation\CoreInformationPage.xaml;Pages\Measurement\MeasurementPage.xaml;Pages\Measurement\MeasurementStyles.xaml;Pages\Measurement\MeasurementUiConstants.xaml;Shared\Styles\Theme.xaml;Windows\ConfirmationWindow\ConfirmationWindow.xaml;
 
 True
 

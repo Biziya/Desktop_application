@@ -92,7 +92,7 @@ The table builds these columns in `MeasurementPage.xaml.cs` between the drag han
 ## Depth intervals
 
 - **Units.** Depths are stored and calculated as whole millimetres (INTEGER) and shown in metres (`Depth.cs`: 1 m = 1000 mm). Input finer than 1 mm is rejected, so intervals add up exactly with no floating-point drift. `"from"`, `"to"` and `step` in SQLite are millimetres.
-- **Inputs.** The Measurement page control area is one row: **Starting Depth (m)** and **Step (m)** stacked on the left, the bar chart in the middle (remaining width, about 250 px at the smallest window), and the capture countdown with Start / Stop below it on the right. There is no To input: `to = from + step`. Both inputs start from the session's saved progress; a session without progress starts empty and Start needs both. Depth entry is only on this page.
+- **Inputs.** The Measurement page control area is one row: a control column (**Starting Depth (m)**, **Step (m)** and the **Start / Stop** toggle — same width, top to bottom), the bar chart in the middle (remaining width, about 240 px at the smallest window) and the capture countdown on the right. The single toggle shows a green Start while stopped and a red Stop while measuring. There is no To input: `to = from + step`. Both inputs start from the session's saved progress; a session without progress starts empty and Start needs both. Depth entry is only on this page.
 - **Per capture.** When a capture begins, its interval is fixed: `from` = Starting Depth, `to = from + step`, `step` = Step. The completed row stores all three; Starting Depth then becomes that `to` — once per completed capture (one row per capture). Changing Step or Starting Depth during a capture applies to the next capture; a starting depth typed during the capture is not overwritten by the advance. Cancelled, stopped or failed captures do not advance.
 - **Progress.** Starting Depth and Step are saved per session in `MeasurementProgress (session_id, next_from, step)` — in the same transaction as the rows, so a capture and its depth advance commit together and a retried save cannot advance twice. They are restored after Stop → Start, when reopening the drillhole and after a restart. (There was no earlier settings storage to reuse.)
 - Reordering changes only `SortOrder`; depths never change. Rows stored before this version keep null `from`/`to`/`step` and sessions null metadata — nothing is invented. The table shows each row's saved depths as read-only **From (m)**, **To (m)** and **Step (m)** columns (fields `FromMetres`/`ToMetres`/`StepMetres`, exact mm ÷ 1000; layout in `MeasurementColumnLayout.cs`). They are not exported, so the CSV columns are unchanged (one `IncludeInCsv` flag each to change that).
@@ -104,7 +104,7 @@ CSV contains the measurement columns above in order (including the hidden Captur
 ## Bar chart and demo ts_ms
 
 - `DepthBarChart.cs` draws one vertical bar per table row: left edge at `from`, right edge at `to` (so bar widths follow the actual interval and step changes), height from 0 to the row's ts_ms. Bars are placed by depth, so reordering rows does not move them; rows without depths or ts_ms are skipped. Axes: Depth (m) and ts_ms, with round tick values (large ts_ms shortened, e.g. 1.76T). Hovering a bar shows From, To, Step and ts_ms. Colours, text and grid lines use the theme brushes.
-- **Demo / preview mode** (`MainViewModel.ShowDemoTsMs`, currently on): rows without a device ts_ms get a random value (500–5000) once, when they enter the table, so the table and chart show the same stable value. Demo values live in `MeasurementResult.DemoTsMs` only — never in SQLite or CSV (both read `Reading.TsMs`). A "DEMO ts_ms" badge marks the chart while the mode is on. Set the constant to false once the CT007 service provides ts_ms; device values are always shown as they are.
+- **Demo / preview mode** (`MainViewModel.ShowDemoTsMs`, currently on): rows without a device ts_ms get a random value (500–5000) once, when they enter the table, so the table and chart show the same stable value. Demo values live in `MeasurementResult.DemoTsMs` only — never in SQLite or CSV (both read `Reading.TsMs`). The chart has no title or demo badge; demo values are listed as "(demo)" in the bar tooltip. Set the constant to false once the CT007 service provides ts_ms; device values are always shown as they are.
 
 ## Icon
 
@@ -113,7 +113,7 @@ CSV contains the measurement columns above in order (including the hidden Captur
 ## Device Status and shared styling
 
 - **Gamm Guard SQLite Database** (Device Status) shows the path reported by the connected device (`DeviceConnection.GammGuardDatabasePath`), separate from the measurement database. It refreshes on connect/disconnect and shows "Not available" when no device is connected or none is reported — no path is guessed. There is no Gamm Guard integration yet, so with the mock service it shows "Not available". Both paths are selectable read-only boxes that wrap long paths.
-- Shared styles in `Shared/Styles/Theme.xaml`: palette brushes (including `LabelText`, `WarningSurface`), `FieldLabel` (every input label on both pages), `RequiredStar`, `CopyableValue`, cards, section titles, inputs and the button states below. Core Information has two sections — Drillhole Information (with Save & Continue at its end) and Device Status (connection beside the two database paths).
+- Shared styles in `Shared/Styles/Theme.xaml`: palette brushes (including `LabelText`, `WarningSurface`), `FieldLabel` (every input label on both pages), `RequiredStar`, `CopyableValue`, cards, section titles, inputs and the button states below. Core Information has two sections — Drillhole Information (row 1: Drillhole, Project, Campaign, Operator; row 2: Notes; Save & Continue at the end) and Device Status (three rows: CT007 connection, Measurement SQLite Database, Gamm Guard SQLite Database).
 
 - The Core Information page's Device Status shows the SQLite database path in use (from the repository configuration, selectable for copying) and the CT007 connection from `IMeasurementService.ConnectedDevice` (name and identifier). When no device is connected it shows a red "Disconnected" row with no name or ID; details are re-read whenever `ConnectionChanged` is raised, so they are never stale. The mock service has no hardware link and always reports Disconnected; captures still work in simulation.
 - The Bluetooth Trigger indicator is no longer shown. The trigger itself (right-click in the main window while armed) is unchanged.
@@ -126,7 +126,8 @@ CSV contains the measurement columns above in order (including the hidden Captur
 - Blue/white theme, collapsible sidebar, active navigation, icon tooltips and retained sidebar state.
 - Drag handle and Delete columns around the configured measurement columns; 36-pixel rows (at the default 1.0 multipliers) and alternating backgrounds.
 - Measurement page sizes are Default x Multiplier values in `Pages/Measurement/MeasurementUiConstants.xaml`; every multiplier is 1.0 by default, which is the original look. They are applied with `{local:Scale ...}` (`ScaleExtension.cs`).
-- Reordering with insertion feedback/edge scrolling, stable capture identifiers, delete confirmation, notifications and CSV save dialog.
+- Reordering with insertion feedback/edge scrolling, stable capture identifiers, notifications and CSV save dialog.
+- **Row changes are confirmed** in one compact dialog centred over the window (`Windows/ConfirmationWindow`): after a drop, "Move this measurement from position X to position Y?" (Move / Cancel); for delete, "Delete this measurement?" (Delete / Cancel). Nothing changes on Cancel. A confirmed change is stored right away; if storing fails the row is put back and an error is shown, so the table always matches the database. Selecting, scrolling and viewing never ask.
 - Completed results remain across navigation and, through SQLite, across restarts.
 
 ## Source organization
@@ -157,8 +158,8 @@ Frontend/
 │       ├── MeasurementUiConstants.xaml
 │       └── ScaleExtension.cs
 ├── Windows/ConfirmationWindow/
-│   ├── DeleteConfirmationWindow.xaml
-│   ├── DeleteConfirmationWindow.xaml.cs
+│   ├── ConfirmationWindow.xaml
+│   ├── ConfirmationWindow.xaml.cs
 │   └── DialogService.cs
 ├── Shared/
 │   ├── Infrastructure/ (ObservableObject, commands)

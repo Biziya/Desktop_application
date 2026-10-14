@@ -11,6 +11,11 @@
             <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}"/>
             <Setter Property="Padding" Value="14,12"/>
         </Style>
+        <!-- Database path rows: same shape as the device row, neutral background, 8 px apart. -->
+        <Style x:Key="PathRow" TargetType="Border" BasedOn="{StaticResource StatusRow}">
+            <Setter Property="Background" Value="{StaticResource Canvas}"/>
+            <Setter Property="Margin" Value="0,8,0,0"/>
+        </Style>
         <!-- Device row turns red when no CT007 is connected. -->
         <Style x:Key="DeviceRow" TargetType="Border" BasedOn="{StaticResource StatusRow}">
             <Style.Triggers>
@@ -39,13 +44,14 @@
         <StackPanel>
 
             <!-- 1. Drillhole Information. Labels are display text only: Drillhole → DrillholeId (DrillholeID),
-                 Project → DrillholeName (DrillholeName), Campaign → ProjectArea (Project). Three equal columns with the
-                 same field margins keep both rows aligned and every input the same width; Notes spans two. -->
+                 Project → DrillholeName (DrillholeName), Campaign → ProjectArea (Project). Row 1: four equal columns
+                 with the same field margins; row 2: Notes across the full width. -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="Drillhole Information" Style="{StaticResource SectionTitle}"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition/>
                             <ColumnDefinition/>
                             <ColumnDefinition/>
                             <ColumnDefinition/>
@@ -75,12 +81,12 @@
                             <TextBox Text="{Binding ProjectArea, UpdateSourceTrigger=PropertyChanged}"
                                      AutomationProperties.Name="Campaign"/>
                         </StackPanel>
-                        <StackPanel Grid.Row="1" Style="{StaticResource FieldPanel}">
+                        <StackPanel Grid.Column="3" Style="{StaticResource FieldPanel}">
                             <TextBlock Text="Operator" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding Operator, UpdateSourceTrigger=PropertyChanged}"
                                      AutomationProperties.Name="Operator"/>
                         </StackPanel>
-                        <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource FieldPanel}">
+                        <StackPanel Grid.Row="1" Grid.ColumnSpan="4" Style="{StaticResource FieldPanel}">
                             <TextBlock Text="Notes" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
                                      AutomationProperties.Name="Notes"
@@ -102,41 +108,40 @@
                 </StackPanel>
             </Border>
 
-            <!-- 2. Device Status: connection on the left, the two databases (separate files) on the right.
+            <!-- 2. Device Status: three rows — the CT007 connection, then the two databases (separate files).
+                 Paths are read-only text boxes: long paths wrap and can be selected and copied.
                  The Bluetooth trigger indicator is not shown; the trigger itself (right-click in MainWindow) is unchanged. -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="Device Status" Style="{StaticResource SectionTitle}"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition/>
-                            <ColumnDefinition Width="18"/>
-                            <ColumnDefinition/>
-                        </Grid.ColumnDefinitions>
-                        <Border Style="{StaticResource DeviceRow}" VerticalAlignment="Top">
-                            <DockPanel>
-                                <TextBlock Style="{StaticResource DeviceStatusValue}"
-                                           AutomationProperties.Name="Device connection status"><Run Text="●  "/><Run Text="{Binding DeviceStatus, Mode=OneWay}"/></TextBlock>
-                                <StackPanel>
-                                    <TextBlock Text="SPP CT-007 Device" Style="{StaticResource FieldLabel}"/>
-                                    <TextBlock Style="{StaticResource StatusDetail}" Text="{Binding DeviceName}"/>
-                                    <TextBlock Style="{StaticResource StatusDetail}"
-                                               Visibility="{Binding IsDeviceConnected, Converter={StaticResource BoolVisibility}}"><Run Text="ID: "/><Run Text="{Binding DeviceIdentifier, Mode=OneWay}"/></TextBlock>
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
-                        <StackPanel Grid.Column="2">
-                            <!-- Read-only text boxes so the full paths can be selected and copied. -->
+                    <Border Style="{StaticResource DeviceRow}">
+                        <DockPanel>
+                            <TextBlock Style="{StaticResource DeviceStatusValue}"
+                                       AutomationProperties.Name="Device connection status"><Run Text="●  "/><Run Text="{Binding DeviceStatus, Mode=OneWay}"/></TextBlock>
+                            <StackPanel>
+                                <TextBlock Text="SPP CT-007 Device" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Style="{StaticResource StatusDetail}" Text="{Binding DeviceName}"/>
+                                <TextBlock Style="{StaticResource StatusDetail}"
+                                           Visibility="{Binding IsDeviceConnected, Converter={StaticResource BoolVisibility}}"><Run Text="ID: "/><Run Text="{Binding DeviceIdentifier, Mode=OneWay}"/></TextBlock>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource PathRow}">
+                        <StackPanel>
                             <TextBlock Text="Measurement SQLite Database" Style="{StaticResource FieldLabel}"/>
                             <TextBox Style="{StaticResource CopyableValue}"
                                      Text="{Binding DatabasePath, Mode=OneWay}"
                                      AutomationProperties.Name="Measurement SQLite database path"/>
-                            <TextBlock Text="Gamm Guard SQLite Database" Style="{StaticResource FieldLabel}" Margin="0,14,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource PathRow}">
+                        <StackPanel>
+                            <TextBlock Text="Gamm Guard SQLite Database" Style="{StaticResource FieldLabel}"/>
                             <TextBox Style="{StaticResource CopyableValue}"
                                      Text="{Binding GammGuardDatabasePath, Mode=OneWay}"
                                      AutomationProperties.Name="Gamm Guard SQLite database path"/>
                         </StackPanel>
-                    </Grid>
+                    </Border>
                 </StackPanel>
             </Border>
 

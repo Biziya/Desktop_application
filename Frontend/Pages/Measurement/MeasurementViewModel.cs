@@ -333,9 +333,32 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             destination--;
         }
 
+        // Dropped back on its own position, or cancelled: nothing changes.
+        if (destination == sourceIndex || !dialogs.ConfirmMove(sourceIndex + 1, destination + 1))
+        {
+            return;
+        }
+
         Results.Move(sourceIndex, destination);
         Renumber();
-        SaveSession();
+        _ = CommitMoveAsync(source, sourceIndex);
+    }
+
+    // Stores the confirmed order. If that fails the row goes back, so the table keeps showing the stored order.
+    private async Task CommitMoveAsync(MeasurementResult row, int originalIndex)
+    {
+        if (await SaveSessionAsync(error => $"Moving the measurement failed ({error.Message}). The stored order is kept."))
+        {
+            return;
+        }
+
+        var current = Results.IndexOf(row);
+
+        if (current >= 0 && originalIndex < Results.Count)
+        {
+            Results.Move(current, originalIndex);
+            Renumber();
+        }
     }
 
     public void Dispose()
@@ -559,9 +582,26 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             return;
         }
 
+        _ = DeleteAsync(row);
+    }
+
+    // Removes the confirmed row. If the database delete fails the row is shown again where it was, because it is
+    // still stored.
+    private async Task DeleteAsync(MeasurementResult row)
+    {
+        var index = Results.IndexOf(row);
         Results.Remove(row);
         Renumber();
-        _ = Persist(() => repository.DeleteAsync(row.SessionId, row.CaptureNumber));
+
+        if (!await Persist(
+                () => repository.DeleteAsync(row.SessionId, row.CaptureNumber),
+                error => $"Deleting the measurement failed ({error.Message}). It is still stored and stays in the table."))
+        {
+            Results.Insert(Math.Min(index, Results.Count), row);
+            Renumber();
+            return;
+        }
+
         SaveSession();
         Notify("Measurement deleted.");
     }
@@ -576,26 +616,30 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     // Stores the whole table (one session, current order). Stored rows only get their SortOrder updated, so a row
     // whose earlier save failed is saved by the next change, Stop or close — never twice.
-    private async void SaveSession()
+    private void SaveSession() => _ = SaveSessionAsync();
+
+    private async Task<bool> SaveSessionAsync(Func<Exception, string>? failureMessage = null)
     {
         if (session is not { } current)
         {
-            return;
+            return false;
         }
 
         var rows = Results.ToArray();
         var progress = nextFromMm is { } from && stepMm is { } size ? new DepthProgress(from, size) : null;
-        var saved = await Persist(() => repository.SaveAsync(current, rows, progress));
+        var saved = await Persist(() => repository.SaveAsync(current, rows, progress), failureMessage);
 
         // Saves complete in request order, so the latest result describes the table.
         if (session == current)
         {
             hasUnsavedRows = !saved;
         }
+
+        return saved;
     }
 
-    // Queues a write without blocking the UI. A failure is reported; the rows stay in the table.
-    private async Task<bool> Persist(Func<Task> write)
+    // Queues a write without blocking the UI. A failure is reported (by default: the rows stay in the table).
+    private async Task<bool> Persist(Func<Task> write, Func<Exception, string>? failureMessage = null)
     {
         var previous = persistence;
         var current = Task.Run(async () =>
@@ -612,7 +656,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
         catch (Exception error)
         {
-            Notify($"Saving to the database failed ({error.Message}). Rows stay in the table and are saved again on the next change or Stop.");
+            Notify(failureMessage?.Invoke(error) ??
+                $"Saving to the database failed ({error.Message}). Rows stay in the table and are saved again on the next change or Stop.");
             return false;
         }
     }
