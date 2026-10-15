@@ -1,38 +1,49 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <SolidColorBrush x:Key="Navy" Color="#172C4B"/>
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    xmlns:infra="clr-namespace:Frontend.Shared.Infrastructure">
+    <!-- One height for every single-line field (text boxes and dropdowns) and the Start/Stop button. -->
+    <sys:Double x:Key="ControlHeight">40</sys:Double>
+    <!-- ===== Palette (after the Shopeers reference): white sidebar and cards on a light grey page, one blue accent. ===== -->
+    <!-- Body text (near-black slate). The key name is historical. -->
+    <SolidColorBrush x:Key="Navy" Color="#1F2937"/>
     <SolidColorBrush x:Key="Blue" Color="#2563EB"/>
-    <SolidColorBrush x:Key="Muted" Color="#64748B"/>
-    <SolidColorBrush x:Key="Line" Color="#E2E8F0"/>
+    <SolidColorBrush x:Key="Muted" Color="#6B7280"/>
+    <!-- Form and status labels: between Muted and body text. -->
+    <SolidColorBrush x:Key="LabelText" Color="#374151"/>
+    <SolidColorBrush x:Key="Line" Color="#E6E8EC"/>
     <SolidColorBrush x:Key="Surface" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="Canvas" Color="#F4F7FB"/>
-    <SolidColorBrush x:Key="SidebarSurface" Color="#F9FBFF"/>
-    <!-- Sidebar shell: a cool blue-grey that sets the navigation apart from the lighter content canvas. -->
-    <SolidColorBrush x:Key="SidebarBackground" Color="#E3EAF5"/>
-    <SolidColorBrush x:Key="SidebarHover" Color="#D3DEEF"/>
-    <SolidColorBrush x:Key="SidebarBorder" Color="#CBD5E1"/>
-    <!-- Darker than Muted so unselected navigation text stays readable (about 6:1) on SidebarBackground. -->
-    <SolidColorBrush x:Key="SidebarText" Color="#475569"/>
-    <!-- Outer ring drawn on every enabled button under the mouse. -->
-    <SolidColorBrush x:Key="ButtonHoverOutline" Color="#172C4B"/>
-    <SolidColorBrush x:Key="SoftBlue" Color="#E7EFFF"/>
-    <SolidColorBrush x:Key="HoverSurface" Color="#EEF3FB"/>
-    <SolidColorBrush x:Key="InputBorder" Color="#CBD5E1"/>
-    <SolidColorBrush x:Key="ReadOnlySurface" Color="#F1F5F9"/>
-    <SolidColorBrush x:Key="Success" Color="#008744"/>
-    <SolidColorBrush x:Key="SuccessSurface" Color="#EFFAF3"/>
-    <SolidColorBrush x:Key="Danger" Color="#C82C45"/>
-    <SolidColorBrush x:Key="DangerSurface" Color="#FFF0F2"/>
-    <SolidColorBrush x:Key="Warning" Color="#966015"/>
-    <SolidColorBrush x:Key="WarningSurface" Color="#FFF6E5"/>
-    <!-- Form and status labels: darker than Muted, lighter than Navy body text. -->
-    <SolidColorBrush x:Key="LabelText" Color="#334155"/>
+    <!-- Main page background; the sidebar and cards are white on it. -->
+    <SolidColorBrush x:Key="Canvas" Color="#F3F4F6"/>
+    <!-- Very light fill: alternating table rows, read-only fields. -->
+    <SolidColorBrush x:Key="SubtleSurface" Color="#F9FAFB"/>
+    <SolidColorBrush x:Key="ReadOnlySurface" Color="#F7F8FA"/>
+    <SolidColorBrush x:Key="SidebarBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="SidebarBorder" Color="#E6E8EC"/>
+    <SolidColorBrush x:Key="SidebarHover" Color="#F3F4F6"/>
+    <!-- Unselected navigation text: about 7.6:1 on the white sidebar. -->
+    <SolidColorBrush x:Key="SidebarText" Color="#4B5563"/>
+    <!-- Selected navigation item / highlighted list item. -->
+    <SolidColorBrush x:Key="SoftBlue" Color="#EEF3FE"/>
+    <SolidColorBrush x:Key="HoverSurface" Color="#F5F7FA"/>
+    <SolidColorBrush x:Key="InputBorder" Color="#DDE1E7"/>
+    <SolidColorBrush x:Key="InputHoverBorder" Color="#B9C0CB"/>
+    <!-- Outer ring drawn on every enabled button under the mouse (visible on white and on blue). -->
+    <SolidColorBrush x:Key="ButtonHoverOutline" Color="#1E3A8A"/>
+    <SolidColorBrush x:Key="Success" Color="#15803D"/>
+    <SolidColorBrush x:Key="SuccessSurface" Color="#EEF9F1"/>
+    <SolidColorBrush x:Key="Danger" Color="#C8283F"/>
+    <SolidColorBrush x:Key="DangerSurface" Color="#FEF1F2"/>
+    <SolidColorBrush x:Key="Warning" Color="#92600E"/>
+    <SolidColorBrush x:Key="WarningSurface" Color="#FFF7E6"/>
+    <!-- Sidebar "Offline" dot (yellow; the text beside it stays in the sidebar text colour). Online uses Success. -->
+    <SolidColorBrush x:Key="OfflineIndicator" Color="#EAB308"/>
+
     <CornerRadius x:Key="ControlRadius">8</CornerRadius>
     <CornerRadius x:Key="CardRadius">12</CornerRadius>
     <Geometry x:Key="CoreIcon">M4,2 L16,2 20,6 20,22 4,22 Z M16,2 L16,6 20,6 M8,10 L16,10 M8,14 L16,14 M8,18 L13,18</Geometry>
     <Geometry x:Key="MeasurementIcon">M4,20 L4,12 7,12 7,20 Z M10,20 L10,4 13,4 13,20 Z M16,20 L16,8 19,8 19,20 Z</Geometry>
-    <Geometry x:Key="CollapseIcon">M14,5 L7,12 14,19</Geometry>
-    <Geometry x:Key="ExpandIcon">M9,5 L16,12 9,19</Geometry>
+    <Geometry x:Key="ChevronDownIcon">M1,1 L5,5 9,1</Geometry>
     <BooleanToVisibilityConverter x:Key="BoolVisibility"/>
 
     <!-- Application icon: the shapes of Icons/icon.svg (64 x 64), drawn natively because WPF does not render SVG files. -->
@@ -58,6 +69,7 @@
         </DrawingImage.Drawing>
     </DrawingImage>
 
+    <!-- ===== Text and containers ===== -->
     <Style x:Key="AppWindow" TargetType="Window">
         <Setter Property="FontFamily" Value="Segoe UI"/>
         <Setter Property="FontSize" Value="14"/>
@@ -70,12 +82,13 @@
         <Setter Property="Foreground" Value="{StaticResource Muted}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
+    <!-- Section container on both pages: white, hairline border, 12 px corners. -->
     <Style x:Key="Card" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource Surface}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource CardRadius}"/>
-        <Setter Property="Padding" Value="22"/>
+        <Setter Property="Padding" Value="20"/>
         <Setter Property="Margin" Value="0,0,0,16"/>
     </Style>
     <!-- Label above an input or value; the same on every page. -->
@@ -91,11 +104,18 @@
     <Style x:Key="SectionTitle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="18"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Margin" Value="0,0,0,18"/>
+        <Setter Property="Margin" Value="0,0,0,16"/>
     </Style>
+
+    <!-- ===== Inputs: 40 px, white, light border, 8 px corners; darker border on hover, blue on focus. ===== -->
+    <!-- Text boxes and dropdowns share Height (ControlHeight), left padding (11), font, 1 px border and corners,
+         so a dropdown next to a text box lines up exactly. Multi-line boxes (Notes) set their own Height. -->
     <Style TargetType="TextBox">
-        <Setter Property="MinHeight" Value="40"/>
-        <Setter Property="Padding" Value="11,9"/>
+        <Setter Property="Height" Value="{StaticResource ControlHeight}"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <!-- No vertical padding: the text line is centred in the box (VerticalContentAlignment) at its natural height,
+             so it can never be squeezed or clipped by the fixed 40 px height. -->
+        <Setter Property="Padding" Value="11,0"/>
         <Setter Property="Margin" Value="0,7,0,0"/>
         <Setter Property="Foreground" Value="{StaticResource Navy}"/>
         <Setter Property="Background" Value="{StaticResource Surface}"/>
@@ -108,11 +128,15 @@
                     <Border x:Name="Frame" CornerRadius="{StaticResource ControlRadius}"
                             Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}">
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsReadOnly" Value="True">
                             <Setter TargetName="Frame" Property="Background" Value="{StaticResource ReadOnlySurface}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource InputHoverBorder}"/>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Blue}"/>
@@ -130,6 +154,7 @@
         <Setter Property="IsReadOnly" Value="True"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Height" Value="Auto"/>
         <Setter Property="MinHeight" Value="34"/>
         <Setter Property="Padding" Value="9,7"/>
         <Setter Property="Margin" Value="0,6,0,0"/>
@@ -148,6 +173,153 @@
         <Setter Property="Margin" Value="0,5,0,0"/>
         <Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers>
     </Style>
+
+    <!-- ===== Dropdown: same frame as the text boxes, chevron on the right, themed list. ===== -->
+    <!-- Text part of an editable dropdown: no frame of its own (the dropdown draws it). -->
+    <Style x:Key="ComboBoxEditor" TargetType="TextBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                  HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!-- Opens / closes the list; covers the whole box, the text part sits above it on the left. -->
+    <Style x:Key="ComboBoxToggle" TargetType="ToggleButton">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="ClickMode" Value="Press"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border Background="Transparent">
+                        <Path x:Name="Chevron" Data="{StaticResource ChevronDownIcon}" Stroke="{StaticResource Muted}" StrokeThickness="1.6"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              Width="10" Height="6" Stretch="Uniform" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Chevron" Property="Stroke" Value="{StaticResource Blue}"/>
+                            <Setter TargetName="Chevron" Property="RenderTransformOrigin" Value="0.5,0.5"/>
+                            <Setter TargetName="Chevron" Property="RenderTransform"><Setter.Value><RotateTransform Angle="180"/></Setter.Value></Setter>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="ComboBoxItem">
+        <Setter Property="Padding" Value="10,7"/>
+        <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <!-- Background and outline come from the item style (e.g. the Drillhole list's closest match);
+                         selection and the mouse / arrow-key highlight below take precedence. -->
+                    <Border x:Name="Item" Margin="4,1" Padding="{TemplateBinding Padding}" CornerRadius="6"
+                            Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Item" Property="Background" Value="{StaticResource SoftBlue}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Blue}"/>
+                        </Trigger>
+                        <!-- Mouse or arrow-key highlight. -->
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Item" Property="Background" Value="{StaticResource SidebarHover}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="ComboBox">
+        <Setter Property="Height" Value="{StaticResource ControlHeight}"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Margin" Value="0,7,0,0"/>
+        <Setter Property="Padding" Value="11,0,36,0"/>
+        <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+        <Setter Property="Background" Value="{StaticResource Surface}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource InputBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <!-- Long lists: the list is height-limited and scrolls; it virtualizes (only visible rows get controls) and
+             recycles row containers. CanContentScroll (item scrolling) is what keeps the panel virtualizing inside the
+             ScrollViewer of the template below. -->
+        <Setter Property="MaxDropDownHeight" Value="280"/>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+        <Setter Property="VirtualizingPanel.IsVirtualizingWhenGrouping" Value="True"/>
+        <Setter Property="VirtualizingPanel.ScrollUnit" Value="Item"/>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <Border x:Name="Frame" CornerRadius="{StaticResource ControlRadius}" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
+                        <ToggleButton Style="{StaticResource ComboBoxToggle}"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"/>
+                        <ContentPresenter x:Name="Selection" IsHitTestVisible="False" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"
+                                          Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"/>
+                        <TextBox x:Name="PART_EditableTextBox" Style="{StaticResource ComboBoxEditor}" Margin="{TemplateBinding Padding}"
+                                 Foreground="{TemplateBinding Foreground}" Visibility="Hidden"
+                                 IsReadOnly="{Binding IsReadOnly, RelativeSource={RelativeSource TemplatedParent}}"/>
+                        <Popup x:Name="PART_Popup" Placement="Bottom" VerticalOffset="4" AllowsTransparency="True" Focusable="False"
+                               PopupAnimation="Fade" IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                            <!-- The margin leaves room for the shadow inside the transparent popup. -->
+                            <Border Margin="0,0,10,10" Padding="0,4" CornerRadius="{StaticResource ControlRadius}"
+                                    Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                                    MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="16" ShadowDepth="3" Direction="270" Opacity="0.12"/>
+                                </Border.Effect>
+                                <ScrollViewer CanContentScroll="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEditable" Value="True">
+                            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="Selection" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource InputHoverBorder}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Blue}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Frame" Property="Opacity" Value="0.6"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===== Buttons: 8 px corners; hover ring overlay (size never changes), darker press, inner focus ring, faded when disabled. ===== -->
     <Style TargetType="Button">
         <Setter Property="Background" Value="{StaticResource Blue}"/>
         <Setter Property="Foreground" Value="{StaticResource Surface}"/>
@@ -199,27 +371,11 @@
         <Setter Property="BorderBrush" Value="{StaticResource InputBorder}"/>
         <Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{StaticResource HoverSurface}"/></Trigger></Style.Triggers>
     </Style>
-    <Style x:Key="NavigationButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{StaticResource SidebarText}"/>
-        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-        <Setter Property="Height" Value="44"/>
-        <Setter Property="Margin" Value="0,4"/>
-        <Setter Property="Padding" Value="0"/>
-        <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{StaticResource SidebarHover}"/><Setter Property="Foreground" Value="{StaticResource Navy}"/></Trigger>
-            <!-- Selected page: white tile with blue text and border stands out on the sidebar background. -->
-            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
-                <Setter Property="Background" Value="{StaticResource Surface}"/>
-                <Setter Property="Foreground" Value="{StaticResource Blue}"/>
-                <Setter Property="BorderBrush" Value="{StaticResource Blue}"/>
-            </DataTrigger>
-        </Style.Triggers>
-    </Style>
-    <Style x:Key="NavigationLabel" TargetType="TextBlock">
-        <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="Margin" Value="7,0,8,0"/>
-        <Setter Property="Visibility" Value="{Binding IsSidebarExpanded, Converter={StaticResource BoolVisibility}}"/>
+    <!-- Compact secondary action, e.g. Retry next to a status message. -->
+    <Style x:Key="SmallButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="Padding" Value="10,3"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
     </Style>
     <Style x:Key="DeleteButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Foreground" Value="{StaticResource Danger}"/>
@@ -228,5 +384,133 @@
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{StaticResource DangerSurface}"/></Trigger></Style.Triggers>
+    </Style>
+
+    <!-- ===== Sidebar ===== -->
+    <!-- Navigation item, as in the reference: rounded item, grey hover; selected = soft blue fill, blue semibold text and a
+         blue accent bar at the sidebar's left edge. Keyboard focus shows a blue ring. -->
+    <Style x:Key="NavigationButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource SidebarText}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Height" Value="40"/>
+        <Setter Property="Margin" Value="0,2"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <!-- Sits in the sidebar padding (14 px), flush with the sidebar edge. -->
+                        <Border x:Name="Accent" Width="3" Margin="-14,8,0,8" HorizontalAlignment="Left" CornerRadius="0,2,2,0"
+                                Background="{StaticResource Blue}" Visibility="Collapsed"/>
+                        <Border x:Name="Frame" CornerRadius="{StaticResource ControlRadius}" Background="{TemplateBinding Background}">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                        </Border>
+                        <Border x:Name="FocusRing" CornerRadius="{StaticResource ControlRadius}" BorderBrush="{StaticResource Blue}"
+                                BorderThickness="1.5" Visibility="Collapsed" IsHitTestVisible="False"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource SidebarHover}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+                        </Trigger>
+                        <!-- Current page (infra:SidebarItem.IsSelected, from MainViewModel): soft blue fill, blue icon and
+                             semibold text, accent bar. Declared after the hover trigger so it wins over hover; it does not
+                             depend on focus or the pointer, and in the collapsed sidebar the fill and bar stay around the icon. -->
+                        <Trigger Property="infra:SidebarItem.IsSelected" Value="True">
+                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource SoftBlue}"/>
+                            <Setter TargetName="Accent" Property="Visibility" Value="Visible"/>
+                            <Setter Property="Foreground" Value="{StaticResource Blue}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="NavigationLabel" TargetType="TextBlock">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="4,0,8,0"/>
+        <Setter Property="Visibility" Value="{Binding IsSidebarExpanded, Converter={StaticResource BoolVisibility}}"/>
+    </Style>
+    <!-- Borderless square icon button (sidebar collapse / expand): grey hover, blue focus ring. -->
+    <Style x:Key="IconButton" TargetType="Button">
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Frame" CornerRadius="{StaticResource ControlRadius}" Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent" BorderThickness="1.5">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource SidebarHover}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource Line}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Blue}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===== Toasts (MainWindow, top-right over both pages): white card, coloured accent bar and glyph per kind
+         (success green, information blue, warning amber, error red), close button. ===== -->
+    <Style x:Key="Toast" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource Surface}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}"/>
+        <Setter Property="Margin" Value="0,0,0,8"/>
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="3" Direction="270" Opacity="0.14"/>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="ToastAccent" TargetType="Border">
+        <Setter Property="Width" Value="4"/>
+        <Setter Property="CornerRadius" Value="8,0,0,8"/>
+        <Setter Property="Background" Value="{StaticResource Blue}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Kind}" Value="Success"><Setter Property="Background" Value="{StaticResource Success}"/></DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Warning"><Setter Property="Background" Value="{StaticResource Warning}"/></DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Error"><Setter Property="Background" Value="{StaticResource Danger}"/></DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="ToastGlyph" TargetType="TextBlock">
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Width" Value="18"/>
+        <Setter Property="Margin" Value="12,0,8,0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Foreground" Value="{StaticResource Blue}"/>
+        <Setter Property="Text" Value="i"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Kind}" Value="Success"><Setter Property="Foreground" Value="{StaticResource Success}"/><Setter Property="Text" Value="✓"/></DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Warning"><Setter Property="Foreground" Value="{StaticResource Warning}"/><Setter Property="Text" Value="!"/></DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Error"><Setter Property="Foreground" Value="{StaticResource Danger}"/><Setter Property="Text" Value="✕"/></DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <!-- Small borderless × (toast close, Drillhole clear): grey, darker on hover, blue focus ring. -->
+    <Style x:Key="ClearButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Content" Value="✕"/>
     </Style>
 </ResourceDictionary>

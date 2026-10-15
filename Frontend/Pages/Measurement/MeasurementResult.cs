@@ -17,8 +17,12 @@ public sealed class MeasurementResult : ObservableObject
     // Session the row belongs to (MeasurementRecords.session_id). Not shown in the table.
     public required Guid SessionId { get; init; }
 
-    // Stable within a session: never reused after delete or reorder.
+    // Stable within a session: never reused after delete.
     public required int CaptureNumber { get; init; }
+
+    // MeasurementRecords.id of a stored row (loaded from SQLite); null for a row captured in this run. Only used as
+    // the tie-breaker of the display order (see Calculation/Measurement/MeasurementOrder.cs).
+    public long? RecordId { get; init; }
 
     public required DateTimeOffset StartTime { get; init; }
 
@@ -39,19 +43,22 @@ public sealed class MeasurementResult : ObservableObject
     public bool IsDemoTsMs => Reading.TsMs is null && DemoTsMs is not null;
 
     // Depth interval of the capture in millimetres (see Depth.cs): To = From + Step, fixed when the capture began.
-    // Null for rows stored before depths were recorded. Reordering never changes them.
+    // Null for rows stored before depths were recorded. Sorting never changes them.
     public long? FromMm { get; init; }
 
     public long? ToMm { get; init; }
 
     public long? StepMm { get; init; }
 
-    // The same depths in metres, for display (table columns From (m), To (m), Step (m)). Exact: mm / 1000.
+    // The same depths for display, converted exactly: From (m) and To (m) = mm / 1000, Step (cm) = mm / 10.
+    // StepMetres is kept for CSV (step_m), so the CSV units never change.
     public decimal? FromMetres => FromMm / 1000m;
 
     public decimal? ToMetres => ToMm / 1000m;
 
     public decimal? StepMetres => StepMm / 1000m;
+
+    public decimal? StepCentimetres => StepMm / 10m;
 
     // In-memory capture details. They are not part of the stored/exported column set,
     // so rows reloaded from SQLite leave them null.

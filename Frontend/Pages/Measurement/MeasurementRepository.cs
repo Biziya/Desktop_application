@@ -22,6 +22,9 @@ public sealed record MeasurementSession(
         DrillholeName != other.DrillholeName || Project != other.Project || Operator != other.Operator || Comment != other.Comment;
 }
 
+/// <summary>A drillhole with saved measurements and the Start Time of its most recent capture.</summary>
+public sealed record MeasuredDrillhole(string DrillholeId, DateTimeOffset LastMeasured);
+
 /// <summary>Where the next capture of a session starts and the selected step, both in millimetres (see Depth.cs).</summary>
 public sealed record DepthProgress(long NextFromMm, long StepMm);
 
@@ -37,7 +40,7 @@ public interface IMeasurementRepository
     Task<MeasurementSession> ResolveSessionAsync(MeasurementSession candidate);
 
     /// <summary>
-    /// In one transaction: inserts new rows, stores the user-defined order (SortOrder = position in
+    /// In one transaction: inserts new rows, stores the displayed order (SortOrder = position in
     /// <paramref name="rows"/>) of rows already stored, and stores <paramref name="progress"/> when given.
     /// Nothing else of a stored row changes.
     /// </summary>
@@ -51,8 +54,17 @@ public interface IMeasurementRepository
     /// <summary>The session that received the most recent stored row, or null when nothing is stored.</summary>
     Task<MeasurementSession?> LoadLatestSessionAsync();
 
-    /// <summary>Rows of one session only, in saved order.</summary>
+    /// <summary>The stored session of a Drillhole ID, or null when that drillhole has none. Never creates one.</summary>
+    Task<MeasurementSession?> FindSessionAsync(string drillholeId);
+
+    /// <summary>Rows of one session only (with their record IDs); the ViewModel shows them sorted by From.</summary>
     Task<IReadOnlyList<MeasurementResult>> LoadAsync(Guid sessionId);
+
+    /// <summary>
+    /// Drillholes that have saved measurement records, most recently measured first. Recency is the latest capture
+    /// Start Time (not the table order); sessions without a Drillhole ID are ignored.
+    /// </summary>
+    Task<IReadOnlyList<MeasuredDrillhole>> LoadMeasuredDrillholesAsync();
 }
 
 /// <summary>
@@ -200,8 +212,9 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
             saveProgress.ExecuteNonQuery();
         }
 
-        // (session_id, CaptureNo) is unique: saving a stored row again never duplicates it and only
-        // rewrites its SortOrder when the user moved it. IDs, capture numbers, times and values stay unchanged.
+        // (session_id, CaptureNo) is unique: saving a stored row again never duplicates it and only rewrites its
+        // SortOrder (its position in the displayed, From-sorted table; kept as is, no migration needed).
+        // IDs, capture numbers, times and values stay unchanged.
         using var upsert = connection.CreateCommand();
         upsert.Transaction = transaction;
         upsert.CommandText = $"""
@@ -254,6 +267,16 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
         return true;
     });
 
+    public Task<MeasurementSession?> FindSessionAsync(string drillholeId) => Run(connection =>
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT {SessionColumns} FROM MeasurementSessions WHERE DrillholeID = $drillholeId";
+        command.Parameters.AddWithValue("$drillholeId", drillholeId);
+        using var reader = command.ExecuteReader();
+
+        return reader.Read() ? ReadSession(reader) : null;
+    });
+
     public Task<MeasurementSession?> LoadLatestSessionAsync() => Run(connection =>
     {
         using var command = connection.CreateCommand();
@@ -273,7 +296,7 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
     {
         using var command = connection.CreateCommand();
         command.CommandText = $"""
-            SELECT {RecordColumns}
+            SELECT {RecordColumns}, id
             FROM MeasurementRecords
             WHERE session_id = $session
             ORDER BY SortOrder, CaptureNo
@@ -301,11 +324,39 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
                     NullableDouble(reader, 10)),
                 FromMm = NullableLong(reader, 11),
                 ToMm = NullableLong(reader, 12),
-                StepMm = NullableLong(reader, 13)
+                StepMm = NullableLong(reader, 13),
+                RecordId = reader.GetInt64(14)
             });
         }
 
         return rows;
+    });
+
+    public Task<IReadOnlyList<MeasuredDrillhole>> LoadMeasuredDrillholesAsync() => Run<IReadOnlyList<MeasuredDrillhole>>(connection =>
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT s.DrillholeID, r.StartTime
+            FROM MeasurementRecords r
+            JOIN MeasurementSessions s ON s.id = r.session_id
+            WHERE s.DrillholeID IS NOT NULL
+            """;
+        using var reader = command.ExecuteReader();
+        var latest = new Dictionary<string, DateTimeOffset>();
+
+        // Start times are stored as round-trip text with their offset, so they are compared as instants here.
+        while (reader.Read())
+        {
+            var drillhole = reader.GetString(0);
+            var start = ParseTime(reader.GetString(1));
+
+            if (!latest.TryGetValue(drillhole, out var known) || start > known)
+            {
+                latest[drillhole] = start;
+            }
+        }
+
+        return latest.Select(p => new MeasuredDrillhole(p.Key, p.Value)).OrderByDescending(m => m.LastMeasured).ToList();
     });
 
     private Task<T> Run<T>(Func<SqliteConnection, T> work) => Task.Run(() =>

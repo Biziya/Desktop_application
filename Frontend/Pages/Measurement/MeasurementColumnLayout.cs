@@ -9,30 +9,34 @@ public sealed record ColumnLayout(bool Visible, string Width = "*", double MinWi
 
 /// <summary>
 /// Frontend table layout per measurement column — the only place table visibility and column widths are set.
+/// Visible columns use star widths (shares of the table width, in the proportions of the earlier compact layout), so
+/// together they always fit the table: no horizontal scrolling with the sidebar expanded or collapsed. The minimum
+/// widths add up to 576 px (+ 64 px Delete), which still fits the narrowest layout (minimum window 960 px with
+/// the sidebar expanded: about 650 px of table inside the vertical scrollbar). A value wider than its column ends in "…" and shows in full as a
+/// tooltip; headers wrap onto two lines. A horizontal scrollbar can only appear if the window gets narrower than that.
 /// Columns are identified by the shared definitions in MeasurementColumns.cs (which also hold labels and order).
-/// The drag-handle and Delete columns, fonts, row heights and paddings stay in MeasurementUiConstants.xaml.
+/// The Delete column, fonts, row heights and paddings stay in MeasurementUiConstants.xaml.
 /// </summary>
 public static class MeasurementColumnLayout
 {
     private static readonly Dictionary<string, ColumnLayout> Layouts = new()
     {
-        // Row position only: narrow, fixed.
-        [MeasurementColumns.Number.Binding] = new(Visible: true, Width: "52", MinWidth: 44),
+        // Row position only: narrow.
+        [MeasurementColumns.Number.Binding] = new(Visible: true, Width: "0.6*", MinWidth: 32),
         [MeasurementColumns.CaptureNumber.Binding] = new(Visible: false, Width: "Auto", MinWidth: 90),
         [MeasurementColumns.StartTime.Binding] = new(Visible: false, Width: "Auto", MinWidth: 160),
         [MeasurementColumns.EndTime.Binding] = new(Visible: false, Width: "Auto", MinWidth: 160),
-        [MeasurementColumns.From.Binding] = new(Visible: true, Width: "Auto", MinWidth: 80),
-        [MeasurementColumns.To.Binding] = new(Visible: true, Width: "Auto", MinWidth: 80),
-        [MeasurementColumns.Step.Binding] = new(Visible: true, Width: "Auto", MinWidth: 80),
-        // Takes the remaining width so the table fills the card.
-        [MeasurementColumns.Sample.Binding] = new(Visible: true, Width: "*", MinWidth: 72),
-        // Device values size to their content so full-precision numbers are never clipped.
-        [MeasurementColumns.TsMs.Binding] = new(Visible: true, Width: "Auto", MinWidth: 120),
-        [MeasurementColumns.Count0.Binding] = new(Visible: true, Width: "Auto", MinWidth: 96),
-        [MeasurementColumns.Count0Raw.Binding] = new(Visible: true, Width: "Auto", MinWidth: 104),
-        [MeasurementColumns.Hdm.Binding] = new(Visible: true, Width: "Auto", MinWidth: 96),
-        [MeasurementColumns.HdmRaw.Binding] = new(Visible: true, Width: "Auto", MinWidth: 96),
-        [MeasurementColumns.DoseRate.Binding] = new(Visible: true, Width: "Auto", MinWidth: 96),
+        [MeasurementColumns.From.Binding] = new(Visible: true, Width: "1*", MinWidth: 56),
+        [MeasurementColumns.To.Binding] = new(Visible: true, Width: "1*", MinWidth: 56),
+        [MeasurementColumns.Step.Binding] = new(Visible: true, Width: "1*", MinWidth: 52),
+        [MeasurementColumns.Sample.Binding] = new(Visible: true, Width: "0.9*", MinWidth: 52),
+        // Device values get somewhat more room; full-precision values that still do not fit show "…" + tooltip.
+        [MeasurementColumns.TsMs.Binding] = new(Visible: true, Width: "1.5*", MinWidth: 64),
+        [MeasurementColumns.Count0.Binding] = new(Visible: true, Width: "1.2*", MinWidth: 52),
+        [MeasurementColumns.Count0Raw.Binding] = new(Visible: true, Width: "1.3*", MinWidth: 56),
+        [MeasurementColumns.Hdm.Binding] = new(Visible: true, Width: "1.2*", MinWidth: 48),
+        [MeasurementColumns.HdmRaw.Binding] = new(Visible: true, Width: "1.2*", MinWidth: 52),
+        [MeasurementColumns.DoseRate.Binding] = new(Visible: true, Width: "1.2*", MinWidth: 56),
         [MeasurementColumns.SessionId.Binding] = new(Visible: false, Width: "Auto", MinWidth: 280),
     };
 

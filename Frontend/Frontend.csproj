@@ -13,6 +13,10 @@
   <ItemGroup>
     <Resource Include="Icons\icon.ico" />
     <None Include="Icons\icon.svg" />
+    <!-- Backend URL and intervals; editable next to the executable. -->
+    <None Update="Api\api-settings.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- CT-007 identification, Gamma Guard database location and local check interval; editable next to the executable. -->
+    <None Update="Calculation\Core-Information\device-settings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -26,68 +26,50 @@ public sealed record DeviceReading(
     public static DeviceReading Empty { get; } = new();
 }
 
-/// <summary>
-/// Identity of the connected CT007, as reported by the connection. <paramref name="GammGuardDatabasePath"/> is the
-/// Gamm Guard SQLite database the device integration reports, or null when it does not report one.
-/// </summary>
-public sealed record DeviceConnection(string Name, string Identifier, string? GammGuardDatabasePath = null);
-
 public interface IMeasurementService
 {
-    /// <summary>The connected CT007, or null when no device is connected.</summary>
-    DeviceConnection? ConnectedDevice { get; }
-
-    /// <summary>Raised when a device connects or disconnects (may be raised on any thread).</summary>
-    event EventHandler? ConnectionChanged;
-
-    /// <summary>Length of one capture. The ViewModel derives its countdown text and progress from this.</summary>
-    TimeSpan Duration { get; }
-
+    /// <param name="duration">Length of this capture (the configured capture duration when it started; it never
+    /// changes during the capture).</param>
     Task<CaptureData> CaptureAsync(
         DateTimeOffset start,
+        TimeSpan duration,
         Action<TimeSpan> reportRemaining,
         CancellationToken cancellationToken);
 }
 
 public sealed class MockMeasurementService : IMeasurementService
 {
-    public TimeSpan Duration { get; } = TimeSpan.FromSeconds(5);
-
-    // Simulation only: there is no hardware connection, so no device is ever reported.
-    public DeviceConnection? ConnectedDevice => null;
-
-    public event EventHandler? ConnectionChanged
-    {
-        add { }
-        remove { }
-    }
+    /// <summary>Sample rate of the simulation: one sample per second (unchanged).</summary>
+    public static readonly TimeSpan SampleInterval = TimeSpan.FromSeconds(1);
 
     public async Task<CaptureData> CaptureAsync(
         DateTimeOffset start,
+        TimeSpan duration,
         Action<TimeSpan> reportRemaining,
         CancellationToken cancellationToken)
     {
         var clock = Stopwatch.StartNew();
-        var samples = new List<double>(5);
+        // One synthetic sample at each second boundary of the capture window (5 s → 5 samples, 12 s → 12 samples).
+        // Scheduler delays never extend the logical capture window or change the sample count.
+        var expected = Math.Max(1, (int)(duration.Ticks / SampleInterval.Ticks));
+        var samples = new List<double>(expected);
 
-        // Five synthetic samples, one at each second boundary. Scheduler delays never
-        // extend the logical capture window or change the sample count.
-        reportRemaining(Duration);
+        reportRemaining(duration);
 
-        while (clock.Elapsed < Duration)
+        while (clock.Elapsed < duration)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var elapsed = clock.Elapsed;
 
-            while (samples.Count < 5 && elapsed.TotalSeconds >= samples.Count + 1)
+            while (samples.Count < expected && elapsed >= SampleInterval * (samples.Count + 1))
             {
                 samples.Add(10 + Random.Shared.NextDouble() * 5);
             }
 
-            reportRemaining(Duration > elapsed ? Duration - elapsed : TimeSpan.Zero);
+            reportRemaining(duration > elapsed ? duration - elapsed : TimeSpan.Zero);
 
-            var delay = Duration - clock.Elapsed;
+            var delay = duration - clock.Elapsed;
 
             if (delay > TimeSpan.Zero)
             {
@@ -99,13 +81,14 @@ public sealed class MockMeasurementService : IMeasurementService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        while (samples.Count < 5)
+        // A sample whose second boundary was reached but not yet taken (scheduler delay) is taken now.
+        while (samples.Count < expected)
         {
             samples.Add(10 + Random.Shared.NextDouble() * 5);
         }
 
         reportRemaining(TimeSpan.Zero);
 
-        return new CaptureData(start, start + Duration, samples.AsReadOnly(), "cps", DateTimeOffset.Now);
+        return new CaptureData(start, start + duration, samples.AsReadOnly(), "cps", DateTimeOffset.Now);
     }
 }

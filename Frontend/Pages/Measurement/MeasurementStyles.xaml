@@ -10,7 +10,7 @@
         <Setter Property="Foreground" Value="{StaticResource Navy}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="RowBackground" Value="{StaticResource Surface}"/>
-        <Setter Property="AlternatingRowBackground" Value="{StaticResource SidebarSurface}"/>
+        <Setter Property="AlternatingRowBackground" Value="{StaticResource SubtleSurface}"/>
         <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource Line}"/>
         <Setter Property="VerticalGridLinesBrush" Value="{StaticResource Line}"/>
         <!-- Vertical lines between every column use the same brush as the row lines and header border. -->
@@ -19,7 +19,7 @@
         <!-- Row text size is set once here; header, cells and the columns inherit it. -->
         <Setter Property="FontSize" Value="{local:Scale TableRowFontSize}"/>
         <Setter Property="RowHeight" Value="{local:Scale TableRowHeight}"/>
-        <Setter Property="ColumnHeaderHeight" Value="{local:Scale TableHeaderHeight}"/>
+        <!-- Header height grows when a narrow column wraps its header onto two lines (minimum on the header style). -->
         <Setter Property="CanUserAddRows" Value="False"/>
         <Setter Property="CanUserDeleteRows" Value="False"/>
         <Setter Property="CanUserSortColumns" Value="False"/>
@@ -36,6 +36,7 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="FontSize" Value="{local:Scale TableHeaderFontSize}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="MinHeight" Value="{local:Scale TableHeaderHeight}"/>
         <!-- Right edge continues the column's vertical grid line through the header row. -->
         <Setter Property="BorderThickness" Value="0,0,1,1"/>
         <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
@@ -74,13 +75,56 @@
         </Style.Triggers>
     </Style>
 
+    <!-- Cell text: centred; a value wider than its column ends in "…" and the full value is the tooltip. -->
     <Style x:Key="CenteredTableText" TargetType="TextBlock">
         <Setter Property="TextAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
     </Style>
 
+    <!-- Header text is centred and wraps (also inside a word such as count0_raw) instead of widening the column. -->
     <Style x:Key="CenteredTableHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="ContentTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center"/>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===== Countdown (a button: click to edit the capture duration) ===== -->
+    <!-- No fill or frame; hover tints the ring area, keyboard focus draws a blue circle. When disabled (a capture is
+         running) the countdown looks exactly the same — it just cannot be clicked. -->
+    <Style x:Key="CountdownButton" TargetType="Button">
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid Background="Transparent">
+                        <Ellipse x:Name="Hover" Fill="{StaticResource SoftBlue}" Opacity="0" Margin="6"/>
+                        <ContentPresenter/>
+                        <Ellipse x:Name="Focus" Stroke="{StaticResource Blue}" StrokeThickness="1.5" StrokeDashArray="3 2" Visibility="Collapsed"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Hover" Property="Opacity" Value="1"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Cursor" Value="Arrow"/>
+                            <Setter TargetName="Hover" Property="Opacity" Value="0"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- ===== Start / Stop button ===== -->
@@ -88,7 +132,10 @@
     <Style x:Key="StartStopButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="FontSize" Value="{local:Scale StartStopButtonFontSize}"/>
         <Setter Property="MinWidth" Value="{local:Scale StartStopButtonWidth}"/>
-        <Setter Property="MinHeight" Value="{local:Scale StartStopButtonHeight}"/>
+        <!-- Exactly as tall as the Starting Depth and Step boxes (the box, not their labels). -->
+        <Setter Property="Height" Value="{StaticResource ControlHeight}"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Padding" Value="{local:Scale StartStopButtonPadding}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
     </Style>

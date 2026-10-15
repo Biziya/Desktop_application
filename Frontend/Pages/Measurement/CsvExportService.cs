@@ -28,7 +28,7 @@ public sealed class CsvExportService : ICsvExportService
             return false;
         }
 
-        // Snapshot serialization happens before yielding so later reorder/delete cannot affect this export.
+        // Snapshot serialization happens before yielding so a later capture or delete cannot affect this export.
         var csv = Serialize(rows, session);
         var temporary = dialog.FileName + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
@@ -62,7 +62,7 @@ public sealed class CsvExportService : ICsvExportService
 
     /// <summary>
     /// Measurement columns, order and headers come from MeasurementColumns.cs, followed by the metadata of
-    /// <paramref name="session"/> and session_id. Rows are written in the given (saved) order and must all belong to
+    /// <paramref name="session"/> and session_id. Rows are written in the given (displayed, From-sorted) order and must all belong to
     /// <paramref name="session"/>. ts_ms is the device value only — demo values are never exported.
     /// </summary>
     public static string Serialize(IReadOnlyList<MeasurementResult> rows, MeasurementSession session)

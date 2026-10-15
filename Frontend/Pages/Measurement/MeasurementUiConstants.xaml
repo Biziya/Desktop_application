@@ -6,7 +6,7 @@
   * Section B - DEFAULTS: the original sizes. Leave these unchanged.
   * The final value is calculated where it is used: {local:Scale Name} (see ScaleExtension.cs) reads "Name" and
     "NameMultiplier" from this file. A few items name their multiplier explicitly, e.g.
-    {local:Scale DragHandleFontSize, DragHandleSizeMultiplier}. Items without a multiplier use the default as is.
+    {local:Scale DeleteIconFontSize, DeleteIconSizeMultiplier}. Items without a multiplier use the default as is.
   * This file is loaded once, by ScaleExtension. It is not merged into any resource dictionary or App.xaml.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -15,25 +15,27 @@
 
     <!-- ===================== A. MULTIPLIERS (edit these) ===================== -->
 
-    <!-- Countdown -->
-    <sys:Double x:Key="CountdownFontSizeMultiplier">1.0</sys:Double>
-    <sys:Double x:Key="CountdownRingSizeMultiplier">1.0</sys:Double>
-    <sys:Double x:Key="CountdownRingThicknessMultiplier">1.0</sys:Double>
+    <!-- Countdown: ring, ring line and number enlarged together by 25% (175 px ring, 40 px number, 10 px line).
+         The ring column stays as tall as the Starting Depth / Step / Start-Stop column, so the card does not grow
+         and the chart and table keep their space. -->
+    <sys:Double x:Key="CountdownFontSizeMultiplier">1.25</sys:Double>
+    <sys:Double x:Key="CountdownRingSizeMultiplier">1.25</sys:Double>
+    <sys:Double x:Key="CountdownRingThicknessMultiplier">1.25</sys:Double>
     <sys:Double x:Key="CountdownLabelFontSizeMultiplier">1.0</sys:Double>
 
     <!-- Start / Stop button (both states) -->
+    <!-- Its height is not scaled: it always equals the input boxes (ControlHeight in Shared/Styles/Theme.xaml). -->
     <sys:Double x:Key="StartStopButtonWidthMultiplier">1.0</sys:Double>
-    <sys:Double x:Key="StartStopButtonHeightMultiplier">1.0</sys:Double>
     <sys:Double x:Key="StartStopButtonFontSizeMultiplier">1.0</sys:Double>
     <sys:Double x:Key="StartStopButtonIconFontSizeMultiplier">1.0</sys:Double>
 
-    <!-- Measurement table -->
+    <!-- Measurement table: compact original size (the temporary 2x enlargement is reverted). Column widths are in
+         MeasurementColumnLayout.cs and fit the table width, so raising these makes text shorten with "…" sooner. -->
     <sys:Double x:Key="TableHeaderFontSizeMultiplier">1.0</sys:Double>
     <sys:Double x:Key="TableRowFontSizeMultiplier">1.0</sys:Double>
     <sys:Double x:Key="TableRowHeightMultiplier">1.0</sys:Double>
     <sys:Double x:Key="TableHeaderHeightMultiplier">1.0</sys:Double>
     <sys:Double x:Key="TableCellPaddingMultiplier">1.0</sys:Double>      <!-- also scales header padding -->
-    <sys:Double x:Key="DragHandleSizeMultiplier">1.0</sys:Double>        <!-- handle glyph + its column width -->
     <sys:Double x:Key="DeleteIconSizeMultiplier">1.0</sys:Double>        <!-- delete glyph + its button size -->
 
     <!-- Other page elements -->
@@ -51,25 +53,23 @@
     <sys:Double x:Key="CountdownRingThickness">8</sys:Double>
     <sys:Double x:Key="CountdownLabelFontSize">14</sys:Double>
 
-    <!-- Start / Stop button. Width/Height are applied as MinWidth/MinHeight so text never clips.
-         200 is the original MinWidth; 71.25 is the original natural height (25px Segoe UI line + 2x18 padding + border). -->
+    <!-- Start / Stop button. Width is also the width of the Starting Depth and Step boxes above it. The height is
+         ControlHeight (40, same as those boxes), so text and padding are sized to fit a 40 px button. -->
     <sys:Double x:Key="StartStopButtonWidth">200</sys:Double>
-    <sys:Double x:Key="StartStopButtonHeight">71.25</sys:Double>
-    <sys:Double x:Key="StartStopButtonFontSize">25</sys:Double>
-    <sys:Double x:Key="StartStopButtonIconFontSize">25</sys:Double>      <!-- the play/stop glyph; originally same size as the text -->
-    <Thickness x:Key="StartStopButtonPadding">32,18</Thickness>          <!-- no multiplier: used as is -->
+    <sys:Double x:Key="StartStopButtonFontSize">16</sys:Double>
+    <sys:Double x:Key="StartStopButtonIconFontSize">13</sys:Double>      <!-- the play/stop glyph -->
+    <Thickness x:Key="StartStopButtonPadding">16,0</Thickness>           <!-- no multiplier: used as is -->
 
     <!-- Measurement table -->
     <sys:Double x:Key="TableHeaderFontSize">12</sys:Double>
     <sys:Double x:Key="TableRowFontSize">14</sys:Double>
-    <sys:Double x:Key="TableHeaderHeight">34</sys:Double>
+    <sys:Double x:Key="TableHeaderHeight">34</sys:Double>                 <!-- minimum: a wrapped two-line header may be taller -->
     <sys:Double x:Key="TableRowHeight">36</sys:Double>
     <Thickness x:Key="TableHeaderPadding">8,4</Thickness>
     <Thickness x:Key="TableCellPadding">8,0</Thickness>
-    <sys:Double x:Key="DragHandleFontSize">22</sys:Double>
-    <sys:Double x:Key="DragHandleColumnWidth">34</sys:Double>
     <sys:Double x:Key="DeleteIconFontSize">14</sys:Double>
     <sys:Double x:Key="DeleteButtonSize">28</sys:Double>
+    <sys:Double x:Key="DeleteColumnWidth">64</sys:Double>                 <!-- scaled with DeleteIconSizeMultiplier -->
 
     <!-- Other page elements. Export Width/Height are applied as MinWidth/MinHeight; 42.62 is the original natural height
          (14px line + 2x11 padding + border). 130 approximates the original natural width. -->

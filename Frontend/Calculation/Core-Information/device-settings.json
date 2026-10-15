@@ -1,0 +1,7 @@
+{
+  "ct007Names": [ "CT007", "CT-007" ],
+  "ct007Address": "",
+  "gammaGuardDatabasePath": "",
+  "gammaGuardFileName": "*.sqlite",
+  "checkIntervalSeconds": 5
+}

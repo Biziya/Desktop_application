@@ -7,13 +7,14 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using Frontend.Calculation.Measurement;
 
 namespace Frontend.Pages.Measurement;
 
 /// <summary>
 /// Bar chart of the measurement rows: x = depth (m), y = ts_ms. Each row is one vertical bar from its saved
 /// <c>from</c> to <c>to</c> (so widths follow the actual interval, including step changes) and from 0 up to the same
-/// ts_ms the table shows. Bars are placed by depth, so reordering rows does not move them. Rows without depths or
+/// ts_ms the table shows. Bars are placed by depth (rows are also listed by From). Rows without depths or
 /// ts_ms are not drawn. Hover a bar for its values. Rendering only — the data stays in the ViewModel.
 /// </summary>
 public sealed class DepthBarChart : FrameworkElement
@@ -172,7 +173,7 @@ public sealed class DepthBarChart : FrameworkElement
         tip.Content =
             $"From: {Depth.Format(hit.FromMm!.Value)} m\n" +
             $"To: {Depth.Format(hit.ToMm!.Value)} m\n" +
-            $"Step: {(hit.StepMm is { } step ? Depth.Format(step) : "—")} m\n" +
+            $"Step: {(hit.StepMm is { } step ? Depth.FormatCentimetres(step) : "—")} cm\n" +
             $"ts_ms: {hit.DisplayTsMs!.Value.ToString("N0", CultureInfo.CurrentCulture)}" + (hit.IsDemoTsMs ? " (demo)" : "");
         tip.HorizontalOffset = point.X + 14;
         tip.VerticalOffset = point.Y + 14;

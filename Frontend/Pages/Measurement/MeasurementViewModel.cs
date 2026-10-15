@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.IO;
+using Frontend.Calculation.Measurement;
 using Frontend.Shared.Infrastructure;
 using Frontend.Shared.Models;
 
@@ -11,18 +13,22 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     private readonly IDialogService dialogs;
     private readonly IMeasurementRepository repository;
     private readonly CancellationTokenSource lifetime = new();
-    private CancellationTokenSource? notificationLifetime;
     private CancellationTokenSource? activeCapture;
     private CoreSnapshot? savedCore;
     private bool disposed;
     private MeasurementState state = MeasurementState.Idle;
     private string countdown;
-    private string notification = "";
+    private readonly CaptureDurationSettings durationSettings;
+    private TimeSpan captureDuration;
+    private bool isEditingDuration;
+    private string durationText = "";
+    private int viewVersion;
     private double captureProgress;
     private int nextCapture = 1;
     private MeasurementSession? session;
     private bool hasUnsavedRows;
     private bool openingSession;
+    private bool depthsTypedWhileOpening;
     private string nextFrom = "";
     private string step = "";
     private long? nextFromMm;
@@ -36,18 +42,29 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         ICsvExportService export,
         IDialogService dialogs,
         IMeasurementRepository repository,
-        bool showDemoTsMs = false)
+        bool showDemoTsMs = false,
+        ToastService? toasts = null,
+        CaptureDurationSettings? durationSettings = null)
     {
         ShowDemoTsMs = showDemoTsMs;
         this.measurement = measurement;
         this.export = export;
         this.dialogs = dialogs;
         this.repository = repository;
-        countdown = FormatCountdown(measurement.Duration);
+        Toasts = toasts ?? new ToastService();
+        this.durationSettings = durationSettings ?? new CaptureDurationSettings(null);
+        captureDuration = TimeSpan.FromSeconds(this.durationSettings.Load());
+        countdown = FormatCountdown(captureDuration);
 
+        // Start needs a valid drillhole (saved Core Information with its session). Invalid depths do not disable it:
+        // clicking Start then explains what is missing in a toast (validation on the attempt, not per keystroke).
         ToggleMeasurementCommand = new RelayCommand(
             _ => ToggleMeasurementMode(),
-            _ => IsMeasurementModeActive || (SessionMatchesCore && HasValidDepths && !openingSession));
+            _ => IsMeasurementModeActive || (SessionMatchesCore && !openingSession));
+
+        EditDurationCommand = new RelayCommand(_ => BeginEditDuration(), _ => !IsCapturing && !isEditingDuration);
+        SaveDurationCommand = new RelayCommand(_ => SaveDuration(), _ => isEditingDuration);
+        CancelDurationCommand = new RelayCommand(_ => IsEditingDuration = false, _ => isEditingDuration);
 
         TriggerCommand = new RelayCommand(
             parameter =>
@@ -60,12 +77,12 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
         ExportCommand = new AsyncCommand(
             ExportAsync,
-            _ => Notify("Export failed. Check the file location and try again."),
+            _ => Notify(ToastKind.Error, "Export failed. Check the file location and try again."),
             () => Results.Count > 0);
 
         DeleteCommand = new RelayCommand(Delete, parameter => parameter is MeasurementResult row && Results.Contains(row));
 
-        NewMeasurementCommand = new RelayCommand(_ => NewMeasurement(), _ => !IsMeasurementModeActive);
+        NewMeasurementCommand = new RelayCommand(_ => NewMeasurement(), _ => !IsMeasurementModeActive && session is not null);
 
         Results.CollectionChanged += (_, change) =>
         {
@@ -75,6 +92,9 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     }
 
     public ObservableCollection<MeasurementResult> Results { get; } = [];
+
+    /// <summary>Raised after measurement rows were saved successfully (e.g. to refresh "Measured drillholes").</summary>
+    public event Action? MeasurementsSaved;
 
     public RelayCommand ToggleMeasurementCommand { get; }
 
@@ -111,7 +131,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     public bool IsCapturing => State is MeasurementState.Capturing or MeasurementState.Processing;
 
     public bool CanTrigger =>
-        State == MeasurementState.Ready && SessionMatchesCore && HasValidDepths && activeCapture is null;
+        State == MeasurementState.Ready && SessionMatchesCore && HasValidDepths && activeCapture is null && !isEditingDuration;
 
     public string Countdown
     {
@@ -125,10 +145,38 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         private set => Set(ref captureProgress, value);
     }
 
-    public string Notification
+    /// <summary>The app's toasts (results and errors of measurement actions).</summary>
+    public ToastService Toasts { get; }
+
+    // ---------- Capture duration (click the countdown to edit) ----------
+
+    /// <summary>Length of the next capture. A running capture keeps the duration it started with.</summary>
+    public TimeSpan CaptureDuration => captureDuration;
+
+    public RelayCommand EditDurationCommand { get; }
+
+    public RelayCommand SaveDurationCommand { get; }
+
+    public RelayCommand CancelDurationCommand { get; }
+
+    /// <summary>The duration editor is open. While open, right-click captures are not accepted.</summary>
+    public bool IsEditingDuration
     {
-        get => notification;
-        private set => Set(ref notification, value);
+        get => isEditingDuration;
+        private set
+        {
+            if (Set(ref isEditingDuration, value))
+            {
+                RefreshCommands();
+            }
+        }
+    }
+
+    /// <summary>Seconds typed in the duration editor.</summary>
+    public string DurationText
+    {
+        get => durationText;
+        set => Set(ref durationText, value);
     }
 
     public bool NeedsCore => savedCore is null;
@@ -149,7 +197,10 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Depth step (metres) of each capture. A change applies from the next capture.</summary>
+    /// <summary>
+    /// Depth step of each capture in CENTIMETRES (Step (cm) input): to_m = from_m + step_cm / 100. Stored in mm as
+    /// before. A change applies from the next capture.
+    /// </summary>
     public string Step
     {
         get => step;
@@ -162,9 +213,15 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>Red border on Starting Depth (typed text that is not a valid depth).</summary>
+    public bool IsNextFromInvalid => nextFrom.Length > 0 && nextFromMm is null;
+
+    /// <summary>Red border on Step (typed text that is not a valid step).</summary>
+    public bool IsStepInvalid => step.Length > 0 && stepMm is null;
+
     public string DepthError =>
         nextFrom.Length > 0 && nextFromMm is null ? "Starting depth: enter a depth in metres (at most 3 decimals)." :
-        step.Length > 0 && stepMm is null ? "Step: enter a depth greater than 0 m (at most 3 decimals)." :
+        step.Length > 0 && stepMm is null ? "Step: enter a step greater than 0 cm (at most 1 decimal)." :
         nextFromMm is null || stepMm is null ? "Enter the starting depth and step to enable Start." : "";
 
     private bool HasValidDepths => nextFromMm is not null && stepMm is not null;
@@ -173,7 +230,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         session is { DrillholeId: { } drillhole } && savedCore is { } core && drillhole == core.DrillholeId;
 
     /// <summary>
-    /// Shows the most recently stored session after a restart, in its saved order. Start then continues it.
+    /// Shows the most recently stored session after a restart, sorted by From. Start then continues it.
     /// It does not create a session, and it is skipped if a session is already active.
     /// </summary>
     public async Task RestoreLatestSessionAsync()
@@ -197,7 +254,84 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
         catch (Exception error)
         {
-            Notify($"Stored measurements could not be loaded: {error.Message}");
+            Notify(ToastKind.Error, $"Stored measurements could not be loaded: {error.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Follows the drillhole selected on Core Information (empty when none is selected). Empty: the table and chart
+    /// are emptied and Start, export and delete are unavailable — nothing stored is deleted. A drillhole: its stored
+    /// rows (sorted by From), session and depth progress are shown, without creating a session; Save &amp; Continue
+    /// still creates it when needed. A load that finishes after a newer selection is discarded.
+    /// </summary>
+    public void SelectDrillhole(string drillholeId)
+    {
+        if (string.Equals(session?.DrillholeId ?? "", drillholeId, StringComparison.Ordinal) && !openingSession)
+        {
+            return;
+        }
+
+        var version = ++viewVersion;
+
+        // Rows not stored yet are queued for saving with their own session before the view switches.
+        if (hasUnsavedRows)
+        {
+            SaveSession();
+            hasUnsavedRows = false;
+        }
+
+        StopMeasurementMode();
+        session = null;
+        nextCapture = 1;
+        Results.Clear();
+        Changed(nameof(SessionId));
+        SetDepthInputs("", "");
+        RefreshCommands();
+
+        if (drillholeId.Length > 0)
+        {
+            _ = ShowStoredDrillholeAsync(drillholeId, version);
+        }
+    }
+
+    private async Task ShowStoredDrillholeAsync(string drillholeId, int version)
+    {
+        openingSession = true;
+        depthsTypedWhileOpening = false;
+        RefreshCommands();
+
+        try
+        {
+            await persistence;
+
+            if (await repository.FindSessionAsync(drillholeId) is { } stored)
+            {
+                var rows = await repository.LoadAsync(stored.Id);
+                var progress = await repository.LoadProgressAsync(stored.Id);
+
+                if (!disposed && version == viewVersion)
+                {
+                    ShowSession(stored, rows, progress);
+                }
+            }
+        }
+        catch (Exception error)
+        {
+            Notify(ToastKind.Error, $"Stored measurements of {drillholeId} could not be loaded: {error.Message}");
+        }
+        finally
+        {
+            if (version == viewVersion)
+            {
+                openingSession = false;
+                RefreshCommands();
+
+                if (depthsTypedWhileOpening)
+                {
+                    depthsTypedWhileOpening = false;
+                    DepthInputsChanged(save: true);
+                }
+            }
         }
     }
 
@@ -222,7 +356,9 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     // saved progress. The same Drillhole ID always resolves to the same session, also after a restart.
     private async Task OpenDrillholeAsync(CoreSnapshot core)
     {
+        var version = ++viewVersion;
         openingSession = true;
+        depthsTypedWhileOpening = false;
         RefreshCommands();
 
         try
@@ -233,7 +369,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             if (hasUnsavedRows)
             {
                 SaveSession();
-                Notify("Measurements of the previous drillhole are not saved yet. Retrying — click Save & Continue again once saving succeeds.");
+                Notify(ToastKind.Error, "Measurements of the previous drillhole are not saved yet. Retrying — click Save & Continue again once saving succeeds.");
                 return;
             }
 
@@ -243,7 +379,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             var rows = await repository.LoadAsync(resolved.Id);
             var progress = await repository.LoadProgressAsync(resolved.Id);
 
-            if (disposed || savedCore != core)
+            // A newer selection or open happened meanwhile: this result belongs to an earlier drillhole.
+            if (disposed || savedCore != core || version != viewVersion)
             {
                 return;
             }
@@ -252,29 +389,41 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
             if (resolved.Id != candidate.Id && resolved.MetadataDiffers(candidate))
             {
-                Notify($"Drillhole {core.DrillholeId} already exists. Its stored project, campaign, operator and notes are kept; the edited values were not saved.");
+                Notify(ToastKind.Warning, $"Drillhole {core.DrillholeId} already exists. Its stored project, campaign, operator and notes are kept.");
             }
         }
         catch (Exception error)
         {
-            Notify($"The drillhole session could not be opened: {error.Message}");
+            Notify(ToastKind.Error, $"The drillhole session could not be opened: {error.Message}");
         }
         finally
         {
-            openingSession = false;
-            RefreshCommands();
+            // A newer selection that is still loading keeps its own loading state.
+            if (version == viewVersion)
+            {
+                openingSession = false;
+                RefreshCommands();
+
+                // Values typed while the session was loading were kept on screen; store them now as its progress.
+                if (depthsTypedWhileOpening)
+                {
+                    depthsTypedWhileOpening = false;
+                    DepthInputsChanged(save: true);
+                }
+            }
         }
     }
 
-    // Shows a stored session: its rows in saved order and its saved starting depth and step. Without saved progress
-    // the starting depth is empty (to be entered on the Measurement page) and the step stays as entered.
+    // Shows a stored session: its rows sorted by From and its saved starting depth and step (the step converted from
+    // stored mm to cm). Without saved progress the starting depth is empty (to be entered on the Measurement page) and
+    // the step stays as entered.
     private void ShowSession(MeasurementSession shown, IReadOnlyList<MeasurementResult> rows, DepthProgress? progress)
     {
         session = shown;
         nextCapture = rows.Count == 0 ? 1 : rows.Max(r => r.CaptureNumber) + 1;
         Results.Clear();
 
-        foreach (var row in rows)
+        foreach (var row in MeasurementOrder.Sort(rows))
         {
             Results.Add(row);
         }
@@ -282,9 +431,15 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         Renumber();
         Changed(nameof(SessionId));
 
+        // What the user typed while the session was loading wins over stored values: never overwrite an active edit.
+        if (depthsTypedWhileOpening)
+        {
+            return;
+        }
+
         if (progress is not null)
         {
-            SetDepthInputs(Depth.Format(progress.NextFromMm), Depth.Format(progress.StepMm));
+            SetDepthInputs(Depth.Format(progress.NextFromMm), Depth.FormatCentimetres(progress.StepMm));
         }
         else
         {
@@ -305,59 +460,21 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     private void DepthInputsChanged(bool save)
     {
         nextFromMm = Depth.TryParseMetres(nextFrom, out var from) ? from : null;
-        stepMm = Depth.TryParseMetres(step, out var size) && size > 0 ? size : null;
+        stepMm = Depth.TryParseCentimetres(step, out var size) && size > 0 ? size : null;
         Changed(nameof(DepthError));
+        Changed(nameof(IsNextFromInvalid));
+        Changed(nameof(IsStepInvalid));
         RefreshCommands();
+
+        if (save && openingSession)
+        {
+            depthsTypedWhileOpening = true;
+        }
 
         // A user change is stored as the progress of the drillhole's session (rows are re-saved unchanged).
         if (save && HasValidDepths && SessionMatchesCore && !openingSession)
         {
             SaveSession();
-        }
-    }
-
-    public void Move(MeasurementResult source, MeasurementResult target, bool after)
-    {
-        var sourceIndex = Results.IndexOf(source);
-        var targetIndex = Results.IndexOf(target);
-
-        if (sourceIndex < 0 || targetIndex < 0 || sourceIndex == targetIndex)
-        {
-            return;
-        }
-
-        var destination = targetIndex + (after ? 1 : 0);
-
-        if (sourceIndex < destination)
-        {
-            destination--;
-        }
-
-        // Dropped back on its own position, or cancelled: nothing changes.
-        if (destination == sourceIndex || !dialogs.ConfirmMove(sourceIndex + 1, destination + 1))
-        {
-            return;
-        }
-
-        Results.Move(sourceIndex, destination);
-        Renumber();
-        _ = CommitMoveAsync(source, sourceIndex);
-    }
-
-    // Stores the confirmed order. If that fails the row goes back, so the table keeps showing the stored order.
-    private async Task CommitMoveAsync(MeasurementResult row, int originalIndex)
-    {
-        if (await SaveSessionAsync(error => $"Moving the measurement failed ({error.Message}). The stored order is kept."))
-        {
-            return;
-        }
-
-        var current = Results.IndexOf(row);
-
-        if (current >= 0 && originalIndex < Results.Count)
-        {
-            Results.Move(current, originalIndex);
-            Renumber();
         }
     }
 
@@ -379,15 +496,28 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         // Let queued saves finish on close. They run on the thread pool, so waiting here cannot deadlock.
         persistence.Wait(TimeSpan.FromSeconds(5));
         lifetime.Cancel();
-        notificationLifetime?.Cancel();
-        notificationLifetime?.Dispose();
         lifetime.Dispose();
         ExportCommand.Refresh();
         DeleteCommand.Refresh();
     }
 
+    /// <summary>
+    /// Called when the user leaves a depth box (commits it): invalid text gets an error toast. Typing itself only
+    /// colours the box border.
+    /// </summary>
+    public void CommitDepthInputs()
+    {
+        if (IsNextFromInvalid || IsStepInvalid)
+        {
+            Notify(ToastKind.Error, DepthError);
+        }
+    }
+
     private void RefreshCommands()
     {
+        EditDurationCommand?.Refresh();
+        SaveDurationCommand?.Refresh();
+        CancelDurationCommand?.Refresh();
         ToggleMeasurementCommand.Refresh();
         TriggerCommand.Refresh();
         NewMeasurementCommand.Refresh();
@@ -408,6 +538,13 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             return;
         }
 
+        // Start needs a valid starting depth and step; otherwise say what is missing (5 s error toast).
+        if (!HasValidDepths)
+        {
+            Notify(ToastKind.Error, DepthError);
+            return;
+        }
+
         // Start (also after Stop) continues the drillhole's session, its rows and its next depth and step.
         ResetCountdown();
         State = MeasurementState.Ready;
@@ -421,7 +558,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         if (hasUnsavedRows)
         {
             SaveSession();
-            Notify("Previous measurements are not saved yet. Retrying — try New Measurement again once saving succeeds.");
+            Notify(ToastKind.Error, "Previous measurements are not saved yet. Retrying — try New Measurement again once saving succeeds.");
             return;
         }
 
@@ -431,7 +568,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         Changed(nameof(SessionId));
         SetDepthInputs("", "");
         SetCore(null);
-        Notify("Enter the next drillhole in Core Information and click Save & Continue. Earlier measurements remain stored.");
+        Notify(ToastKind.Information, "Enter the next drillhole in Core Information and click Save & Continue. Earlier measurements remain stored.");
     }
 
     private void StopMeasurementMode()
@@ -442,16 +579,62 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         ResetCountdown();
     }
 
+    // Back to the full configured duration (after completion, cancellation, Stop or a duration change).
     private void ResetCountdown()
     {
-        Countdown = FormatCountdown(measurement.Duration);
+        Countdown = FormatCountdown(captureDuration);
         CaptureProgress = 0;
     }
 
-    private string FormatCountdown(TimeSpan remaining)
+    // mm:ss, rounded up to whole seconds and never above the given capture's duration.
+    private static string FormatCountdown(TimeSpan remaining, TimeSpan? duration = null)
     {
-        var seconds = Math.Clamp((int)Math.Ceiling(remaining.TotalSeconds), 0, (int)measurement.Duration.TotalSeconds);
-        return $"00:{seconds:00}";
+        var limit = (int)Math.Ceiling((duration ?? remaining).TotalSeconds);
+        var seconds = Math.Clamp((int)Math.Ceiling(remaining.TotalSeconds), 0, Math.Max(limit, 0));
+        return $"{seconds / 60:00}:{seconds % 60:00}";
+    }
+
+    private void BeginEditDuration()
+    {
+        if (IsCapturing)
+        {
+            return;
+        }
+
+        DurationText = ((int)captureDuration.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        IsEditingDuration = true;
+    }
+
+    // Saves a valid duration for the next capture (and stores it); invalid input keeps the editor open with an error
+    // toast. Never starts measuring or triggers a capture.
+    private void SaveDuration()
+    {
+        if (!CaptureDurationSettings.TryParse(DurationText, out var seconds))
+        {
+            Notify(ToastKind.Error,
+                $"Capture duration: enter whole seconds from {CaptureDurationSettings.MinSeconds} to {CaptureDurationSettings.MaxSeconds}.");
+            return;
+        }
+
+        if (IsCapturing)
+        {
+            Notify(ToastKind.Error, "The capture duration can be changed when no capture is running.");
+            return;
+        }
+
+        captureDuration = TimeSpan.FromSeconds(seconds);
+        Changed(nameof(CaptureDuration));
+        ResetCountdown();
+        IsEditingDuration = false;
+
+        try
+        {
+            durationSettings.Save(seconds);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            Notify(ToastKind.Error, $"The capture duration is used now but could not be saved ({error.Message}).");
+        }
     }
 
     private async Task CaptureAsync(DateTimeOffset start)
@@ -461,8 +644,9 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             return;
         }
 
-        // The interval is fixed now: later step or depth edits apply to the next capture only.
+        // The interval and the duration are fixed now: later step, depth or duration edits apply to the next capture.
         var toMm = fromMm + stepValue;
+        var duration = captureDuration;
 
         using var capture = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         var token = capture.Token;
@@ -473,6 +657,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         {
             var data = await measurement.CaptureAsync(
                 start,
+                duration,
                 remaining =>
                 {
                     // A cancelled operation may report late; it must never change a newer UI state.
@@ -481,8 +666,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
                         return;
                     }
 
-                    Countdown = FormatCountdown(remaining);
-                    CaptureProgress = Math.Clamp(1 - remaining.TotalSeconds / measurement.Duration.TotalSeconds, 0, 1);
+                    Countdown = FormatCountdown(remaining, duration);
+                    CaptureProgress = Math.Clamp(1 - remaining.TotalSeconds / duration.TotalSeconds, 0, 1);
                 },
                 token);
 
@@ -503,7 +688,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             await Task.Delay(100, token);
             token.ThrowIfCancellationRequested();
 
-            Results.Add(new MeasurementResult
+            // The row goes to its place in the From order (not necessarily the end).
+            AddSorted(new MeasurementResult
             {
                 SessionId = current.Id,
                 CaptureNumber = nextCapture++,
@@ -519,10 +705,10 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
                 ToMm = toMm,
                 StepMm = stepValue
             });
-            Renumber();
 
-            // Advance once per completed capture — unless the user typed a new starting depth meanwhile,
-            // which then applies to the next capture. Saved in the same transaction as the new row.
+            // Advance once per completed capture, from this capture's own interval (never from the last displayed
+            // row: the table is sorted by From) — unless the user typed a new starting depth meanwhile, which then
+            // applies to the next capture. Saved in the same transaction as the new row.
             if (nextFromMm == fromMm)
             {
                 SetDepthInputs(Depth.Format(toMm), step);
@@ -538,7 +724,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             // Disposal cancels the token, so a real failure always has an uncancelled token here.
             if (!token.IsCancellationRequested)
             {
-                Notify("Capture failed. Right-click to try again.");
+                Notify(ToastKind.Error, "Capture failed. Right-click to try again.");
             }
         }
         finally
@@ -558,7 +744,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    // Each row gets its demo value once, when it enters the table, so redraws and reorders keep the same value.
+    // Each row gets its demo value once, when it enters the table, so redraws and re-sorting keep the same value.
     private void AssignDemoTsMs(System.Collections.IList? rows)
     {
         if (!ShowDemoTsMs || rows is null)
@@ -585,11 +771,10 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         _ = DeleteAsync(row);
     }
 
-    // Removes the confirmed row. If the database delete fails the row is shown again where it was, because it is
+    // Removes the confirmed row. If the database delete fails the row is shown again in its place, because it is
     // still stored.
     private async Task DeleteAsync(MeasurementResult row)
     {
-        var index = Results.IndexOf(row);
         Results.Remove(row);
         Renumber();
 
@@ -597,13 +782,20 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
                 () => repository.DeleteAsync(row.SessionId, row.CaptureNumber),
                 error => $"Deleting the measurement failed ({error.Message}). It is still stored and stays in the table."))
         {
-            Results.Insert(Math.Min(index, Results.Count), row);
-            Renumber();
+            AddSorted(row);
             return;
         }
 
         SaveSession();
-        Notify("Measurement deleted.");
+        // Reported only now: the row is gone from the database.
+        Notify(ToastKind.Success, "Measurement deleted.");
+    }
+
+    // Inserts a row at its position in the From order and renumbers No. to match the displayed positions.
+    private void AddSorted(MeasurementResult row)
+    {
+        Results.Insert(MeasurementOrder.InsertIndex(Results, row), row);
+        Renumber();
     }
 
     private void Renumber()
@@ -614,7 +806,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    // Stores the whole table (one session, current order). Stored rows only get their SortOrder updated, so a row
+    // Stores the whole table (one session, displayed order). Stored rows only get their SortOrder updated, so a row
     // whose earlier save failed is saved by the next change, Stop or close — never twice.
     private void SaveSession() => _ = SaveSessionAsync();
 
@@ -633,6 +825,11 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         if (session == current)
         {
             hasUnsavedRows = !saved;
+        }
+
+        if (saved && rows.Length > 0)
+        {
+            MeasurementsSaved?.Invoke();
         }
 
         return saved;
@@ -656,7 +853,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
         catch (Exception error)
         {
-            Notify(failureMessage?.Invoke(error) ??
+            Notify(ToastKind.Error, failureMessage?.Invoke(error) ??
                 $"Saving to the database failed ({error.Message}). Rows stay in the table and are saved again on the next change or Stop.");
             return false;
         }
@@ -666,34 +863,15 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     {
         if (session is { } current && await export.ExportAsync(Results.ToArray(), current, lifetime.Token))
         {
-            Notify("CSV exported.");
+            Notify(ToastKind.Success, "CSV exported.");
         }
     }
 
-    private async void Notify(string message)
+    private void Notify(ToastKind kind, string message)
     {
-        if (disposed)
+        if (!disposed)
         {
-            return;
-        }
-
-        notificationLifetime?.Cancel();
-        notificationLifetime?.Dispose();
-        notificationLifetime = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
-        var token = notificationLifetime.Token;
-        Notification = message;
-
-        try
-        {
-            await Task.Delay(4500, token);
-
-            if (!disposed)
-            {
-                Notification = "";
-            }
-        }
-        catch (OperationCanceledException)
-        {
+            Toasts.Show(kind, message);
         }
     }
 }
