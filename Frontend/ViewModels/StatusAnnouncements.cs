@@ -8,8 +8,9 @@ namespace Frontend.ViewModels;
 /// <summary>
 /// Turns connection changes into toasts — once per transition, never per status check (a check that finds the same
 /// state says nothing). The backend (sidebar Online/Offline) and the CT-007 Bluetooth device are announced separately
-/// and named differently, so the two are never confused. The first result after start-up is not announced, except a
-/// backend that is offline from the start.
+/// and named differently, so the two are never confused. The first database results after start-up are not announced,
+/// nor is a backend that is online from the start. Bluetooth: after the user selects a device, its first confirmed
+/// state is announced once, then every change (Connected ⇄ Disconnected, 3 s; a failed check, 5 s error).
 /// </summary>
 public sealed class StatusAnnouncements : IDisposable
 {
@@ -18,6 +19,7 @@ public sealed class StatusAnnouncements : IDisposable
     private readonly ToastService toasts;
     private BackendState backendState;
     private readonly Dictionary<string, LocalState> deviceStates = new();
+    private LocalState? bluetoothState;
 
     public StatusAnnouncements(BackendConnection backend, DeviceStatusMonitor devices, ToastService toasts)
     {
@@ -59,14 +61,42 @@ public sealed class StatusAnnouncements : IDisposable
     {
         switch (e.PropertyName)
         {
+            case nameof(DeviceStatusMonitor.SelectedBluetoothDevice):
+                bluetoothState = null;   // a new device: its first confirmed state is announced
+                break;
             case nameof(DeviceStatusMonitor.Bluetooth):
-                Announce("CT-007 device (Bluetooth)", devices.Bluetooth);
+                AnnounceBluetooth(devices.Bluetooth);
                 break;
             case nameof(DeviceStatusMonitor.MeasurementDatabase):
                 Announce("Measurement database", devices.MeasurementDatabase);
                 break;
             case nameof(DeviceStatusMonitor.GammaGuardDatabase):
                 Announce("Gamma Guard database", devices.GammaGuardDatabase);
+                break;
+        }
+    }
+
+    private void AnnounceBluetooth(LocalStatus status)
+    {
+        if (status.State is LocalState.Checking or LocalState.NotSelected || status.State == bluetoothState ||
+            devices.SelectedBluetoothDevice is not { } device)
+        {
+            return;
+        }
+
+        bluetoothState = status.State;
+        var name = $"{device.DisplayName} (Bluetooth)";
+
+        switch (status.State)
+        {
+            case LocalState.Connected:
+                toasts.Success($"{name} connected.");
+                break;
+            case LocalState.Disconnected:
+                toasts.Warning($"{name} disconnected.");
+                break;
+            default:
+                toasts.Error($"{name}: status unavailable — {status.Detail}");
                 break;
         }
     }

@@ -1,5 +1,4 @@
 using System.Globalization;
-using Frontend.Calculation.CoreInformation.BluetoothDevice;
 using Frontend.Calculation.Measurement;
 using Microsoft.Data.Sqlite;
 
@@ -12,6 +11,9 @@ public sealed record DetectorStatus(
     string? State,
     long? LastSampleMs,
     long? UpdatedMs);
+
+/// <summary>A serial seen in the newest samples, with its newest ts_ms.</summary>
+public sealed record RecentSerial(string Serial, long LastTsMs);
 
 /// <summary>
 /// The only code that reads the Gamma Guard database (samples, detector_status). Every call opens the file read-only
@@ -73,44 +75,54 @@ public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
     }
 
     /// <summary>
-    /// The detector_status row of a Bluetooth device: same MAC address (any separator, any case), otherwise same name.
-    /// If several rows match, the most recently updated one (updated_ms) is used.
+    /// Serials that wrote the most recent <paramref name="rows"/> samples (by samples.id), each with its newest ts_ms.
+    /// Only the tail of the table is read, never the whole history.
     /// </summary>
-    public DetectorStatus? FindDetector(KnownBluetoothDevice device)
+    public IReadOnlyList<RecentSerial> RecentSerials(int rows)
+    {
+        using var connection = SqliteFileCheck.OpenReadOnly(Path);
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT serial, MAX(ts_ms) FROM samples
+            WHERE id > (SELECT COALESCE(MAX(id), 0) FROM samples) - $rows AND serial IS NOT NULL AND ts_ms IS NOT NULL
+            GROUP BY serial
+            """;
+        command.Parameters.AddWithValue("$rows", rows);
+        using var reader = command.ExecuteReader();
+        var serials = new List<RecentSerial>();
+
+        while (reader.Read())
+        {
+            if (Text(reader, 0) is { Length: > 0 } serial && Long(reader, 1) is { } last)
+            {
+                serials.Add(new RecentSerial(serial, last));
+            }
+        }
+
+        return serials;
+    }
+
+    /// <summary>The detector_status row of a serial (the most recently updated one if there are several), or null.</summary>
+    public DetectorStatus? FindDetector(string serial)
     {
         using var connection = SqliteFileCheck.OpenReadOnly(Path);
         using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT serial, name, mac, firmware, device_type, session_id, state, last_sample_ms, updated_ms
-            FROM detector_status
+            FROM detector_status WHERE serial = $serial
             """;
+        command.Parameters.AddWithValue("$serial", serial);
         using var reader = command.ExecuteReader();
-        var address = device.Address.ToString("X12", CultureInfo.InvariantCulture);
-        var candidates = new List<(int Rank, DetectorStatus Status)>();
+        var rows = new List<DetectorStatus>();
 
         while (reader.Read())
         {
-            if (Text(reader, 0) is not { Length: > 0 } serial)
-            {
-                continue;
-            }
-
-            var status = new DetectorStatus(
-                new DetectorIdentity(serial, Text(reader, 1), Text(reader, 2), Text(reader, 3), Text(reader, 4)),
-                Text(reader, 5), Text(reader, 6), Long(reader, 7), Long(reader, 8));
-            var mac = new string((status.Identity.Mac ?? "").Where(Uri.IsHexDigit).Select(char.ToUpperInvariant).ToArray());
-
-            if (mac.Length == 12 && mac == address)
-            {
-                candidates.Add((0, status));
-            }
-            else if (string.Equals(status.Identity.Name?.Trim(), device.Name.Trim(), StringComparison.OrdinalIgnoreCase))
-            {
-                candidates.Add((1, status));
-            }
+            rows.Add(new DetectorStatus(
+                new DetectorIdentity(Text(reader, 0) ?? serial, Text(reader, 1), Text(reader, 2), Text(reader, 3), Text(reader, 4)),
+                Text(reader, 5), Text(reader, 6), Long(reader, 7), Long(reader, 8)));
         }
 
-        return candidates.OrderBy(c => c.Rank).ThenByDescending(c => c.Status.UpdatedMs ?? long.MinValue).Select(c => c.Status).FirstOrDefault();
+        return rows.OrderByDescending(r => r.UpdatedMs ?? long.MinValue).FirstOrDefault();
     }
 
     private static string? Text(SqliteDataReader reader, int ordinal) =>

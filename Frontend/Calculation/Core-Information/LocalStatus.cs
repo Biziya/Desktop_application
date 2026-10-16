@@ -4,6 +4,8 @@ namespace Frontend.Calculation.CoreInformation;
 public enum LocalState
 {
     Checking,
+    /// <summary>No device has been picked for monitoring yet (Bluetooth).</summary>
+    NotSelected,
     Connected,
     Disconnected,
     Available,
@@ -28,7 +30,7 @@ public sealed record LocalStatus(LocalState State, string Text, string Detail = 
     public static LocalStatus Checking(string path = "") => new(LocalState.Checking, "Checking…", "", path);
 
     /// <summary>Retry makes sense for every result except a good one or a running check.</summary>
-    public bool CanRetry => State is not (LocalState.Checking or LocalState.Connected or LocalState.Available);
+    public bool CanRetry => State is not (LocalState.Checking or LocalState.NotSelected or LocalState.Connected or LocalState.Available);
 
     public bool HasPath => Path.Length > 0;
 }

@@ -97,6 +97,9 @@
                 <DataTrigger Binding="{Binding State}" Value="Unavailable">
                     <Setter Property="Background" Value="{StaticResource WarningSurface}"/>
                 </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="NotSelected">
+                    <Setter Property="Background" Value="{StaticResource Canvas}"/>
+                </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Checking">
                     <Setter Property="Background" Value="{StaticResource Canvas}"/>
                 </DataTrigger>
@@ -125,6 +128,9 @@
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Unavailable">
                     <Setter Property="Foreground" Value="{StaticResource Warning}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="NotSelected">
+                    <Setter Property="Foreground" Value="{StaticResource Muted}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding State}" Value="Checking">
                     <Setter Property="Foreground" Value="{StaticResource Muted}"/>
@@ -265,11 +271,29 @@
                     <TextBlock Text="Device Status" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
                     <Border Style="{StaticResource DeviceRow}" DataContext="{Binding Devices.Bluetooth}">
                         <DockPanel>
-                            <!-- No Retry: the Bluetooth connection is checked every second. -->
+                            <!-- No Retry: the selected device's connection is checked every second. The dropdown lists
+                                 paired/connected CT007-M devices (name + Bluetooth address); the user must pick one, and
+                                 picking only starts monitoring — no pairing or connection. Informational only: it never
+                                 enables or blocks measuring. -->
                             <TextBlock Style="{StaticResource DeviceStatusValue}"
                                        AutomationProperties.Name="Bluetooth device status"><Run Text="●  "/><Run Text="{Binding Text, Mode=OneWay}"/></TextBlock>
                             <StackPanel Margin="0,0,12,0">
                                 <TextBlock Text="CT007-M Device — Bluetooth" Style="{StaticResource FieldLabel}"/>
+                                <!-- Up to 360 px wide, left-aligned, narrower when the window is. -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" MaxWidth="360"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox DisplayMemberPath="Display"
+                                              SelectedItem="{Binding DataContext.Devices.SelectedBluetoothDevice, Mode=TwoWay, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              ItemsSource="{Binding DataContext.Devices.BluetoothDevices, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              DropDownOpened="BluetoothDropDownOpened"
+                                              ToolTip="CT007-M device to monitor"
+                                              AutomationProperties.Name="CT007-M device to monitor"/>
+                                </Grid>
+                                <TextBlock Style="{StaticResource StatusMessage}"
+                                           Text="{Binding DataContext.Devices.BluetoothDevicesMessage, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                                 <TextBlock Style="{StaticResource StatusMessage}" Text="{Binding Detail}" Margin="0,3,0,0"/>
                             </StackPanel>
                         </DockPanel>

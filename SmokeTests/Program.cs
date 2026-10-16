@@ -76,8 +76,8 @@ internal static class Program
         using var formDevices = NewDevices(@"C:\data\measurements.db");
         var form = new CoreInformationViewModel(core => saved = core, @"C:\data\measurements.db",
             new DrillholesClient(api), backend, formCache, new MemoryRepository(), formDevices, SearchDelay);
-        Check(form.DatabasePath == @"C:\data\measurements.db" && form.Devices.Bluetooth.State == LocalState.Checking &&
-            form.Devices.MeasurementDatabase is { State: LocalState.Checking, Path: @"C:\data\measurements.db" }, "Measurement DB path local; device status checking");
+        Check(form.DatabasePath == @"C:\data\measurements.db" && form.Devices.Bluetooth.State == LocalState.NotSelected &&
+            form.Devices.MeasurementDatabase is { State: LocalState.Checking, Path: @"C:\data\measurements.db" }, "Measurement DB path local; device status checking; Bluetooth: No device selected");
         await Until(() => Ids(form).Length == 3);
         Check(backend.State == BackendState.Online, "Page requests mark the backend Online");
         Check(form.DrillholeId == "" && form.DrillholeName == "" && form.ProjectArea == "" && form.PickedDrillhole is null &&
@@ -349,15 +349,31 @@ internal static class Program
         }
         var mainBackend = new StubBackend();
         var bluetoothChecks = 0;
-        var mainDevices = DeviceSettings.Default with { CheckInterval = TimeSpan.FromMilliseconds(30), BluetoothCheckInterval = TimeSpan.FromMilliseconds(30) };
+        var mainDevices = DeviceSettings.Default with { CheckInterval = TimeSpan.FromMinutes(5), BluetoothCheckInterval = TimeSpan.FromMilliseconds(30) };
+        var mainBtConnected = true;
+        var mainBtFails = false;
+        var mainCapture = new ControlledMeasurements();
+        IReadOnlyList<KnownBluetoothDevice> MainBluetooth()
+        {
+            Interlocked.Increment(ref bluetoothChecks);
+            if (mainBtFails)
+            {
+                throw new InvalidOperationException("Bluetooth is turned off.");
+            }
+
+            return [new KnownBluetoothDevice("CT007-M-A1", 0x001122AABBCC, mainBtConnected, true)];
+        }
         using (var main = new MainViewModel(new MemoryRepository(), settings with { StatusInterval = TimeSpan.FromMilliseconds(30) }, mainDevices, mainBackend,
-                   () => { Interlocked.Increment(ref bluetoothChecks); return [new KnownBluetoothDevice("CT007-M-A1", 0x001122AABBCC, true, true)]; },
-                   new ControlledMeasurements()))
+                   MainBluetooth, mainCapture))
         {
             Check(main.CurrentPage == main.Core && main.IsCoreSelected && !main.IsMeasurementSelected, "Sidebar: Core Information selected at start");
-            await Until(() => Ids(main.Core).Length == 3 && main.Backend.State == BackendState.Online);
+            await Until(() => Ids(main.Core).Length == 3 && main.Backend.State == BackendState.Online && main.Devices.BluetoothDevices.Count == 1);
+            await Task.Delay(100);
+            Check(main.Devices.Bluetooth.State == LocalState.NotSelected && bluetoothChecks <= 2, "App: no device selected and no connection checks until the user selects one");
+            main.Core.Devices.SelectedBluetoothDevice = main.Core.Devices.BluetoothDevices[0];
             await Until(() => main.Devices.Bluetooth.State == LocalState.Connected);
-            Check(main.Core.Devices == main.Devices && main.Devices.Bluetooth.Detail == "CT007-M-A1", "App: Device Status comes from the local checks");
+            Check(main.Core.Devices == main.Devices && main.Devices.Bluetooth.Detail == "CT007-M-A1" &&
+                Toasted(main.Toasts, ToastKind.Success, "CT007-M-A1 (Bluetooth) connected."), "App: the selected device is monitored and its first state announced");
             await Pick(main.Core, "GTZO_0002_1"); main.Core.Notes = "retained";
             for (int i = 0; i < 5; i++)
             {
@@ -397,12 +413,24 @@ internal static class Program
             main.Core.SaveCommand.Execute(null);   // Save & Continue navigates outside the sidebar
             Check(main.CurrentPage == retainedMeasurement && main.IsMeasurementSelected && !main.IsCoreSelected,
                 "Sidebar follows navigation triggered outside it (Save & Continue)");
+            // Bluetooth monitoring is informational: a failed check does not block Start, the trigger or the countdown.
+            mainBtFails = true;
+            await Until(() => main.Devices.Bluetooth.State == LocalState.Unavailable);
             main.Measurement.SetCore(core); main.Measurement.NextFrom = "150"; main.Measurement.Step = "50"; main.Measurement.ToggleMeasurementCommand.Execute(null);
+            Check(main.Measurement.CanTrigger, "Start arms while the Bluetooth status is unavailable");
             main.Measurement.TriggerCommand.Execute(null); main.ShowCoreCommand.Execute(null);
             var navigationSession = main.Measurement.SessionId;
             main.ShowMeasurementCommand.Execute(null); main.ShowCoreCommand.Execute(null);
             Check(main.Measurement.IsCapturing && main.CurrentPage == retainedCore &&
                 main.Measurement.SessionId == navigationSession, "Navigation does not duplicate, reset or start a session");
+            mainBtFails = false; mainBtConnected = false;
+            await Until(() => main.Devices.Bluetooth.State == LocalState.Disconnected);
+            Check(main.Measurement.IsCapturing && Toasted(main.Toasts, ToastKind.Warning, "CT007-M-A1 (Bluetooth) disconnected."),
+                "A disconnect during a capture is announced but does not cancel it");
+            mainCapture.Complete();
+            await Until(() => main.Measurement.Results.Count == 1 && main.Measurement.CanTrigger);
+            Check(main.Measurement.NextFrom == "150.50" && main.Measurement.ExportCommand.CanExecute(null),
+                "With the device disconnected the capture completes, depth advances once and export stays available");
             main.Measurement.ToggleMeasurementCommand.Execute(null);
         }
         var closingService = new ControlledMeasurements();
@@ -722,33 +750,43 @@ internal static class Program
                 "Deleting a capture deletes its raw samples (only its own)");
         }
 
-        // Device resolution at the click: one connected CT007-M → its detector_status row (by MAC, newest); otherwise refused.
+        // Device resolution at the click comes from the Gamma Guard samples alone — never from Bluetooth monitoring.
         using (var gg = new FakeGammaGuard())
         {
             gg.Detector("SN-OLD", "CT007-M-0001", "00-11-22-aa-bb-01", 100);
             gg.Detector("SN-1001", "CT007-M-0001", "00:11:22:AA:BB:01", 200);
-            gg.Detector("SN-2002", "CT007-M-0002", "00:11:22:AA:BB:02", 300);
-            var connected = new List<KnownBluetoothDevice> { new("CT007-M-0001", 0x001122AABB01, true, true) };
-            using var monitor = new DeviceStatusMonitor(new Ct007BluetoothCheck(DeviceSettings.Default, () => connected.ToList()),
+            gg.Detector("SN-1001", "CT007-M-0001 (old row)", "00:11:22:AA:BB:01", 150);
+            gg.Sample("SN-OLD", 1, T - 600_000, 1);
+            gg.Sample("SN-1001", 1, T - 1000, 1);
+            var bluetooth = new List<KnownBluetoothDevice>();   // nothing paired or connected
+            using var monitor = new DeviceStatusMonitor(new Ct007BluetoothCheck(DeviceSettings.Default, () => bluetooth.ToList()),
                 new MeasurementDatabaseCheck(TempDb("x")), new GammaGuardDatabaseCheck(DeviceSettings.Default with { GammaGuardDatabasePath = gg.Path }, []),
                 TimeSpan.FromMinutes(5), TimeSpan.FromSeconds(1));
             await monitor.CheckAllAsync();
-            var now = DateTimeOffset.Now;
-            var resolver = new GammaGuardCaptureDevices(monitor, () => now);
-            Check(resolver.Resolve().Identity is { Serial: "SN-1001", Name: "CT007-M-0001" }, "The connected device maps to its detector_status serial (MAC match, newest row)");
-            connected.Add(new("CT007-M-0002", 0x001122AABB02, true, true));
+            var resolver = new GammaGuardCaptureDevices(monitor);
+            Check(monitor.Bluetooth.State == LocalState.NotSelected && resolver.Resolve().Identity is { Serial: "SN-1001", Name: "CT007-M-0001" },
+                "No Bluetooth selection or connection: the recording detector is still resolved (newest samples; newest detector_status row)");
+            monitor.SelectBluetoothDevice(new BluetoothDeviceOption(0x001122AABB09, "CT007-M-0009"));
+            await Until(() => monitor.Bluetooth.State == LocalState.Disconnected);
+            Check(resolver.Resolve().Identity.Serial == "SN-1001", "A disconnected selected device neither blocks nor changes the data source");
+            bluetooth.Add(new("CT007-M-0009", 0x001122AABB09, true, true));
             await monitor.CheckBluetoothAsync();
+            await Until(() => monitor.Bluetooth.State == LocalState.Connected);
+            Check(resolver.Resolve().Identity.Serial == "SN-1001", "Selecting/connecting another device does not switch the data source");
             string Refusal() { try { resolver.Resolve(); return ""; } catch (CaptureException e) { return e.Message; } }
-            Check(Refusal().StartsWith("More than one CT007-M device is connected"), "Two connected devices: refused, never mixed");
-            connected.Clear();
-            await monitor.CheckBluetoothAsync();
-            Check(Refusal() == "No CT007-M device is connected to this laptop." && monitor.ConnectedDevices.Count == 0,
-                "Disconnected: refused; the stale connected device is cleared at the next check");
-            connected.Add(new("CT007-M-0009", 0x001122AABB09, true, true));
-            await monitor.CheckBluetoothAsync();
-            Check(Refusal().Contains("has no detector_status entry"), "A connected device unknown to Gamma Guard is refused");
-            now = now.AddSeconds(10);
-            Check(Refusal().StartsWith("The CT-007 Bluetooth status is not current"), "A stale Bluetooth result is not trusted for a capture");
+            gg.Sample("SN-2002", 1, T - 500, 1);
+            Check(Refusal().StartsWith("More than one detector is recording (SN-2002, SN-1001)"), "Two detectors recording at once: refused, never mixed");
+            gg.Sample("SN-3003", 1, T + 60_000, 1);
+            Check(resolver.Resolve().Identity is { Serial: "SN-3003", Name: null }, "A detector without detector_status row is used by serial (metadata stays empty)");
+        }
+        using (var empty = new FakeGammaGuard())
+        {
+            using var monitor = new DeviceStatusMonitor(new Ct007BluetoothCheck(DeviceSettings.Default, () => throw new InvalidOperationException("Bluetooth is turned off.")),
+                new MeasurementDatabaseCheck(TempDb("x")), new GammaGuardDatabaseCheck(DeviceSettings.Default with { GammaGuardDatabasePath = empty.Path }, []),
+                TimeSpan.FromMinutes(5), TimeSpan.FromSeconds(1));
+            await monitor.CheckAllAsync();
+            try { new GammaGuardCaptureDevices(monitor).Resolve(); throw new Exception("empty database accepted"); }
+            catch (CaptureException e) when (e.Message.StartsWith("The Gamma Guard database has no samples yet")) { }
         }
 
         // A device whose ts_ms is not in milliseconds is refused instead of mis-matched with the click.
@@ -854,14 +892,47 @@ internal static class Program
         stub.Offline = false;
         for (int i = 0; i < 3; i++) await backend.CheckNowAsync();
         Check(announced.Items.Count(t => t.Message == "Backend online again.") == 1, "Backend back online announced once");
+        Check(announced.Items.Count == 2 && devices.Bluetooth.State == LocalState.NotSelected, "No Bluetooth selection: nothing checked, nothing announced");
+
+        // Bluetooth toasts after a selection: the first confirmed state once, then each transition once. Every toast
+        // that is shown is counted (the toasts expire at once here, so a repeat would be visible).
+        var shown = new List<(ToastKind Kind, string Message)>();
+        var btToasts = new ToastService((_, _) => Task.CompletedTask);
+        btToasts.Items.CollectionChanged += (_, e) => { foreach (Toast t in e.NewItems ?? Array.Empty<Toast>()) shown.Add((t.Kind, t.Message)); };
+        using var btAnnouncements = new Frontend.ViewModels.StatusAnnouncements(backend, devices, btToasts);
+        var a1 = new BluetoothDeviceOption(1, "CT007-M-A1");
+        devices.SelectBluetoothDevice(a1);
+        await Until(() => devices.Bluetooth.State == LocalState.Connected);
+        for (int i = 0; i < 3; i++) await devices.CheckBluetoothAsync();
+        Check(shown.SequenceEqual(new[] { (ToastKind.Success, "CT007-M-A1 (Bluetooth) connected.") }) && ToastService.DurationOf(ToastKind.Success) == TimeSpan.FromSeconds(3),
+            "After selection the first confirmed state is announced once (3 s); unchanged checks say nothing");
         bluetooth[0] = new KnownBluetoothDevice("CT007-M-A1", 1, false, true);
         for (int i = 0; i < 3; i++) await devices.CheckBluetoothAsync();
-        Check(announced.Items.Count(t => t.Message == "CT-007 device (Bluetooth) disconnected.") == 1 &&
-            !announced.Items.Any(t => t.Message.StartsWith("Backend offline", StringComparison.Ordinal) && t.Message.Contains("Bluetooth")),
-            "Device disconnect announced once and named as the Bluetooth device, separate from the backend");
+        Check(shown.Count(t => t == (ToastKind.Warning, "CT007-M-A1 (Bluetooth) disconnected.")) == 1 && devices.Bluetooth.Detail.Contains("paired with this laptop, not connected") &&
+            !shown.Any(t => t.Message.StartsWith("Backend", StringComparison.Ordinal)),
+            "Connected → Disconnected announced once (paired, not connected), named as the Bluetooth device, separate from the backend");
         bluetooth[0] = new KnownBluetoothDevice("CT007-M-A1", 1, true, true);
-        await devices.CheckBluetoothAsync();
-        Check(announced.Items.Any(t => t is { Kind: ToastKind.Success, Message: "CT-007 device (Bluetooth) connected: CT007-M-A1" }), "Device reconnect announced");
+        for (int i = 0; i < 3; i++) await devices.CheckBluetoothAsync();
+        Check(shown.Count(t => t.Message == "CT007-M-A1 (Bluetooth) connected.") == 2, "Disconnected → Connected announced once");
+        var failure = new InvalidOperationException("Bluetooth is turned off.");
+        var failing = true;
+        using var flaky = new DeviceStatusMonitor(new Ct007BluetoothCheck(DeviceSettings.Default, () => failing ? throw failure : bluetooth.ToList()),
+            new MeasurementDatabaseCheck(TempDb("ct007-flaky")), new GammaGuardDatabaseCheck(DeviceSettings.Default, []), TimeSpan.FromMinutes(5));
+        var flakyShown = new List<(ToastKind Kind, string Message)>();
+        var flakyToasts = new ToastService((_, _) => Task.CompletedTask);
+        flakyToasts.Items.CollectionChanged += (_, e) => { foreach (Toast t in e.NewItems ?? Array.Empty<Toast>()) flakyShown.Add((t.Kind, t.Message)); };
+        using var flakyAnnouncements = new Frontend.ViewModels.StatusAnnouncements(backend, flaky, flakyToasts);
+        flaky.SelectBluetoothDevice(a1);
+        await Until(() => flaky.Bluetooth.State == LocalState.Unavailable);
+        for (int i = 0; i < 3; i++) await flaky.CheckBluetoothAsync();
+        Check(flaky.Bluetooth is { Text: "Status unavailable", Detail: "Bluetooth is turned off." } &&
+            flakyShown.SequenceEqual(new[] { (ToastKind.Error, "CT007-M-A1 (Bluetooth): status unavailable — Bluetooth is turned off.") }) &&
+            ToastService.DurationOf(ToastKind.Error) == TimeSpan.FromSeconds(5),
+            "A failed check is Status unavailable (never Disconnected), announced once as a 5 s error");
+        failing = false;
+        await flaky.CheckBluetoothAsync();
+        await Until(() => flaky.Bluetooth.State == LocalState.Connected);
+        Check(flakyShown.Last() == (ToastKind.Success, "CT007-M-A1 (Bluetooth) connected.") && flakyShown.Count == 2, "Recovery announced once");
     }
 
     /// <summary>Clear button, closest match, selection lock, and the Measurement page following the selected drillhole.</summary>
@@ -1095,28 +1166,28 @@ internal static class Program
     /// <summary>Device Status checks of this laptop: Bluetooth list, measurement database, Gamma Guard discovery.</summary>
     private static async Task LocalDeviceStatusChecks()
     {
-        // Bluetooth: identification rule, connected vs paired, failure → Status unavailable.
+        // Bluetooth: dropdown list (identification rule), the selected device by address, connected vs paired, failure.
         var settings = DeviceSettings.Default;
-        LocalStatus Bt(params KnownBluetoothDevice[] devices) => new Ct007BluetoothCheck(settings, () => devices).Check();
+        IReadOnlyList<BluetoothDeviceOption> List(params KnownBluetoothDevice[] devices) => new Ct007BluetoothCheck(settings, () => devices).ListDevices();
+        LocalStatus Bt(BluetoothDeviceOption selected, params KnownBluetoothDevice[] devices) => new Ct007BluetoothCheck(settings, () => devices).CheckSelected(selected);
         var other = new KnownBluetoothDevice("Headphones", 1, true, true);
-        Check(Bt(other, new KnownBluetoothDevice("ct007-m-0012", 2, true, true)) is { State: LocalState.Connected, Detail: "ct007-m-0012" },
-            "Connected CT007-M device (name begins with CT007-M-, any case)");
-        Check(Bt(new KnownBluetoothDevice("SPP CT007-M-1", 2, true, true), new KnownBluetoothDevice("CT007-X-1", 3, true, true),
-                new KnownBluetoothDevice("CT-007", 4, true, true)).State == LocalState.Disconnected,
-            "Only names that BEGIN with CT007-M- count (not CT007-X-, CT-007 or a prefix in the middle)");
-        Check(Bt(other, new KnownBluetoothDevice("CT007-M-0012", 2, false, true)) is { State: LocalState.Disconnected } paired && paired.Detail.Contains("paired") &&
-            paired.Detail.StartsWith("CT007-M-0012"), "Paired but not connected → Disconnected with the name");
-        Check(Bt(new KnownBluetoothDevice("CT007-M-1", 3, false, true), new KnownBluetoothDevice("CT007-M-2", 4, true, true)) is { State: LocalState.Connected, Detail: "CT007-M-2" },
-            "The connected device is shown, not a merely paired one");
-        Check(new Ct007BluetoothCheck(settings, () => [new("CT007-M-1", 3, true, true), new("CT007-M-2", 4, true, true)]).CheckDevices() is
-            { Status.State: LocalState.Connected, Connected.Count: 2 } two && two.Status.Detail.Contains("2 devices connected"),
-            "Two connected CT007-M devices are both reported (a capture then refuses to pick one)");
-        Check(Bt(other).State == LocalState.Disconnected && Bt(other).Detail.Contains("No CT007-M"), "Only other devices → Disconnected (confirmed)");
-        Check(Bt(new KnownBluetoothDevice("", 5, true, true)).State == LocalState.Disconnected, "A nameless device is not taken for the CT-007");
-        Check(new Ct007BluetoothCheck(settings with { Ct007Address = "00:11:22:AA:BB:CC" }, () => [new KnownBluetoothDevice("", 0x001122AABBCC, true, true)]).Check()
-            is { State: LocalState.Connected, Detail: "Name unavailable" }, "Configured address identifies the device; missing name shown as Name unavailable");
-        Check(new Ct007BluetoothCheck(settings, () => throw new InvalidOperationException("Bluetooth is turned off.")).Check()
+        Check(List(other, new KnownBluetoothDevice("ct007-m-0012", 2, false, true), new KnownBluetoothDevice("SPP CT007-M-1", 3, true, true), new KnownBluetoothDevice("CT007-X-1", 4, true, true),
+                new KnownBluetoothDevice("CT-007", 5, true, true), new KnownBluetoothDevice("", 6, true, true), new KnownBluetoothDevice("CT007-M-0001", 7, true, true), new KnownBluetoothDevice("CT007-M-0001", 7, false, true))
+              .Select(o => (o.Address, o.Name)).SequenceEqual(new[] { (7UL, "CT007-M-0001"), (2UL, "ct007-m-0012") }),
+            "Dropdown: paired or connected devices whose name BEGINS with CT007-M- (any case), once per address, by name");
+        var a1 = new BluetoothDeviceOption(0x001122AABBCC, "CT007-M-A1");
+        Check(a1.Display == "CT007-M-A1  (00:11:22:AA:BB:CC)" && a1.Equals(new BluetoothDeviceOption(0x001122AABBCC, "renamed")) &&
+            !a1.Equals(new BluetoothDeviceOption(0x001122AABBCD, "CT007-M-A1")), "A device is identified by its Bluetooth address, not its display name");
+        Check(Bt(a1, new KnownBluetoothDevice("CT007-M-A1", 0x001122AABBCC, true, true)) is { State: LocalState.Connected, Text: "Connected", Detail: "CT007-M-A1" },
+            "Selected device actively connected → Connected with its name");
+        Check(Bt(a1, new KnownBluetoothDevice("CT007-M-A1", 0x001122AABBCC, false, true), new KnownBluetoothDevice("CT007-M-A1", 0x001122AABBCD, true, true)) is { State: LocalState.Disconnected } paired &&
+            paired.Detail == "CT007-M-A1 — paired with this laptop, not connected",
+            "Paired is not connected; another device with the same name being connected does not count");
+        Check(Bt(a1, other).Detail == "CT007-M-A1 — no longer paired with or known to this laptop", "Selected device unknown to Windows → Disconnected (confirmed)");
+        Check(new Ct007BluetoothCheck(settings, () => throw new InvalidOperationException("Bluetooth is turned off.")).CheckSelected(a1)
             is { State: LocalState.Unavailable, Text: "Status unavailable", Detail: "Bluetooth is turned off." }, "Check failure → Status unavailable, not Disconnected");
+        Check(new Ct007BluetoothCheck(settings with { Ct007Address = "00:11:22:AA:BB:CC" }, () => [new KnownBluetoothDevice("", 0x001122AABBCC, true, true)]).ListDevices()
+            .Single().Display == "Name unavailable  (00:11:22:AA:BB:CC)", "Configured address identifies a listed device; missing name shown as Name unavailable");
 
         // Settings file.
         var settingsFile = Path.Combine(Path.GetTempPath(), $"device-settings-{Guid.NewGuid():N}.json");
@@ -1172,21 +1243,63 @@ internal static class Program
         File.Delete(gammaDb);
         Check(gamma.Check() is { State: LocalState.NotFound }, "A discovered database that disappears is searched again");
 
-        // Monitor: async, no overlap, publishes on the caller's context, stops on Dispose.
-        var gate = new ManualResetEventSlim(false);
+        // Monitor: nothing checked before a selection; then only the selected device, async, no overlap, results of a
+        // previous selection discarded, published on the caller's context, stopped on Dispose.
+        var gate = new ManualResetEventSlim(true);
         var runs = 0;
+        var known = new List<KnownBluetoothDevice> { new("CT007-M-1", 1, true, true), new("CT007-M-2", 2, false, true) };
         using (var monitor = new DeviceStatusMonitor(
-                   new Ct007BluetoothCheck(settings, () => { Interlocked.Increment(ref runs); gate.Wait(TimeSpan.FromSeconds(2)); return [new KnownBluetoothDevice("CT007-M-1", 1, true, true)]; }),
+                   new Ct007BluetoothCheck(settings, () => { Interlocked.Increment(ref runs); gate.Wait(TimeSpan.FromSeconds(2)); lock (known) return known.ToList(); }),
                    new MeasurementDatabaseCheck(dbPath), new GammaGuardDatabaseCheck(settings, []), TimeSpan.FromMinutes(5)))
         {
             var thread = Environment.CurrentManagedThreadId;
+            await monitor.CheckBluetoothAsync();
+            Check(runs == 0 && monitor.Bluetooth is { State: LocalState.NotSelected, Text: "No device selected" } && monitor.SelectedBluetoothDevice is null,
+                "Before a selection: No device selected, and no connection check runs");
+            await monitor.RefreshBluetoothDevicesAsync();
+            Check(runs == 1 && monitor.BluetoothDevices.Select(d => d.Name).SequenceEqual(new[] {"CT007-M-1", "CT007-M-2"}) && monitor.SelectedBluetoothDevice is null &&
+                monitor.Bluetooth.State == LocalState.NotSelected, "The list is filled but nothing is selected automatically (even with a connected device)");
+            gate.Reset();
+            monitor.SelectBluetoothDevice(monitor.BluetoothDevices[0]);
             var a = monitor.CheckBluetoothAsync(); var b = monitor.CheckBluetoothAsync();
-            Check(a == b && monitor.Bluetooth.State == LocalState.Checking, "A running local check is reused, never doubled; the UI is not blocked meanwhile");
+            Check(a == b && monitor.Bluetooth is { State: LocalState.Checking, Detail: "CT007-M-1" }, "A running check is reused, never doubled; the UI is not blocked meanwhile");
+
+            // Switch while the check of CT007-M-1 is still running: its (Connected) result must not appear for CT007-M-2.
+            monitor.SelectBluetoothDevice(monitor.BluetoothDevices[1]);
             gate.Set(); await a;
-            Check(runs == 1 && monitor.Bluetooth.State == LocalState.Connected && Environment.CurrentManagedThreadId == thread, "One run; result published on the UI context");
+            Check(monitor.Bluetooth.State != LocalState.Connected, "A late result for the previous device is discarded");
+            await Until(() => monitor.Bluetooth.State == LocalState.Disconnected);
+            Check(monitor.Bluetooth.Detail.StartsWith("CT007-M-2") && monitor.SelectedBluetoothDevice!.Name == "CT007-M-2" && Environment.CurrentManagedThreadId == thread,
+                "The new device's own state is shown (paired, not connected); published on the UI context");
+
+            // The list refresh never changes the selection: the device stays selected (and listed) after it disappears.
+            lock (known) known.RemoveAt(1);
+            await monitor.RefreshBluetoothDevicesAsync(); await monitor.CheckBluetoothAsync();
+            monitor.SelectedBluetoothDevice = null;   // what a ComboBox writes while its items are replaced
+            Check(monitor.SelectedBluetoothDevice?.Address == 2 && monitor.BluetoothDevices.Any(d => d.Address == 2) &&
+                monitor.Bluetooth.Detail.Contains("no longer paired"), "Selection kept when the device disappears or the list refreshes; never switched");
+            var listBefore = monitor.BluetoothDevices;
+            await monitor.RefreshBluetoothDevicesAsync();
+            Check(ReferenceEquals(listBefore, monitor.BluetoothDevices), "An unchanged device list is not republished (the dropdown is not reset every refresh)");
             await monitor.CheckAllAsync();
-            Check(monitor.MeasurementDatabase.State == LocalState.Available && monitor.GammaGuardDatabase.State == LocalState.NotFound, "All three rows checked");
+            Check(monitor.MeasurementDatabase.State == LocalState.Available && monitor.GammaGuardDatabase.State == LocalState.NotFound, "All rows checked");
         }
+
+        // Every second, only the selected device; one loop per monitor; stops on Dispose.
+        var polls = 0;
+        var poller = new DeviceStatusMonitor(new Ct007BluetoothCheck(settings, () => { Interlocked.Increment(ref polls); return [new("CT007-M-1", 1, true, true)]; }),
+            new MeasurementDatabaseCheck(dbPath), new GammaGuardDatabaseCheck(settings, []), TimeSpan.FromMinutes(5), TimeSpan.FromMilliseconds(50));
+        poller.Start(); poller.Start();
+        await Task.Delay(300);
+        var listOnly = polls;   // one list read at start, no connection checks before a selection
+        poller.SelectBluetoothDevice(new BluetoothDeviceOption(1, "CT007-M-1"));
+        await Task.Delay(520);
+        var selectedPolls = polls - listOnly;
+        poller.Dispose();
+        var afterDispose = polls;
+        await Task.Delay(200);
+        Check(listOnly == 1 && selectedPolls is >= 6 and <= 13 && polls == afterDispose && poller.Bluetooth.State == LocalState.Connected,
+            $"Polling: none before a selection ({listOnly} list read), then one check per interval ({selectedPolls} in 520 ms at 50 ms, Start twice), none after Dispose");
     }
 
     /// <summary>Large drillhole lists: background filtering, debounce, no stale results, few collection notifications.</summary>

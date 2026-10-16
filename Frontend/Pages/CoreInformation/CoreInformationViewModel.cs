@@ -68,6 +68,7 @@ public sealed class CoreInformationViewModel : ObservableObject
         SaveCommand = new RelayCommand(_ => Save(saved));
         RefreshDrillholesCommand = new RelayCommand(_ => _ = LoadDrillholesAsync());
         ClearDrillholeCommand = new RelayCommand(_ => ClearDrillhole(), _ => CanClearDrillhole);
+        RefreshBluetoothDevicesCommand = new RelayCommand(_ => _ = devices.RefreshBluetoothDevicesAsync());
         RefreshMeasurementDatabaseCommand = new RelayCommand(_ => _ = devices.CheckMeasurementDatabaseAsync());
         RefreshGammaGuardDatabaseCommand = new RelayCommand(_ => _ = devices.CheckGammaGuardDatabaseAsync(rediscover: true));
 
@@ -128,6 +129,9 @@ public sealed class CoreInformationViewModel : ObservableObject
     public RelayCommand SaveCommand { get; }
 
     public RelayCommand RefreshDrillholesCommand { get; }
+
+    /// <summary>Reads the CT007-M device list again (the dropdown was opened). Never selects or connects a device.</summary>
+    public RelayCommand RefreshBluetoothDevicesCommand { get; }
 
     public RelayCommand RefreshMeasurementDatabaseCommand { get; }
 

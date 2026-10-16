@@ -22,6 +22,10 @@ public partial class CoreInformationPage : UserControl
         Loaded += (_, _) => Observe(DataContext as CoreInformationViewModel);
     }
 
+    // Opening the Bluetooth device dropdown reads the device list again, so a newly paired CT007-M appears.
+    private void BluetoothDropDownOpened(object sender, EventArgs e) =>
+        (DataContext as CoreInformationViewModel)?.RefreshBluetoothDevicesCommand.Execute(null);
+
     // View-only: while the user types in the Drillhole box, show the filtered list and keep the caret where it was
     // (opening the dropdown would otherwise select the whole text, so the next key would replace it).
     private void DrillholeTyped(object sender, TextChangedEventArgs e)
