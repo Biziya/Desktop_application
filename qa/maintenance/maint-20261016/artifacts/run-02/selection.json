@@ -1,0 +1,175 @@
+﻿{
+    "runId":  "maint-20261016-02",
+    "baseline":  "c4586de",
+    "head":  "c4586de6e84c2c875a0f6b727fc2aec79e5270bb",
+    "changedFiles":  [
+                         "qa/regression/maint-20261016-01/",
+                         "Tests/CT007.Tests/Backend/CsvExportTests.cs",
+                         "Tests/CT007.Tests/Backend/DrillholeApiTests.cs",
+                         "Tests/CT007.Tests/EndToEnd/DesktopWorkflowTests.cs",
+                         "Tests/CT007.Tests/Fixtures/AppDatabase.cs",
+                         "Tests/CT007.Tests/Fixtures/Fakes.cs",
+                         "Tests/CT007.Tests/Fixtures/TestBackend.cs",
+                         "Tests/CT007.Tests/Fixtures/TestFolder.cs",
+                         "Tests/CT007.Tests/Frontend/ApiClientTests.cs",
+                         "Tests/CT007.Tests/Integration/HttpIntegrationTests.cs",
+                         "Tests/CT007.Tests/TestRunner.cs"
+                     ],
+    "full":  true,
+    "fullReasons":  [
+                        "Tests/CT007.Tests/Backend/CsvExportTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Backend/DrillholeApiTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/EndToEnd/DesktopWorkflowTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Fixtures/AppDatabase.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Fixtures/Fakes.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Fixtures/TestBackend.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Fixtures/TestFolder.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Frontend/ApiClientTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Integration/HttpIntegrationTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/TestRunner.cs (test code or fixtures changed)"
+                    ],
+    "direct":  [
+
+               ],
+    "dependents":  [
+
+                   ],
+    "critical":  [
+                     "BE-020",
+                     "BE-025",
+                     "BE-027",
+                     "BE-032",
+                     "BE-036",
+                     "BE-037",
+                     "INT-007",
+                     "INT-008",
+                     "INT-010",
+                     "INT-012",
+                     "FE-026",
+                     "FE-035",
+                     "FE-036",
+                     "FE-005",
+                     "BE-030"
+                 ],
+    "selected":  {
+
+                 },
+    "manualFollowUp":  [
+
+                       ],
+    "trace":  [
+                  {
+                      "file":  "qa/regression/maint-20261016-01/",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Backend/CsvExportTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Backend/DrillholeApiTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/EndToEnd/DesktopWorkflowTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Fixtures/AppDatabase.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Fixtures/Fakes.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Fixtures/TestBackend.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Fixtures/TestFolder.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Frontend/ApiClientTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Integration/HttpIntegrationTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/TestRunner.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  }
+              ],
+    "include":  [
+                    "Timing"
+                ]
+}

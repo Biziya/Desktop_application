@@ -43,6 +43,18 @@ Keep `-WorkRoot` short. SQLite's native DLL fails to load once its path reaches 
 
 CI (`.github/workflows/tests.yml`) runs the same script, then `Tests/ci/Publish-TestResults.ps1`, which writes JUnit XML and the job summary and decides pass or fail. Documentation is in `qa/ci/`.
 
+## Where to start (maintainers and AI agents)
+
+Read these in order. Do not rescan the whole repository.
+
+1. `qa/planning/test-inventory.md`: the scenario IDs, priorities and status.
+2. `qa/generation/test-implementation-status.md`: which file and method implements each ID.
+3. `Tests/regression/impact-map.json`: which tests a changed file affects.
+4. The latest run's `results.csv` / `summary.md`. Read `console.log` only for failing tests.
+5. `qa/reports/run-20261016-final/defect-report.md` and `Tests/ci/known-failures.json`: the known defects.
+
+Use the scripts for counting, selection and reporting. Use an AI review only for failures whose cause is unclear.
+
 ## Isolation
 
 - Every test works in its own `%TEMP%\ct007-tests\<guid>` folder, and the folder is deleted afterwards.

@@ -1,0 +1,10 @@
+﻿  Determining projects to restore...
+  Restored C:\Users\user\AppData\Local\Temp\ct007-mut\Frontend\Frontend.csproj (in 834 ms).
+  Restored C:\Users\user\AppData\Local\Temp\ct007-mut\Tests\CT007.Tests\CT007.Tests.csproj (in 870 ms).
+  Restored C:\Users\user\AppData\Local\Temp\ct007-mut\Backend\Backend.csproj (in 870 ms).
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:03.13

@@ -71,7 +71,6 @@ public sealed class MemoryRepository(string databasePath) : IMeasurementReposito
     private readonly Dictionary<string, MeasurementSession> sessions = new(StringComparer.Ordinal);
     private readonly Dictionary<Guid, List<MeasurementResult>> rows = new();
     private readonly Dictionary<Guid, DepthProgress> progress = new();
-    private int saveCalls;
 
     public string DatabasePath { get; } = databasePath;
 
@@ -86,8 +85,6 @@ public sealed class MemoryRepository(string databasePath) : IMeasurementReposito
 
     /// <summary>Awaited before a session lookup (Resolve/Find) of the given Drillhole ID.</summary>
     public Func<string, Task>? BeforeLookup { get; set; }
-
-    public int SaveCalls => Volatile.Read(ref saveCalls);
 
     public int SessionCount { get { lock (gate) return sessions.Count; } }
 
@@ -123,8 +120,6 @@ public sealed class MemoryRepository(string databasePath) : IMeasurementReposito
 
     public async Task SaveAsync(MeasurementSession session, IReadOnlyList<MeasurementResult> list, DepthProgress? next)
     {
-        Interlocked.Increment(ref saveCalls);
-
         if (SaveGate is { } gateTask) await gateTask.Task;
         if (SaveDelay > TimeSpan.Zero) await Task.Delay(SaveDelay);
         if (FailSave) throw new IOException("disk full");
@@ -355,9 +350,6 @@ public sealed class FakeGammaGuard : IDisposable
     }
 
     public string Path { get; }
-
-    /// <summary>The open writer connection (Gamma Guard keeps one), e.g. to hold a lock.</summary>
-    public SqliteConnection Writer => writer;
 
     public void Detector(string serial, string name, string mac, long updatedMs) => Execute(
         "INSERT INTO detector_status VALUES ($s, $n, $m, '2.1.0', 'CT007-M', 41, 'connected', 0.2, $u, $u)",

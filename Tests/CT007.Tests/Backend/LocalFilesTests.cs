@@ -158,6 +158,17 @@ public static class LocalFilesTests
         Assert.Equal(folder.Path("configured.sqlite"), status.Path, "configured path");
     }
 
+    // The non-numeric case is its own test: its known defect (DEF-002) used to end this test early and hide the limit,
+    // parsing and save checks below from mutation testing (qa/effectiveness/eff-20261016).
+    [Test("BE-030", "A non-numeric saved duration falls back to 5 s (DEF-002)")]
+    public static void DurationSettingsNonNumericValue()
+    {
+        using var folder = new TestFolder();
+        var path = folder.Path("text.json");
+        File.WriteAllText(path, """{"captureDurationSeconds":"7"}""");
+        Assert.Equal(CaptureDurationSettings.DefaultSeconds, new CaptureDurationSettings(path).Load(), "text value");
+    }
+
     [Test("BE-030", "CaptureDurationSettings: load, parse and atomic save (UR-03)")]
     public static void DurationSettings()
     {
@@ -167,7 +178,7 @@ public static class LocalFilesTests
                  {
                      ("missing", null), ("invalid JSON", "{"), ("below range", """{"captureDurationSeconds":1}"""),
                      ("above range", """{"captureDurationSeconds":11}"""), ("fraction", """{"captureDurationSeconds":5.5}"""),
-                     ("text", """{"captureDurationSeconds":"7"}"""), ("no property", "{}")
+                     ("no property", "{}")
                  })
         {
             var path = folder.Path(Guid.NewGuid() + ".json");

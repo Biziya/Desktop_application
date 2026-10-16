@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites><testsuite name="CT007.Tests" tests="109" failures="2" skipped="5" time="106.517">
+<testcase classname="BE" name="BE-001 DrillholeApiTests.DrillholesContract" time="2.622"></testcase>
+<testcase classname="BE" name="BE-002 DrillholeApiTests.SqlFailureIs503" time="1.192"></testcase>
+<testcase classname="BE" name="BE-005 DrillholeApiTests.RequestCancellation" time="0.416"></testcase>
+<testcase classname="BE" name="BE-006 DrillholeApiTests.SqlProjection" time="0"><skipped message="category Sql not included" /></testcase>
+<testcase classname="BE" name="BE-008 DrillholeApiTests.OpenApiDocument" time="0.113"></testcase>
+<testcase classname="BE" name="BE-011 DrillholeApiTests.RoutingContract" time="0.027"></testcase>
+<testcase classname="BE" name="BE-015 DepthAndOrderTests.ParseMetres" time="0.002"></testcase>
+<testcase classname="BE" name="BE-016 DepthAndOrderTests.ParseCentimetres" time="0"></testcase>
+<testcase classname="BE" name="BE-017 DepthAndOrderTests.Formatting" time="0.01"></testcase>
+<testcase classname="BE" name="BE-018 DepthAndOrderTests.NoCumulativeDrift" time="0"></testcase>
+<testcase classname="BE" name="BE-019 DepthAndOrderTests.Ordering" time="0.012"></testcase>
+<testcase classname="BE" name="BE-020 CaptureLogicTests.WindowMembership" time="0.01"></testcase>
+<testcase classname="BE" name="BE-021 CaptureLogicTests.ExpectedSamples" time="0"></testcase>
+<testcase classname="BE" name="BE-022 CaptureLogicTests.Averaging" time="0.014"></testcase>
+<testcase classname="BE" name="BE-023 CaptureLogicTests.TimeBasis" time="0"></testcase>
+<testcase classname="BE" name="BE-024 CaptureLogicTests.DetectorPick" time="0.004"></testcase>
+<testcase classname="BE" name="BE-024 CaptureLogicTests.ResolveNeedsAvailableDatabase" time="0.358"></testcase>
+<testcase classname="BE" name="BE-025 CaptureLogicTests.PollingAndFinalRead" time="0.045"></testcase>
+<testcase classname="BE" name="BE-026 CaptureLogicTests.TimeCheckAndCancellation" time="0.112"></testcase>
+<testcase classname="BE" name="BE-027 LocalFilesTests.BrokenOrLockedDatabase" time="2.131"></testcase>
+<testcase classname="BE" name="BE-027 LocalFilesTests.VendorDatabaseReadOnly" time="0.077"></testcase>
+<testcase classname="BE" name="BE-028 LocalFilesTests.FileCheckStates" time="2.11"></testcase>
+<testcase classname="BE" name="BE-029 LocalFilesTests.Discovery" time="0.081"></testcase>
+<testcase classname="BE" name="BE-030 LocalFilesTests.DurationSettings" time="0.026"></testcase>
+<testcase classname="BE" name="BE-030 LocalFilesTests.DurationSettingsNonNumericValue" time="0.004"><failure message="InvalidOperationException: The requested operation requires an element of type &apos;Number&apos;, but the target element has type &apos;String&apos;." /></testcase>
+<testcase classname="BE" name="BE-031 MeasurementRepositoryTests.SessionResolution" time="1.153"></testcase>
+<testcase classname="BE" name="BE-032 MeasurementRepositoryTests.AtomicSave" time="0.046"></testcase>
+<testcase classname="BE" name="BE-033 MeasurementRepositoryTests.IsolationAndUniqueCaptureNumbers" time="0.025"></testcase>
+<testcase classname="BE" name="BE-034 MeasurementRepositoryTests.Delete" time="0.049"></testcase>
+<testcase classname="BE" name="BE-035 MeasurementRepositoryTests.RoundTripPrecision" time="0.092"></testcase>
+<testcase classname="BE" name="BE-036 MeasurementRepositoryTests.Migrations" time="0.289"></testcase>
+<testcase classname="BE" name="BE-037 MeasurementRepositoryTests.MigrationRefusals" time="0.137"></testcase>
+<testcase classname="BE" name="BE-038 MeasurementRepositoryTests.MigrationIdempotence" time="0.405"></testcase>
+<testcase classname="BE" name="BE-039 MeasurementRepositoryTests.MeasuredOrdering" time="0.033"></testcase>
+<testcase classname="BE" name="BE-040 MeasurementRepositoryTests.DrillholeCacheReplace" time="0.608"></testcase>
+<testcase classname="BE" name="BE-042 CsvExportTests.Structure" time="0.012"></testcase>
+<testcase classname="BE" name="BE-043 CsvExportTests.InjectionAndMixing" time="0.006"></testcase>
+<testcase classname="BE" name="BE-046 MeasurementRepositoryTests.TextFields" time="0.045"></testcase>
+<testcase classname="E2E" name="E2E-001 DesktopWorkflowTests.MainJourney" time="0"><skipped message="category E2E not included" /></testcase>
+<testcase classname="E2E" name="E2E-002 DesktopWorkflowTests.RestartPersistence" time="0"><skipped message="category E2E not included" /></testcase>
+<testcase classname="E2E" name="E2E-003 DesktopWorkflowTests.OfflineOperation" time="0"><skipped message="category E2E not included" /></testcase>
+<testcase classname="E2E" name="E2E-004 DesktopWorkflowTests.DeleteWithDialog" time="0"><skipped message="category E2E not included" /></testcase>
+<testcase classname="FE" name="FE-001 ApiClientTests.OkResponse" time="0.003"></testcase>
+<testcase classname="FE" name="FE-002 ApiClientTests.HttpErrors" time="0.001"></testcase>
+<testcase classname="FE" name="FE-003 ApiClientTests.Unreachable" time="1.009"></testcase>
+<testcase classname="FE" name="FE-004 ApiClientTests.InvalidPayloads" time="0.002"></testcase>
+<testcase classname="FE" name="FE-005 ApiClientTests.SettingsDefaults" time="0.011"></testcase>
+<testcase classname="FE" name="FE-005 ApiClientTests.SettingsNonNumericValue" time="0.002"><failure message="InvalidOperationException: The requested operation requires an element of type &apos;Number&apos;, but the target element has type &apos;String&apos;." /></testcase>
+<testcase classname="FE" name="FE-006 ApiClientTests.ProbePolling" time="1.021"></testcase>
+<testcase classname="FE" name="FE-007 ApiClientTests.ReloadAfterRecovery" time="0.361"></testcase>
+<testcase classname="FE" name="FE-008 ApiClientTests.LoopsStopOnDispose" time="0.683"></testcase>
+<testcase classname="FE" name="FE-009 DrillholeSelectionTests.CacheThenServer" time="0.036"></testcase>
+<testcase classname="FE" name="FE-010 DrillholeSelectionTests.FailedRefreshKeepsState" time="0.015"></testcase>
+<testcase classname="FE" name="FE-011 DrillholeSelectionTests.EmptyListKeepsSaved" time="0.019"></testcase>
+<testcase classname="FE" name="FE-012 DrillholeSelectionTests.LoadIsReused" time="0.026"></testcase>
+<testcase classname="FE" name="FE-013 DrillholeSelectionTests.CatalogCleaning" time="0"></testcase>
+<testcase classname="FE" name="FE-014 DrillholeSelectionTests.RankingAndGroups" time="0"></testcase>
+<testcase classname="FE" name="FE-015 DrillholeSelectionTests.NoImplicitPick" time="0.015"></testcase>
+<testcase classname="FE" name="FE-016 DrillholeSelectionTests.DebounceAndStaleResults" time="1.003"></testcase>
+<testcase classname="FE" name="FE-018 DrillholeSelectionTests.UnicodeIds" time="0.019"></testcase>
+<testcase classname="FE" name="FE-019 CoreInformationTests.SaveWithoutPick" time="0.167"></testcase>
+<testcase classname="FE" name="FE-020 CoreInformationTests.SaveAndContinue" time="0.358"></testcase>
+<testcase classname="FE" name="FE-021 CoreInformationTests.EditDisarms" time="0.494"></testcase>
+<testcase classname="FE" name="FE-022 CoreInformationTests.SelectionLock" time="0.327"></testcase>
+<testcase classname="FE" name="FE-023 CoreInformationTests.NavigationKeepsState" time="1.205"></testcase>
+<testcase classname="FE" name="FE-024 MeasurementWorkflowTests.DepthValidation" time="0.003"></testcase>
+<testcase classname="FE" name="FE-025 MeasurementWorkflowTests.StartRequirements" time="0.001"></testcase>
+<testcase classname="FE" name="FE-026 MeasurementWorkflowTests.CaptureCycle" time="0.137"></testcase>
+<testcase classname="FE" name="FE-027 MeasurementWorkflowTests.StopWhileCapturing" time="0.308"></testcase>
+<testcase classname="FE" name="FE-028 MeasurementWorkflowTests.StopWhileProcessing" time="4.371"></testcase>
+<testcase classname="FE" name="FE-029 MeasurementWorkflowTests.DepthProgression" time="0.355"></testcase>
+<testcase classname="FE" name="FE-030 MeasurementWorkflowTests.CaptureOutcomes" time="0.279"></testcase>
+<testcase classname="FE" name="FE-031 MeasurementWorkflowTests.LateProgressIgnored" time="0.016"></testcase>
+<testcase classname="FE" name="FE-032 MeasurementWorkflowTests.DurationEditor" time="0.117"></testcase>
+<testcase classname="FE" name="FE-033 MeasurementWorkflowTests.SortedInsert" time="0.34"></testcase>
+<testcase classname="FE" name="FE-034 MeasurementWorkflowTests.DeleteFlow" time="0.497"></testcase>
+<testcase classname="FE" name="FE-035 MeasurementWorkflowTests.SaveFailureRetry" time="0.588"></testcase>
+<testcase classname="FE" name="FE-036 MeasurementWorkflowTests.DrillholeSwitch" time="1.249"></testcase>
+<testcase classname="FE" name="FE-036 MeasurementWorkflowTests.SwitchRefusedWhileUnsaved" time="0.124"></testcase>
+<testcase classname="FE" name="FE-037 MeasurementWorkflowTests.StoredMetadataWins" time="0.111"></testcase>
+<testcase classname="FE" name="FE-038 MeasurementWorkflowTests.NewMeasurementFlow" time="0.247"></testcase>
+<testcase classname="FE" name="FE-039 MeasurementWorkflowTests.ExportCommandFlow" time="0.527"></testcase>
+<testcase classname="FE" name="FE-040 DrillholeSelectionTests.MeasuredGroupRefresh" time="0.297"></testcase>
+<testcase classname="FE" name="FE-041 StatusAndPresentationTests.ToastRules" time="0.005"></testcase>
+<testcase classname="FE" name="FE-042 StatusAndPresentationTests.Announcements" time="0.038"></testcase>
+<testcase classname="FE" name="FE-043 StatusAndPresentationTests.BluetoothSelection" time="0.327"></testcase>
+<testcase classname="FE" name="FE-044 StatusAndPresentationTests.DatabaseRowsAndRetry" time="0.01"></testcase>
+<testcase classname="FE" name="FE-045 StatusAndPresentationTests.DeviceSettingsLoad" time="0.01"></testcase>
+<testcase classname="FE" name="FE-046 StatusAndPresentationTests.CellFormatting" time="0.001"></testcase>
+<testcase classname="FE" name="FE-047 StatusAndPresentationTests.ColumnLayouts" time="0.001"></testcase>
+<testcase classname="FE" name="FE-048 MeasurementWorkflowTests.CloseDuringWork" time="7.448"></testcase>
+<testcase classname="FE" name="FE-049 MeasurementWorkflowTests.DemoTsMs" time="0.235"></testcase>
+<testcase classname="INT" name="INT-001 HttpIntegrationTests.FieldMapping" time="0.664"></testcase>
+<testcase classname="INT" name="INT-002 HttpIntegrationTests.ServiceUnavailablePropagation" time="1.076"></testcase>
+<testcase classname="INT" name="INT-003 HttpIntegrationTests.OfflineStartAndRecovery" time="3.21"></testcase>
+<testcase classname="INT" name="INT-004 HttpIntegrationTests.SlowBackend" time="1.044"></testcase>
+<testcase classname="INT" name="INT-005 HttpIntegrationTests.ContractAlignment" time="0.001"></testcase>
+<testcase classname="INT" name="INT-006 HttpIntegrationTests.CacheAcrossRestart" time="0.012"></testcase>
+<testcase classname="INT" name="INT-007 CapturePipelineTests.CaptureToStorage" time="0.223"></testcase>
+<testcase classname="INT" name="INT-008 CapturePipelineTests.ConcurrentWriter" time="55.662"></testcase>
+<testcase classname="INT" name="INT-009 CapturePipelineTests.GammaGuardUnavailable" time="2.47"></testcase>
+<testcase classname="INT" name="INT-010 CapturePipelineTests.AppDatabaseFailureAndRecovery" time="0.377"></testcase>
+<testcase classname="INT" name="INT-011 CapturePipelineTests.ReopenMeasuredDrillhole" time="0.162"></testcase>
+<testcase classname="INT" name="INT-012 CapturePipelineTests.NoSessionMixing" time="1.284"></testcase>
+<testcase classname="INT" name="INT-013 CapturePipelineTests.DeleteReloadExport" time="0.52"></testcase>
+<testcase classname="INT" name="INT-014 CapturePipelineTests.ValuesAgreeAcrossLayers" time="0.394"></testcase>
+<testcase classname="INT" name="INT-015 CapturePipelineTests.StatusAndCaptureAgree" time="0.192"></testcase>
+<testcase classname="INT" name="INT-016 CapturePipelineTests.DatabaseStatusUnderLock" time="2.118"></testcase>
+<testcase classname="INT" name="INT-017 CapturePipelineTests.UpgradeThenMeasure" time="0.423"></testcase>
+</testsuite></testsuites>

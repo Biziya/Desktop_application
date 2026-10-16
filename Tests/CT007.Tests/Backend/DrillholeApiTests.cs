@@ -10,10 +10,6 @@ namespace Ct007.Tests.BackendTests;
 /// <summary>BE-001, BE-002, BE-005, BE-006, BE-008, BE-011: the ASP.NET Core drillhole API (F01), hosted in-process.</summary>
 public static class DrillholeApiTests
 {
-    /// <summary>A SQL Server address where nothing listens: opening a connection fails with a real SqlException.</summary>
-    private const string RefusedConnection =
-        "Server=tcp:127.0.0.1,1;Database=CT007_Test;User ID=ct007_test_user;Password=NotARealPassword-1;Connect Timeout=3;ConnectRetryCount=0;Encrypt=False";
-
     [Test("BE-001", "GET drillholes returns the camelCase contract")]
     public static async Task DrillholesContract()
     {
@@ -37,7 +33,7 @@ public static class DrillholeApiTests
     {
         await using var backend = await TestBackend.StartAsync(settings: new Dictionary<string, string?>
         {
-            ["ConnectionStrings:DefaultConnection"] = RefusedConnection
+            ["ConnectionStrings:DefaultConnection"] = TestBackend.RefusedSqlConnection
         });
         using var http = new HttpClient();
 

@@ -3,7 +3,8 @@ namespace Ct007.Tests.BackendTests;
 /// <summary>BE-042, BE-043: CSV serialisation contract and spreadsheet-formula neutralisation (F19).</summary>
 public static class CsvExportTests
 {
-    private const string Header =
+    /// <summary>The exported header row (current contract, UR-04); also used by E2E-001.</summary>
+    internal const string Header =
         "\"No\",\"Capture No\",\"Start Time\",\"End Time\",\"Sample\",\"ts_ms\",\"count0\",\"count0_raw\",\"hdm\",\"hdm_raw\",\"dose_rate\"," +
         "\"Drillhole\",\"Project\",\"Campaign\",\"Operator\",\"Notes\",\"session_id\"";
 

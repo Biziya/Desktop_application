@@ -136,6 +136,9 @@ public static class DrillholeSelectionTests
             search.Entries.Select(o => o.IsHeader ? o.Header : o.HoleId), "search 'ab'");
         Assert.Equal("AB", search.Closest?.HoleId, "closest match");
 
+        // Several equally good matches: the closest is the one listed first ("AB" before "AB1" and "ab2").
+        Assert.Equal("AB", catalog.Options(history, "a", "").Closest?.HoleId, "tie between prefix matches");
+
         var all = catalog.Options(history, "", "");
         Assert.Sequence(new[] { "Measured drillholes", "ZZ", "XAB", "All drillholes", "AB", "AB1", "ab2" },
             all.Entries.Select(o => o.IsHeader ? o.Header : o.HoleId), "empty query");

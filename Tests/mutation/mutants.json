@@ -1,0 +1,772 @@
+[
+ {
+  "id": "M01",
+  "file": "Frontend/Calculation/Measurement/Depth.cs",
+  "kind": "relational",
+  "find": "out var metres) || metres < 0)",
+  "replace": "out var metres) || metres < -1)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "negative starting depth accepted"
+ },
+ {
+  "id": "M02",
+  "file": "Frontend/Calculation/Measurement/Depth.cs",
+  "kind": "arithmetic",
+  "find": "var mm = metres * 1000m;",
+  "replace": "var mm = metres * 100m;",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "metres converted with the wrong factor"
+ },
+ {
+  "id": "M03",
+  "file": "Frontend/Calculation/Measurement/Depth.cs",
+  "kind": "remove condition",
+  "find": "if (mm != decimal.Truncate(mm) || mm > long.MaxValue / 2)",
+  "replace": "if (mm > long.MaxValue / 2)",
+  "occurrence": 1,
+  "occurrencesInFile": 2,
+  "effect": "sub-millimetre depth accepted"
+ },
+ {
+  "id": "M04",
+  "file": "Frontend/Calculation/Measurement/Depth.cs",
+  "kind": "boundary",
+  "find": "centimetres) || centimetres < 0)",
+  "replace": "centimetres) || centimetres <= 0)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "parser rejects a 0 cm step"
+ },
+ {
+  "id": "M05",
+  "file": "Frontend/Calculation/Measurement/Depth.cs",
+  "kind": "arithmetic",
+  "find": "var mm = centimetres * 10m;",
+  "replace": "var mm = centimetres * 100m;",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "step converted with the wrong factor"
+ },
+ {
+  "id": "M06",
+  "file": "Frontend/Calculation/Measurement/Depth.cs",
+  "kind": "format",
+  "find": "(millimetres / 10m).ToString(\"0.#\"",
+  "replace": "(millimetres / 10m).ToString(\"0\"",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "step shown without its decimal"
+ },
+ {
+  "id": "M07",
+  "file": "Frontend/Calculation/Measurement/DeviceSamples.cs",
+  "kind": "boundary",
+  "find": "tsMs > TriggerMs && tsMs <= EndMs",
+  "replace": "tsMs >= TriggerMs && tsMs <= EndMs",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "sample at the click itself accepted"
+ },
+ {
+  "id": "M08",
+  "file": "Frontend/Calculation/Measurement/DeviceSamples.cs",
+  "kind": "boundary",
+  "find": "tsMs > TriggerMs && tsMs <= EndMs",
+  "replace": "tsMs > TriggerMs && tsMs < EndMs",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "sample at the window end rejected"
+ },
+ {
+  "id": "M09",
+  "file": "Frontend/Calculation/Measurement/DeviceSamples.cs",
+  "kind": "constant",
+  "find": "Math.Max(1, durationMs / 1000)",
+  "replace": "Math.Max(0, durationMs / 1000)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "expected samples can be 0"
+ },
+ {
+  "id": "M10",
+  "file": "Frontend/Calculation/Measurement/DeviceSamples.cs",
+  "kind": "remove condition",
+  "find": "!string.Equals(row.Serial, serial, StringComparison.Ordinal) ||",
+  "replace": "false ||",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "samples of another detector accepted"
+ },
+ {
+  "id": "M11",
+  "file": "Frontend/Calculation/Measurement/DeviceSamples.cs",
+  "kind": "remove condition",
+  "find": "row.Seq is { } seq && !seenReadings.Add(",
+  "replace": "row.Seq is { } seq && false && !seenReadings.Add(",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "duplicate readings accepted"
+ },
+ {
+  "id": "M12",
+  "file": "Frontend/Calculation/Measurement/DeviceSamples.cs",
+  "kind": "predicate",
+  "find": "double.IsFinite(x)",
+  "replace": "!double.IsNaN(x)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "infinite values averaged"
+ },
+ {
+  "id": "M13",
+  "file": "Frontend/Calculation/Measurement/DeviceSamples.cs",
+  "kind": "relational",
+  "find": "sessions.Count == 1 ? sessions[0] : null",
+  "replace": "sessions.Count >= 1 ? sessions[0] : null",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "mixed device sessions reported as one"
+ },
+ {
+  "id": "M14",
+  "file": "Frontend/Calculation/Measurement/DeviceSamples.cs",
+  "kind": "ordering",
+  "find": ".OrderBy(s => s.TsMs).ThenBy(s => s.SourceId).FirstOrDefault()?.TsMs",
+  "replace": ".OrderByDescending(s => s.TsMs).ThenBy(s => s.SourceId).FirstOrDefault()?.TsMs",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "last instead of first ts_ms"
+ },
+ {
+  "id": "M15",
+  "file": "Frontend/Calculation/Measurement/DeviceSamples.cs",
+  "kind": "constant",
+  "find": "latestTsMs < 100_000_000_000",
+  "replace": "latestTsMs < 10_000_000_000",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "some non-millisecond time bases accepted"
+ },
+ {
+  "id": "M16",
+  "file": "Frontend/Calculation/Measurement/DeviceSamples.cs",
+  "kind": "boundary",
+  "find": "> (long)MaxClockDifference.TotalMilliseconds",
+  "replace": ">= (long)MaxClockDifference.TotalMilliseconds",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "exactly 12 h difference refused"
+ },
+ {
+  "id": "M17",
+  "file": "Frontend/Calculation/Core-Information/GammaGuardDatabase/GammaGuardCaptureDevices.cs",
+  "kind": "boundary",
+  "find": "<= (long)SimultaneousWindow.TotalMilliseconds",
+  "replace": "< (long)SimultaneousWindow.TotalMilliseconds",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "detectors exactly 5 s apart not refused"
+ },
+ {
+  "id": "M18",
+  "file": "Frontend/Calculation/Core-Information/GammaGuardDatabase/GammaGuardCaptureDevices.cs",
+  "kind": "ordering",
+  "find": "recent.OrderByDescending(r => r.LastTsMs)",
+  "replace": "recent.OrderBy(r => r.LastTsMs)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "oldest detector picked"
+ },
+ {
+  "id": "M19",
+  "file": "Frontend/Calculation/Core-Information/GammaGuardDatabase/GammaGuardCaptureDevices.cs",
+  "kind": "condition",
+  "find": "State: LocalState.Available",
+  "replace": "State: not LocalState.Checking",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "capture allowed from a missing/busy database"
+ },
+ {
+  "id": "M20",
+  "file": "Frontend/Calculation/Measurement/DeviceCaptureService.cs",
+  "kind": "remove lookback",
+  "find": "Math.Max(0, baseline - LookbackRows)",
+  "replace": "Math.Max(0, baseline)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "rows written just before the click missed"
+ },
+ {
+  "id": "M21",
+  "file": "Frontend/Calculation/Measurement/DeviceCaptureService.cs",
+  "kind": "remove branch",
+  "find": "window.Count < window.ExpectedSamples && clock.NowMs < finalDeadline",
+  "replace": "false && clock.NowMs < finalDeadline",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "no final read for late rows"
+ },
+ {
+  "id": "M22",
+  "file": "Frontend/Calculation/Measurement/DeviceCaptureService.cs",
+  "kind": "remove condition",
+  "find": "DeviceTime.Problem(latest, clock.NowMs) is { } problem)",
+  "replace": "DeviceTime.Problem(latest, clock.NowMs) is { } problem && false)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "time-basis check skipped"
+ },
+ {
+  "id": "M23",
+  "file": "Frontend/Calculation/Measurement/MeasurementOrder.cs",
+  "kind": "return value",
+  "find": "(null, _) => 1,",
+  "replace": "(null, _) => -1,",
+  "occurrence": 1,
+  "occurrencesInFile": 2,
+  "effect": "rows without depth sorted first"
+ },
+ {
+  "id": "M24",
+  "file": "Frontend/Calculation/Measurement/MeasurementOrder.cs",
+  "kind": "negation",
+  "find": "if (byTime != 0) return byTime;",
+  "replace": "if (byTime != 0) return -byTime;",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "equal depths ordered newest first"
+ },
+ {
+  "id": "M25",
+  "file": "Frontend/Calculation/Measurement/MeasurementOrder.cs",
+  "kind": "boundary",
+  "find": "Compare(sorted[middle], row) <= 0)",
+  "replace": "Compare(sorted[middle], row) < 0)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "insert position among equal rows"
+ },
+ {
+  "id": "M26",
+  "file": "Frontend/Calculation/Measurement/CaptureDurationSettings.cs",
+  "kind": "boundary",
+  "find": "seconds is >= MinSeconds and <= MaxSeconds",
+  "replace": "seconds is >= MinSeconds and < MaxSeconds",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "10 s duration rejected"
+ },
+ {
+  "id": "M27",
+  "file": "Frontend/Calculation/Measurement/CaptureDurationSettings.cs",
+  "kind": "validation",
+  "find": "NumberStyles.None",
+  "replace": "NumberStyles.Integer",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "signed/whitespace durations accepted"
+ },
+ {
+  "id": "M28",
+  "file": "Frontend/Pages/Measurement/MeasurementRepository.cs",
+  "kind": "remove validation",
+  "find": "if (row.SessionId != session.Id)",
+  "replace": "if (false)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "row of another session saved"
+ },
+ {
+  "id": "M29",
+  "file": "Frontend/Pages/Measurement/MeasurementRepository.cs",
+  "kind": "update scope",
+  "find": "DO UPDATE SET SortOrder = excluded.SortOrder",
+  "replace": "DO UPDATE SET SortOrder = excluded.SortOrder, Count0 = excluded.Count0",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "stored values overwritten on re-save"
+ },
+ {
+  "id": "M30",
+  "file": "Frontend/Pages/Measurement/MeasurementRepository.cs",
+  "kind": "boundary",
+  "find": "if (version > SchemaVersion)",
+  "replace": "if (version > SchemaVersion + 1)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "newer schema accepted"
+ },
+ {
+  "id": "M31",
+  "file": "Frontend/Pages/Measurement/MeasurementRepository.cs",
+  "kind": "rounding",
+  "find": "(long)Math.Round(centimetres * 10, MidpointRounding.AwayFromZero)",
+  "replace": "(long)(centimetres * 10)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "cm -> mm truncated instead of rounded"
+ },
+ {
+  "id": "M32",
+  "file": "Frontend/Pages/Measurement/MeasurementRepository.cs",
+  "kind": "arithmetic",
+  "find": "progress.NextFromMm / 10.0",
+  "replace": "progress.NextFromMm / 100.0",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "progress stored in the wrong unit"
+ },
+ {
+  "id": "M33",
+  "file": "Frontend/Pages/Measurement/MeasurementRepository.cs",
+  "kind": "conflict rule",
+  "find": "ON CONFLICT (DrillholeID) DO NOTHING;",
+  "replace": "ON CONFLICT (DrillholeID) DO UPDATE SET \"operator\" = excluded.\"operator\";",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "stored session metadata overwritten"
+ },
+ {
+  "id": "M34",
+  "file": "Frontend/Pages/Measurement/MeasurementRepository.cs",
+  "kind": "remove check",
+  "find": "if (orphans.Read())",
+  "replace": "if (false && orphans.Read())",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "orphan records accepted by migration"
+ },
+ {
+  "id": "M35",
+  "file": "Frontend/Pages/Measurement/MeasurementRepository.cs",
+  "kind": "boundary",
+  "find": "if (duplicates.Count > 0)",
+  "replace": "if (duplicates.Count > 1)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "single duplicate Drillhole ID accepted"
+ },
+ {
+  "id": "M36",
+  "file": "Frontend/Pages/Measurement/MeasurementRepository.cs",
+  "kind": "remove statement",
+  "find": "DELETE FROM CaptureSamples WHERE record_id IN",
+  "replace": "DELETE FROM CaptureSamples WHERE 0 AND record_id IN",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "samples not deleted with their record"
+ },
+ {
+  "id": "M37",
+  "file": "Frontend/Pages/Measurement/CsvExportService.cs",
+  "kind": "remove case",
+  "find": "trimmed[0] is '=' or '+' or '-' or '@'",
+  "replace": "trimmed[0] is '=' or '+' or '@'",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "'-' formula prefix not neutralised"
+ },
+ {
+  "id": "M38",
+  "file": "Frontend/Pages/Measurement/CsvExportService.cs",
+  "kind": "remove trim",
+  "find": "value.TrimStart() is { Length: > 0 } trimmed",
+  "replace": "value is { Length: > 0 } trimmed",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "formula after leading spaces not neutralised"
+ },
+ {
+  "id": "M39",
+  "file": "Frontend/Pages/Measurement/CsvExportService.cs",
+  "kind": "remove escaping",
+  "find": "value.Replace(\"\\\"\", \"\\\"\\\"\")",
+  "replace": "value",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "embedded quotes not doubled"
+ },
+ {
+  "id": "M40",
+  "file": "Frontend/Pages/Measurement/CsvExportService.cs",
+  "kind": "remove validation",
+  "find": "rows.Any(r => r.SessionId != session.Id)",
+  "replace": "rows.Any(r => false)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "mixed-session export allowed"
+ },
+ {
+  "id": "M41",
+  "file": "Frontend/Pages/Measurement/CsvExportService.cs",
+  "kind": "culture",
+  "find": "number.ToString(\"R\", CultureInfo.InvariantCulture)",
+  "replace": "number.ToString(CultureInfo.CurrentCulture)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "numbers exported in the local culture"
+ },
+ {
+  "id": "M42",
+  "file": "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+  "kind": "condition",
+  "find": "if (nextFromMm == fromMm)",
+  "replace": "if (true)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "depth advances although edited during capture"
+ },
+ {
+  "id": "M43",
+  "file": "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+  "kind": "remove validation",
+  "find": "&& size > 0 ? size : null",
+  "replace": "? size : null",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "0 cm step accepted"
+ },
+ {
+  "id": "M44",
+  "file": "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+  "kind": "remove condition",
+  "find": "activeCapture is null && !isEditingDuration;",
+  "replace": "activeCapture is null;",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "capture while the duration editor is open"
+ },
+ {
+  "id": "M45",
+  "file": "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+  "kind": "negation",
+  "find": "if (row.IsIncomplete)",
+  "replace": "if (!row.IsIncomplete)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "incomplete warning on complete captures"
+ },
+ {
+  "id": "M46",
+  "file": "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+  "kind": "remove condition",
+  "find": "if (disposed || savedCore != core || version != viewVersion)",
+  "replace": "if (disposed || savedCore != core)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "late session open not discarded"
+ },
+ {
+  "id": "M47",
+  "file": "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+  "kind": "remove condition",
+  "find": "if (!disposed && version == viewVersion)",
+  "replace": "if (!disposed)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "late stored-drillhole load shown"
+ },
+ {
+  "id": "M48",
+  "file": "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+  "kind": "constant",
+  "find": "hasUnsavedRows = !saved;",
+  "replace": "hasUnsavedRows = false;",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "failed save not retried"
+ },
+ {
+  "id": "M49",
+  "file": "Frontend/Pages/Measurement/MeasurementResult.cs",
+  "kind": "boundary",
+  "find": "SampleCount < expected",
+  "replace": "SampleCount <= expected",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "complete capture shown as incomplete"
+ },
+ {
+  "id": "M50",
+  "file": "Frontend/Pages/Measurement/MeasurementCellFormat.cs",
+  "kind": "rounding",
+  "find": "Math.Round(d, 2, MidpointRounding.AwayFromZero)",
+  "replace": "Math.Round(d, 2, MidpointRounding.ToEven)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "display rounding mode"
+ },
+ {
+  "id": "M51",
+  "file": "Frontend/Pages/Measurement/MeasurementCellFormat.cs",
+  "kind": "remove clean-up",
+  "find": "text == \"-0\" ? \"0\" : text",
+  "replace": "text",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "'-0' shown"
+ },
+ {
+  "id": "M52",
+  "file": "Frontend/Api/ApiClient.cs",
+  "kind": "remove branch",
+  "find": "if (!response.IsSuccessStatusCode)",
+  "replace": "if (false)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "HTTP errors parsed as data"
+ },
+ {
+  "id": "M53",
+  "file": "Frontend/Api/ApiClient.cs",
+  "kind": "swap messages",
+  "find": "error is TaskCanceledException ? \"Backend did not respond in time.\" : \"Backend is offline.\"",
+  "replace": "error is TaskCanceledException ? \"Backend is offline.\" : \"Backend did not respond in time.\"",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "timeout and refusal messages swapped"
+ },
+ {
+  "id": "M54",
+  "file": "Frontend/Api/ApiSettings.cs",
+  "kind": "boundary",
+  "find": "value.TryGetDouble(out var seconds) && seconds > 0",
+  "replace": "value.TryGetDouble(out var seconds) && seconds >= 0",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "0 s timeout accepted"
+ },
+ {
+  "id": "M55",
+  "file": "Frontend/Api/BackendConnection.cs",
+  "kind": "condition",
+  "find": "if (reachable && !wasOnline)",
+  "replace": "if (reachable)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "CameOnline raised on every successful probe"
+ },
+ {
+  "id": "M56",
+  "file": "Frontend/Api/BackendConnection.cs",
+  "kind": "remove condition",
+  "find": "if (check is { IsCompleted: false })",
+  "replace": "if (false)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "overlapping probes"
+ },
+ {
+  "id": "M57",
+  "file": "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+  "kind": "predicate",
+  "find": ".Where(d => !string.IsNullOrWhiteSpace(d.HoleId))",
+  "replace": ".Where(d => d.HoleId is not null)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "blank Hole IDs kept"
+ },
+ {
+  "id": "M58",
+  "file": "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+  "kind": "comparer",
+  "find": ".DistinctBy(d => d.HoleId!, StringComparer.OrdinalIgnoreCase)",
+  "replace": ".DistinctBy(d => d.HoleId!, StringComparer.Ordinal)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "case-variant duplicates kept"
+ },
+ {
+  "id": "M59",
+  "file": "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+  "kind": "constant",
+  "find": "StringComparison.OrdinalIgnoreCase) ? 0 :",
+  "replace": "StringComparison.OrdinalIgnoreCase) ? 2 :",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "exact match ranked last"
+ },
+ {
+  "id": "M60",
+  "file": "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+  "kind": "boundary",
+  "find": "if (rank < best)",
+  "replace": "if (rank <= best)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "closest match tie-break"
+ },
+ {
+  "id": "M61",
+  "file": "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+  "kind": "condition",
+  "find": "if (fresh.Count > 0 || catalog.Count == 0)",
+  "replace": "if (true)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "empty server list replaces the saved list"
+ },
+ {
+  "id": "M62",
+  "file": "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+  "kind": "condition",
+  "find": "if (drillholesStatus is not ApiStatus.Ok)",
+  "replace": "if (true)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "reload on every CameOnline"
+ },
+ {
+  "id": "M63",
+  "file": "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+  "kind": "remove lock",
+  "find": "if (isSelectionLocked && !string.Equals(value, DrillholeId, StringComparison.OrdinalIgnoreCase))",
+  "replace": "if (false)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "typing changes the drillhole while measuring"
+ },
+ {
+  "id": "M64",
+  "file": "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+  "kind": "predicate",
+  "find": "if (string.IsNullOrWhiteSpace(Operator))",
+  "replace": "if (Operator.Length == 0)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "blank Operator not autofilled"
+ },
+ {
+  "id": "M65",
+  "file": "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+  "kind": "remove validation",
+  "find": "if (!HasRequiredText)",
+  "replace": "if (false)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "save without a drillhole"
+ },
+ {
+  "id": "M66",
+  "file": "Frontend/Calculation/Core-Information/SqliteFileCheck.cs",
+  "kind": "remove case",
+  "find": "SqliteErrorCode is 5 or 6",
+  "replace": "SqliteErrorCode is 6",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "busy database not reported as Busy"
+ },
+ {
+  "id": "M67",
+  "file": "Frontend/Calculation/Core-Information/GammaGuardDatabase/GammaGuardDatabaseCheck.cs",
+  "kind": "constant",
+  "find": "\"Database\", StringComparison.OrdinalIgnoreCase",
+  "replace": "\"Logs\", StringComparison.OrdinalIgnoreCase",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "wrong subfolder searched"
+ },
+ {
+  "id": "M68",
+  "file": "Frontend/Calculation/Core-Information/GammaGuardDatabase/GammaGuardDatabaseCheck.cs",
+  "kind": "ordering",
+  "find": ".OrderByDescending(f => f.LastWriteTimeUtc)",
+  "replace": ".OrderBy(f => f.LastWriteTimeUtc)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "oldest database chosen"
+ },
+ {
+  "id": "M69",
+  "file": "Frontend/Calculation/Core-Information/GammaGuardDatabase/GammaGuardDatabaseCheck.cs",
+  "kind": "remove normalisation",
+  "find": "Path.GetFileName(directory).Replace(\" \", \"\")",
+  "replace": "Path.GetFileName(directory)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "'Gamma Guard' folder not recognised"
+ },
+ {
+  "id": "M70",
+  "file": "Frontend/Calculation/Core-Information/BluetoothDevice/Ct007BluetoothCheck.cs",
+  "kind": "remove check",
+  "find": "if (device is not null && device.Address != selected.Address)",
+  "replace": "if (false)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "device with another address accepted"
+ },
+ {
+  "id": "M71",
+  "file": "Frontend/ViewModels/StatusAnnouncements.cs",
+  "kind": "negation",
+  "find": "previous == BackendState.Offline",
+  "replace": "previous != BackendState.Offline",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "online announcement condition inverted"
+ },
+ {
+  "id": "M72",
+  "file": "Frontend/ViewModels/StatusAnnouncements.cs",
+  "kind": "remove condition",
+  "find": "if (!known || previous == status.State)",
+  "replace": "if (previous == status.State)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "first known state announced"
+ },
+ {
+  "id": "M73",
+  "file": "Frontend/Shared/Infrastructure/ToastService.cs",
+  "kind": "boundary",
+  "find": "while (Items.Count >= MaxVisible)",
+  "replace": "while (Items.Count > MaxVisible)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "five toasts visible"
+ },
+ {
+  "id": "M74",
+  "file": "Frontend/Shared/Infrastructure/ToastService.cs",
+  "kind": "constant",
+  "find": "kind == ToastKind.Error ? ErrorDuration : ShortDuration",
+  "replace": "ShortDuration",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "errors shown for 3 s"
+ },
+ {
+  "id": "M75",
+  "file": "Backend/Controllers/CoreInformation/Drillhole/DrillholeController.cs",
+  "kind": "exception type",
+  "find": "catch (SqlException ex)",
+  "replace": "catch (InvalidCastException ex)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "SQL outage becomes HTTP 500"
+ },
+ {
+  "id": "M76",
+  "file": "Backend/Controllers/CoreInformation/Drillhole/DrillholeController.cs",
+  "kind": "constant",
+  "find": "statusCode: StatusCodes.Status503ServiceUnavailable",
+  "replace": "statusCode: StatusCodes.Status500InternalServerError",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "outage status 500 instead of 503"
+ },
+ {
+  "id": "M77",
+  "file": "Backend/Repositories/CoreInformation/Drillhole/DrillholeRepository.cs",
+  "kind": "sql",
+  "find": "RIGHT(PROSPECT, 4)",
+  "replace": "LEFT(PROSPECT, 4)",
+  "occurrence": 1,
+  "occurrencesInFile": 1,
+  "effect": "campaign taken from the wrong end"
+ }
+]

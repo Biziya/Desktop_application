@@ -62,9 +62,11 @@ public static class TestRunner
         }));
         Dispatcher.Run();
 
+        var leftovers = Fixtures.TestFolder.DeleteLeftovers();
         var failed = results.Count(r => r.Outcome == "FAIL");
         Console.WriteLine($"{results.Count} tests: {results.Count(r => r.Outcome == "PASS")} passed, {failed} failed, " +
-                          $"{results.Count(r => r.Outcome == "SKIP")} skipped.");
+                          $"{results.Count(r => r.Outcome == "SKIP")} skipped." +
+                          (leftovers > 0 ? $" {leftovers} temp folder(s) could not be deleted." : ""));
 
         if (resultsPath is not null)
         {

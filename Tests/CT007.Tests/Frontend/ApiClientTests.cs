@@ -84,6 +84,17 @@ public static class ApiClientTests
         Assert.Equal(ApiStatus.InvalidResponse, nothing.Status, "null: status");
     }
 
+    // The non-numeric case is its own test: its known defect (DEF-001) used to end this test early and hide the cases
+    // after it (qa/effectiveness/eff-20261016).
+    [Test("FE-005", "A non-numeric timeout in api-settings.json falls back to the defaults (DEF-001)")]
+    public static void SettingsNonNumericValue()
+    {
+        using var folder = new TestFolder();
+        var path = folder.Path("text.json");
+        File.WriteAllText(path, """{"requestTimeoutSeconds":"abc"}""");
+        Assert.Equal(ApiSettings.Default, ApiSettings.Load(path), "text timeout");
+    }
+
     [Test("FE-005", "ApiSettings.Load falls back to defaults for missing or invalid values")]
     public static void SettingsDefaults()
     {
@@ -97,7 +108,6 @@ public static class ApiClientTests
             ("invalid JSON", "{ baseUrl: "),
             ("zero timeout", """{"requestTimeoutSeconds":0}"""),
             ("negative timeout", """{"requestTimeoutSeconds":-1}"""),
-            ("text timeout", """{"requestTimeoutSeconds":"abc"}"""),
             ("relative URL", """{"baseUrl":"api/backend"}""")
         };
 
@@ -181,14 +191,23 @@ public static class ApiClientTests
     {
         using var folder = new TestFolder();
         var backend = new StubBackend();
-        var main = Make.Shell(new MemoryRepository(folder.Path("m.db")), backend, new ControlledMeasurements(), folder.Path("gg.sqlite"),
-            TimeSpan.FromMilliseconds(50));
-        await Assert.Eventually(() => backend.Calls("/") >= 2, "polling runs");
+        var deviceListReads = 0;
+        var devices = Make.Devices(folder.Path("gg.sqlite")) with
+        {
+            CheckInterval = TimeSpan.FromMilliseconds(50),
+            BluetoothCheckInterval = TimeSpan.FromMilliseconds(50)
+        };
+        var main = new MainViewModel(new MemoryRepository(folder.Path("m.db")),
+            new ApiSettings("http://stub.test", TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(50)), devices, backend,
+            () => { Interlocked.Increment(ref deviceListReads); return []; }, new ControlledMeasurements());
+        await Assert.Eventually(() => backend.Calls("/") >= 2 && Volatile.Read(ref deviceListReads) >= 2, "probe and Device Status loops run");
 
         main.Dispose();
         await Task.Delay(100);
-        var after = backend.Calls("/");
+        var probes = backend.Calls("/");
+        var reads = Volatile.Read(ref deviceListReads);
         await Task.Delay(300);
-        Assert.Equal(after, backend.Calls("/"), "no probes after dispose");
+        Assert.Equal(probes, backend.Calls("/"), "no probes after dispose");
+        Assert.Equal(reads, Volatile.Read(ref deviceListReads), "no Device Status checks after dispose");
     }
 }

@@ -80,6 +80,13 @@ public sealed class TestBackend : IAsyncDisposable
         return new TestBackend(app, contentRoot, address.TrimEnd('/'), logs);
     }
 
+    /// <summary>
+    /// A SQL Server address where nothing listens (127.0.0.1, port 1): opening a connection fails with a real
+    /// SqlException. The user name and password are fake markers that tests check never appear in a response.
+    /// </summary>
+    public const string RefusedSqlConnection =
+        "Server=tcp:127.0.0.1,1;Database=CT007_Test;User ID=ct007_test_user;Password=NotARealPassword-1;Connect Timeout=1;ConnectRetryCount=0;Encrypt=False";
+
     /// <summary>A port nothing listens on right now (for "backend down" and later start on the same port).</summary>
     public static int FreePort()
     {

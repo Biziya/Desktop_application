@@ -1,0 +1,573 @@
+{
+ "M01": {
+  "status": "Equivalent",
+  "how": "",
+  "evidence": "unreachable: NumberStyles has no AllowLeadingSign, so a negative value never parses"
+ },
+ "M02": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-015 DepthAndOrderTests.ParseMetres",
+   "BE-017 DepthAndOrderTests.Formatting",
+   "FE-026 MeasurementWorkflowTests.CaptureCycle",
+   "FE-029 MeasurementWorkflowTests.DepthProgression",
+   "FE-033 MeasurementWorkflowTests.SortedInsert",
+   "INT-007 CapturePipelineTests.CaptureToStorage",
+   "INT-010 CapturePipelineTests.AppDatabaseFailureAndRecovery",
+   "INT-011 CapturePipelineTests.ReopenMeasuredDrillhole",
+   "INT-012 CapturePipelineTests.NoSessionMixing",
+   "INT-017 CapturePipelineTests.UpgradeThenMeasure"
+  ]
+ },
+ "M03": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-015 DepthAndOrderTests.ParseMetres",
+   "FE-024 MeasurementWorkflowTests.DepthValidation"
+  ]
+ },
+ "M04": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-016 DepthAndOrderTests.ParseCentimetres",
+   "BE-017 DepthAndOrderTests.Formatting"
+  ]
+ },
+ "M05": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-016 DepthAndOrderTests.ParseCentimetres",
+   "BE-017 DepthAndOrderTests.Formatting",
+   "BE-018 DepthAndOrderTests.NoCumulativeDrift",
+   "FE-024 MeasurementWorkflowTests.DepthValidation",
+   "FE-026 MeasurementWorkflowTests.CaptureCycle",
+   "FE-029 MeasurementWorkflowTests.DepthProgression",
+   "INT-007 CapturePipelineTests.CaptureToStorage",
+   "INT-010 CapturePipelineTests.AppDatabaseFailureAndRecovery",
+   "INT-012 CapturePipelineTests.NoSessionMixing"
+  ]
+ },
+ "M06": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-017 DepthAndOrderTests.Formatting"
+  ]
+ },
+ "M07": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-020 CaptureLogicTests.WindowMembership"
+  ]
+ },
+ "M08": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-020 CaptureLogicTests.WindowMembership",
+   "BE-025 CaptureLogicTests.PollingAndFinalRead",
+   "INT-007 CapturePipelineTests.CaptureToStorage",
+   "INT-015 CapturePipelineTests.StatusAndCaptureAgree"
+  ]
+ },
+ "M09": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-021 CaptureLogicTests.ExpectedSamples"
+  ]
+ },
+ "M10": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-020 CaptureLogicTests.WindowMembership"
+  ]
+ },
+ "M11": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-020 CaptureLogicTests.WindowMembership"
+  ]
+ },
+ "M12": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-022 CaptureLogicTests.Averaging"
+  ]
+ },
+ "M13": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-022 CaptureLogicTests.Averaging"
+  ]
+ },
+ "M14": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-022 CaptureLogicTests.Averaging",
+   "INT-007 CapturePipelineTests.CaptureToStorage"
+  ]
+ },
+ "M15": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-023 CaptureLogicTests.TimeBasis"
+  ]
+ },
+ "M16": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-023 CaptureLogicTests.TimeBasis"
+  ]
+ },
+ "M17": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-024 CaptureLogicTests.DetectorPick"
+  ]
+ },
+ "M18": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-024 CaptureLogicTests.DetectorPick"
+  ]
+ },
+ "M19": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-024 CaptureLogicTests.ResolveNeedsAvailableDatabase"
+  ]
+ },
+ "M20": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-025 CaptureLogicTests.PollingAndFinalRead",
+   "INT-007 CapturePipelineTests.CaptureToStorage",
+   "INT-009 CapturePipelineTests.GammaGuardUnavailable",
+   "INT-015 CapturePipelineTests.StatusAndCaptureAgree"
+  ]
+ },
+ "M21": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-025 CaptureLogicTests.PollingAndFinalRead"
+  ]
+ },
+ "M22": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-026 CaptureLogicTests.TimeCheckAndCancellation"
+  ]
+ },
+ "M23": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-019 DepthAndOrderTests.Ordering"
+  ]
+ },
+ "M24": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-019 DepthAndOrderTests.Ordering"
+  ]
+ },
+ "M25": {
+  "status": "Equivalent",
+  "how": "",
+  "evidence": "distinct rows never compare equal (CaptureNo unique per session)"
+ },
+ "M26": {
+  "status": "Killed",
+  "how": "pass3 (improved tests/map)",
+  "evidence": [
+   "BE-030 LocalFilesTests.DurationSettings"
+  ]
+ },
+ "M27": {
+  "status": "Killed",
+  "how": "pass3 (improved tests/map)",
+  "evidence": [
+   "BE-030 LocalFilesTests.DurationSettings"
+  ]
+ },
+ "M28": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-032 MeasurementRepositoryTests.AtomicSave",
+   "BE-033 MeasurementRepositoryTests.IsolationAndUniqueCaptureNumbers"
+  ]
+ },
+ "M29": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-032 MeasurementRepositoryTests.AtomicSave"
+  ]
+ },
+ "M30": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-037 MeasurementRepositoryTests.MigrationRefusals"
+  ]
+ },
+ "M31": {
+  "status": "Equivalent",
+  "how": "",
+  "evidence": "(mm/10.0)*10 is exact for every integer mm (0..200000 exhaustive, 2M random up to 1e12)"
+ },
+ "M32": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-032 MeasurementRepositoryTests.AtomicSave",
+   "BE-035 MeasurementRepositoryTests.RoundTripPrecision",
+   "INT-007 CapturePipelineTests.CaptureToStorage",
+   "INT-010 CapturePipelineTests.AppDatabaseFailureAndRecovery",
+   "INT-011 CapturePipelineTests.ReopenMeasuredDrillhole",
+   "INT-012 CapturePipelineTests.NoSessionMixing"
+  ]
+ },
+ "M33": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-031 MeasurementRepositoryTests.SessionResolution"
+  ]
+ },
+ "M34": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-037 MeasurementRepositoryTests.MigrationRefusals"
+  ]
+ },
+ "M35": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-037 MeasurementRepositoryTests.MigrationRefusals"
+  ]
+ },
+ "M36": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-034 MeasurementRepositoryTests.Delete",
+   "INT-013 CapturePipelineTests.DeleteReloadExport"
+  ]
+ },
+ "M37": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-043 CsvExportTests.InjectionAndMixing"
+  ]
+ },
+ "M38": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-043 CsvExportTests.InjectionAndMixing"
+  ]
+ },
+ "M39": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-043 CsvExportTests.InjectionAndMixing"
+  ]
+ },
+ "M40": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-043 CsvExportTests.InjectionAndMixing"
+  ]
+ },
+ "M41": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-042 CsvExportTests.Structure"
+  ]
+ },
+ "M42": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-029 MeasurementWorkflowTests.DepthProgression"
+  ]
+ },
+ "M43": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-024 MeasurementWorkflowTests.DepthValidation"
+  ]
+ },
+ "M44": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-032 MeasurementWorkflowTests.DurationEditor"
+  ]
+ },
+ "M45": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-030 MeasurementWorkflowTests.CaptureOutcomes"
+  ]
+ },
+ "M46": {
+  "status": "Survived",
+  "how": "",
+  "evidence": "Survived"
+ },
+ "M47": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-036 MeasurementWorkflowTests.DrillholeSwitch"
+  ]
+ },
+ "M48": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-035 MeasurementWorkflowTests.SaveFailureRetry",
+   "FE-036 MeasurementWorkflowTests.SwitchRefusedWhileUnsaved",
+   "FE-038 MeasurementWorkflowTests.NewMeasurementFlow"
+  ]
+ },
+ "M49": {
+  "status": "Killed",
+  "how": "pass3 (improved tests/map)",
+  "evidence": [
+   "FE-046 StatusAndPresentationTests.CellFormatting"
+  ]
+ },
+ "M50": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-046 StatusAndPresentationTests.CellFormatting"
+  ]
+ },
+ "M51": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-046 StatusAndPresentationTests.CellFormatting"
+  ]
+ },
+ "M52": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-002 ApiClientTests.HttpErrors",
+   "FE-010 DrillholeSelectionTests.FailedRefreshKeepsState",
+   "INT-002 HttpIntegrationTests.ServiceUnavailablePropagation"
+  ]
+ },
+ "M53": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-003 ApiClientTests.Unreachable",
+   "FE-010 DrillholeSelectionTests.FailedRefreshKeepsState"
+  ]
+ },
+ "M54": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-005 ApiClientTests.SettingsDefaults"
+  ]
+ },
+ "M55": {
+  "status": "Equivalent",
+  "how": "",
+  "evidence": "only listener re-checks the load status; no observable change"
+ },
+ "M56": {
+  "status": "Killed",
+  "how": "pass2 (Timing)",
+  "evidence": [
+   "FE-006 ApiClientTests.ProbePolling"
+  ]
+ },
+ "M57": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-013 DrillholeSelectionTests.CatalogCleaning"
+  ]
+ },
+ "M58": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-013 DrillholeSelectionTests.CatalogCleaning"
+  ]
+ },
+ "M59": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-014 DrillholeSelectionTests.RankingAndGroups"
+  ]
+ },
+ "M60": {
+  "status": "Killed",
+  "how": "pass3 (improved tests/map)",
+  "evidence": [
+   "FE-014 DrillholeSelectionTests.RankingAndGroups"
+  ]
+ },
+ "M61": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-011 DrillholeSelectionTests.EmptyListKeepsSaved"
+  ]
+ },
+ "M62": {
+  "status": "Killed",
+  "how": "pass3 (improved tests/map)",
+  "evidence": [
+   "FE-007 ApiClientTests.ReloadAfterRecovery"
+  ]
+ },
+ "M63": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-022 CoreInformationTests.SelectionLock"
+  ]
+ },
+ "M64": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-020 CoreInformationTests.SaveAndContinue"
+  ]
+ },
+ "M65": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-019 CoreInformationTests.SaveWithoutPick"
+  ]
+ },
+ "M66": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-028 LocalFilesTests.FileCheckStates"
+  ]
+ },
+ "M67": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-029 LocalFilesTests.Discovery",
+   "FE-044 StatusAndPresentationTests.DatabaseRowsAndRetry",
+   "INT-015 CapturePipelineTests.StatusAndCaptureAgree"
+  ]
+ },
+ "M68": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-029 LocalFilesTests.Discovery"
+  ]
+ },
+ "M69": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-029 LocalFilesTests.Discovery",
+   "FE-044 StatusAndPresentationTests.DatabaseRowsAndRetry"
+  ]
+ },
+ "M70": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-043 StatusAndPresentationTests.BluetoothSelection"
+  ]
+ },
+ "M71": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-042 StatusAndPresentationTests.Announcements"
+  ]
+ },
+ "M72": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-042 StatusAndPresentationTests.Announcements"
+  ]
+ },
+ "M73": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-041 StatusAndPresentationTests.ToastRules"
+  ]
+ },
+ "M74": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "FE-019 CoreInformationTests.SaveWithoutPick",
+   "FE-041 StatusAndPresentationTests.ToastRules"
+  ]
+ },
+ "M75": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-002 DrillholeApiTests.SqlFailureIs503",
+   "INT-002 HttpIntegrationTests.ServiceUnavailablePropagation"
+  ]
+ },
+ "M76": {
+  "status": "Killed",
+  "how": "pass1",
+  "evidence": [
+   "BE-002 DrillholeApiTests.SqlFailureIs503",
+   "INT-002 HttpIntegrationTests.ServiceUnavailablePropagation"
+  ]
+ },
+ "M77": {
+  "status": "NoCoverage",
+  "how": "",
+  "evidence": "only BE-006 (Sql, skipped) executes the query"
+ }
+}

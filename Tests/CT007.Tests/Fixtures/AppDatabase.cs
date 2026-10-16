@@ -10,10 +10,17 @@ public static class AppDatabase
     public static readonly Guid SessionA = Guid.Parse("11111111-1111-1111-1111-111111111111");
     public static readonly Guid SessionB = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
+    // Unpooled, so no handle stays open after the call (tests delete or lock these files right after).
+    private static SqliteConnection Open(string path, bool foreignKeys = true)
+    {
+        var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false, ForeignKeys = foreignKeys }.ToString());
+        connection.Open();
+        return connection;
+    }
+
     public static object? Scalar(string path, string sql)
     {
-        using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString());
-        connection.Open();
+        using var connection = Open(path);
         using var command = connection.CreateCommand();
         command.CommandText = sql;
         return command.ExecuteScalar();
@@ -30,8 +37,7 @@ public static class AppDatabase
 
     public static List<string> Rows(string path, string sql)
     {
-        using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString());
-        connection.Open();
+        using var connection = Open(path);
         using var command = connection.CreateCommand();
         command.CommandText = sql;
         using var reader = command.ExecuteReader();
@@ -49,8 +55,7 @@ public static class AppDatabase
     /// may contain deliberately broken links).</summary>
     public static void Execute(string path, string sql)
     {
-        using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false, ForeignKeys = false }.ToString());
-        connection.Open();
+        using var connection = Open(path, foreignKeys: false);
         using var command = connection.CreateCommand();
         command.CommandText = sql;
         command.ExecuteNonQuery();

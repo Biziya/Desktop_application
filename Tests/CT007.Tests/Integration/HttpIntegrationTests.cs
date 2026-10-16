@@ -7,9 +7,6 @@ namespace Ct007.Tests.IntegrationTests;
 /// <summary>INT-001…INT-006: real frontend API client and pages against the in-process backend over HTTP (F01, F02, F04, F05, F19).</summary>
 public static class HttpIntegrationTests
 {
-    private const string RefusedConnection =
-        "Server=tcp:127.0.0.1,1;Database=CT007_Test;User ID=ct007_test_user;Password=NotARealPassword-1;Connect Timeout=3;ConnectRetryCount=0;Encrypt=False";
-
     private static MainViewModel Shell(string baseUrl, IMeasurementRepository repository, IMeasurementService capture, string gammaGuardPath,
         TimeSpan? statusInterval = null, double timeoutSeconds = 5) =>
         new(repository, new ApiSettings(baseUrl, TimeSpan.FromSeconds(timeoutSeconds), statusInterval ?? TimeSpan.FromMinutes(5)),
@@ -57,7 +54,7 @@ public static class HttpIntegrationTests
     {
         await using var backend = await TestBackend.StartAsync(settings: new Dictionary<string, string?>
         {
-            ["ConnectionStrings:DefaultConnection"] = RefusedConnection
+            ["ConnectionStrings:DefaultConnection"] = TestBackend.RefusedSqlConnection
         });
         using var folder = new TestFolder();
         var db = folder.Path("m.db");

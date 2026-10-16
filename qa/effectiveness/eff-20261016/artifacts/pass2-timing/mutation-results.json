@@ -1,0 +1,146 @@
+[
+    {
+        "id":  "M01",
+        "file":  "Frontend/Calculation/Measurement/Depth.cs",
+        "kind":  "relational",
+        "effect":  "negative starting depth accepted",
+        "selected":  25,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  69
+    },
+    {
+        "id":  "M25",
+        "file":  "Frontend/Calculation/Measurement/MeasurementOrder.cs",
+        "kind":  "boundary",
+        "effect":  "insert position among equal rows",
+        "selected":  25,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  65
+    },
+    {
+        "id":  "M26",
+        "file":  "Frontend/Calculation/Measurement/CaptureDurationSettings.cs",
+        "kind":  "boundary",
+        "effect":  "10 s duration rejected",
+        "selected":  16,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  67
+    },
+    {
+        "id":  "M27",
+        "file":  "Frontend/Calculation/Measurement/CaptureDurationSettings.cs",
+        "kind":  "validation",
+        "effect":  "signed/whitespace durations accepted",
+        "selected":  16,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  64
+    },
+    {
+        "id":  "M31",
+        "file":  "Frontend/Pages/Measurement/MeasurementRepository.cs",
+        "kind":  "rounding",
+        "effect":  "cm -\u003e mm truncated instead of rounded",
+        "selected":  30,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  72
+    },
+    {
+        "id":  "M46",
+        "file":  "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+        "kind":  "remove condition",
+        "effect":  "late session open not discarded",
+        "selected":  41,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  86
+    },
+    {
+        "id":  "M49",
+        "file":  "Frontend/Pages/Measurement/MeasurementResult.cs",
+        "kind":  "boundary",
+        "effect":  "complete capture shown as incomplete",
+        "selected":  41,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-046 StatusAndPresentationTests.CellFormatting"
+                     ],
+        "seconds":  88
+    },
+    {
+        "id":  "M55",
+        "file":  "Frontend/Api/BackendConnection.cs",
+        "kind":  "condition",
+        "effect":  "CameOnline raised on every successful probe",
+        "selected":  33,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  76
+    },
+    {
+        "id":  "M56",
+        "file":  "Frontend/Api/BackendConnection.cs",
+        "kind":  "remove condition",
+        "effect":  "overlapping probes",
+        "selected":  33,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-006 ApiClientTests.ProbePolling"
+                     ],
+        "seconds":  78
+    },
+    {
+        "id":  "M60",
+        "file":  "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+        "kind":  "boundary",
+        "effect":  "closest match tie-break",
+        "selected":  40,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  75
+    },
+    {
+        "id":  "M62",
+        "file":  "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+        "kind":  "condition",
+        "effect":  "reload on every CameOnline",
+        "selected":  40,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-007 ApiClientTests.ReloadAfterRecovery"
+                     ],
+        "seconds":  75
+    },
+    {
+        "id":  "M77",
+        "file":  "Backend/Repositories/CoreInformation/Drillhole/DrillholeRepository.cs",
+        "kind":  "sql",
+        "effect":  "campaign taken from the wrong end",
+        "selected":  32,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  73
+    }
+]

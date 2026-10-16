@@ -9,10 +9,6 @@ namespace Ct007.Tests.EndToEnd;
 /// </summary>
 public static class DesktopWorkflowTests
 {
-    private const string CsvHeader =
-        "\"No\",\"Capture No\",\"Start Time\",\"End Time\",\"Sample\",\"ts_ms\",\"count0\",\"count0_raw\",\"hdm\",\"hdm_raw\",\"dose_rate\"," +
-        "\"Drillhole\",\"Project\",\"Campaign\",\"Operator\",\"Notes\",\"session_id\"";
-
     private static async Task MeasureThree(DesktopApp app)
     {
         await app.PickDrillhole("DH-0", "North Ridge");
@@ -49,7 +45,7 @@ public static class DesktopWorkflowTests
         await Task.Delay(500);
 
         var lines = File.ReadAllText(target).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
-        Assert.Equal(CsvHeader, lines[0].TrimStart('﻿'), "CSV header");
+        Assert.Equal(BackendTests.CsvExportTests.Header, lines[0].TrimStart('﻿'), "CSV header");
         Assert.Equal(4, lines.Length, "header + 3 rows");
         Assert.True(lines.Skip(1).All(l => l.Contains(",\"DH-001\",\"North Ridge\",\"2024\",", StringComparison.Ordinal)), "rows carry the drillhole");
     }

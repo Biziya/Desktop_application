@@ -1,0 +1,970 @@
+[
+    {
+        "id":  "M01",
+        "file":  "Frontend/Calculation/Measurement/Depth.cs",
+        "kind":  "relational",
+        "effect":  "negative starting depth accepted",
+        "selected":  25,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M02",
+        "file":  "Frontend/Calculation/Measurement/Depth.cs",
+        "kind":  "arithmetic",
+        "effect":  "metres converted with the wrong factor",
+        "selected":  25,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-015 DepthAndOrderTests.ParseMetres",
+                         "BE-017 DepthAndOrderTests.Formatting",
+                         "FE-026 MeasurementWorkflowTests.CaptureCycle",
+                         "FE-029 MeasurementWorkflowTests.DepthProgression",
+                         "FE-033 MeasurementWorkflowTests.SortedInsert",
+                         "INT-007 CapturePipelineTests.CaptureToStorage",
+                         "INT-010 CapturePipelineTests.AppDatabaseFailureAndRecovery",
+                         "INT-011 CapturePipelineTests.ReopenMeasuredDrillhole",
+                         "INT-012 CapturePipelineTests.NoSessionMixing",
+                         "INT-017 CapturePipelineTests.UpgradeThenMeasure"
+                     ],
+        "seconds":  11
+    },
+    {
+        "id":  "M03",
+        "file":  "Frontend/Calculation/Measurement/Depth.cs",
+        "kind":  "remove condition",
+        "effect":  "sub-millimetre depth accepted",
+        "selected":  25,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-015 DepthAndOrderTests.ParseMetres",
+                         "FE-024 MeasurementWorkflowTests.DepthValidation"
+                     ],
+        "seconds":  12
+    },
+    {
+        "id":  "M04",
+        "file":  "Frontend/Calculation/Measurement/Depth.cs",
+        "kind":  "boundary",
+        "effect":  "parser rejects a 0 cm step",
+        "selected":  25,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-016 DepthAndOrderTests.ParseCentimetres",
+                         "BE-017 DepthAndOrderTests.Formatting"
+                     ],
+        "seconds":  12
+    },
+    {
+        "id":  "M05",
+        "file":  "Frontend/Calculation/Measurement/Depth.cs",
+        "kind":  "arithmetic",
+        "effect":  "step converted with the wrong factor",
+        "selected":  25,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-016 DepthAndOrderTests.ParseCentimetres",
+                         "BE-017 DepthAndOrderTests.Formatting",
+                         "BE-018 DepthAndOrderTests.NoCumulativeDrift",
+                         "FE-024 MeasurementWorkflowTests.DepthValidation",
+                         "FE-026 MeasurementWorkflowTests.CaptureCycle",
+                         "FE-029 MeasurementWorkflowTests.DepthProgression",
+                         "INT-007 CapturePipelineTests.CaptureToStorage",
+                         "INT-010 CapturePipelineTests.AppDatabaseFailureAndRecovery",
+                         "INT-012 CapturePipelineTests.NoSessionMixing"
+                     ],
+        "seconds":  12
+    },
+    {
+        "id":  "M06",
+        "file":  "Frontend/Calculation/Measurement/Depth.cs",
+        "kind":  "format",
+        "effect":  "step shown without its decimal",
+        "selected":  25,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-017 DepthAndOrderTests.Formatting"
+                     ],
+        "seconds":  11
+    },
+    {
+        "id":  "M07",
+        "file":  "Frontend/Calculation/Measurement/DeviceSamples.cs",
+        "kind":  "boundary",
+        "effect":  "sample at the click itself accepted",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-020 CaptureLogicTests.WindowMembership"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M08",
+        "file":  "Frontend/Calculation/Measurement/DeviceSamples.cs",
+        "kind":  "boundary",
+        "effect":  "sample at the window end rejected",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-020 CaptureLogicTests.WindowMembership",
+                         "BE-025 CaptureLogicTests.PollingAndFinalRead",
+                         "INT-007 CapturePipelineTests.CaptureToStorage",
+                         "INT-015 CapturePipelineTests.StatusAndCaptureAgree"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M09",
+        "file":  "Frontend/Calculation/Measurement/DeviceSamples.cs",
+        "kind":  "constant",
+        "effect":  "expected samples can be 0",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-021 CaptureLogicTests.ExpectedSamples"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M10",
+        "file":  "Frontend/Calculation/Measurement/DeviceSamples.cs",
+        "kind":  "remove condition",
+        "effect":  "samples of another detector accepted",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-020 CaptureLogicTests.WindowMembership"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M11",
+        "file":  "Frontend/Calculation/Measurement/DeviceSamples.cs",
+        "kind":  "remove condition",
+        "effect":  "duplicate readings accepted",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-020 CaptureLogicTests.WindowMembership"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M12",
+        "file":  "Frontend/Calculation/Measurement/DeviceSamples.cs",
+        "kind":  "predicate",
+        "effect":  "infinite values averaged",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-022 CaptureLogicTests.Averaging"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M13",
+        "file":  "Frontend/Calculation/Measurement/DeviceSamples.cs",
+        "kind":  "relational",
+        "effect":  "mixed device sessions reported as one",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-022 CaptureLogicTests.Averaging"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M14",
+        "file":  "Frontend/Calculation/Measurement/DeviceSamples.cs",
+        "kind":  "ordering",
+        "effect":  "last instead of first ts_ms",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-022 CaptureLogicTests.Averaging",
+                         "INT-007 CapturePipelineTests.CaptureToStorage"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M15",
+        "file":  "Frontend/Calculation/Measurement/DeviceSamples.cs",
+        "kind":  "constant",
+        "effect":  "some non-millisecond time bases accepted",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-023 CaptureLogicTests.TimeBasis"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M16",
+        "file":  "Frontend/Calculation/Measurement/DeviceSamples.cs",
+        "kind":  "boundary",
+        "effect":  "exactly 12 h difference refused",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-023 CaptureLogicTests.TimeBasis"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M17",
+        "file":  "Frontend/Calculation/Core-Information/GammaGuardDatabase/GammaGuardCaptureDevices.cs",
+        "kind":  "boundary",
+        "effect":  "detectors exactly 5 s apart not refused",
+        "selected":  20,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-024 CaptureLogicTests.DetectorPick"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M18",
+        "file":  "Frontend/Calculation/Core-Information/GammaGuardDatabase/GammaGuardCaptureDevices.cs",
+        "kind":  "ordering",
+        "effect":  "oldest detector picked",
+        "selected":  20,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-024 CaptureLogicTests.DetectorPick"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M19",
+        "file":  "Frontend/Calculation/Core-Information/GammaGuardDatabase/GammaGuardCaptureDevices.cs",
+        "kind":  "condition",
+        "effect":  "capture allowed from a missing/busy database",
+        "selected":  20,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-024 CaptureLogicTests.ResolveNeedsAvailableDatabase"
+                     ],
+        "seconds":  12
+    },
+    {
+        "id":  "M20",
+        "file":  "Frontend/Calculation/Measurement/DeviceCaptureService.cs",
+        "kind":  "remove lookback",
+        "effect":  "rows written just before the click missed",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-025 CaptureLogicTests.PollingAndFinalRead",
+                         "INT-007 CapturePipelineTests.CaptureToStorage",
+                         "INT-009 CapturePipelineTests.GammaGuardUnavailable",
+                         "INT-015 CapturePipelineTests.StatusAndCaptureAgree"
+                     ],
+        "seconds":  16
+    },
+    {
+        "id":  "M21",
+        "file":  "Frontend/Calculation/Measurement/DeviceCaptureService.cs",
+        "kind":  "remove branch",
+        "effect":  "no final read for late rows",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-025 CaptureLogicTests.PollingAndFinalRead"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M22",
+        "file":  "Frontend/Calculation/Measurement/DeviceCaptureService.cs",
+        "kind":  "remove condition",
+        "effect":  "time-basis check skipped",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-026 CaptureLogicTests.TimeCheckAndCancellation"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M23",
+        "file":  "Frontend/Calculation/Measurement/MeasurementOrder.cs",
+        "kind":  "return value",
+        "effect":  "rows without depth sorted first",
+        "selected":  25,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-019 DepthAndOrderTests.Ordering"
+                     ],
+        "seconds":  12
+    },
+    {
+        "id":  "M24",
+        "file":  "Frontend/Calculation/Measurement/MeasurementOrder.cs",
+        "kind":  "negation",
+        "effect":  "equal depths ordered newest first",
+        "selected":  25,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-019 DepthAndOrderTests.Ordering"
+                     ],
+        "seconds":  11
+    },
+    {
+        "id":  "M25",
+        "file":  "Frontend/Calculation/Measurement/MeasurementOrder.cs",
+        "kind":  "boundary",
+        "effect":  "insert position among equal rows",
+        "selected":  25,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  12
+    },
+    {
+        "id":  "M26",
+        "file":  "Frontend/Calculation/Measurement/CaptureDurationSettings.cs",
+        "kind":  "boundary",
+        "effect":  "10 s duration rejected",
+        "selected":  16,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  10
+    },
+    {
+        "id":  "M27",
+        "file":  "Frontend/Calculation/Measurement/CaptureDurationSettings.cs",
+        "kind":  "validation",
+        "effect":  "signed/whitespace durations accepted",
+        "selected":  16,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  10
+    },
+    {
+        "id":  "M28",
+        "file":  "Frontend/Pages/Measurement/MeasurementRepository.cs",
+        "kind":  "remove validation",
+        "effect":  "row of another session saved",
+        "selected":  30,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-032 MeasurementRepositoryTests.AtomicSave",
+                         "BE-033 MeasurementRepositoryTests.IsolationAndUniqueCaptureNumbers"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M29",
+        "file":  "Frontend/Pages/Measurement/MeasurementRepository.cs",
+        "kind":  "update scope",
+        "effect":  "stored values overwritten on re-save",
+        "selected":  30,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-032 MeasurementRepositoryTests.AtomicSave"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M30",
+        "file":  "Frontend/Pages/Measurement/MeasurementRepository.cs",
+        "kind":  "boundary",
+        "effect":  "newer schema accepted",
+        "selected":  30,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-037 MeasurementRepositoryTests.MigrationRefusals"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M31",
+        "file":  "Frontend/Pages/Measurement/MeasurementRepository.cs",
+        "kind":  "rounding",
+        "effect":  "cm -\u003e mm truncated instead of rounded",
+        "selected":  30,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M32",
+        "file":  "Frontend/Pages/Measurement/MeasurementRepository.cs",
+        "kind":  "arithmetic",
+        "effect":  "progress stored in the wrong unit",
+        "selected":  30,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-032 MeasurementRepositoryTests.AtomicSave",
+                         "BE-035 MeasurementRepositoryTests.RoundTripPrecision",
+                         "INT-007 CapturePipelineTests.CaptureToStorage",
+                         "INT-010 CapturePipelineTests.AppDatabaseFailureAndRecovery",
+                         "INT-011 CapturePipelineTests.ReopenMeasuredDrillhole",
+                         "INT-012 CapturePipelineTests.NoSessionMixing"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M33",
+        "file":  "Frontend/Pages/Measurement/MeasurementRepository.cs",
+        "kind":  "conflict rule",
+        "effect":  "stored session metadata overwritten",
+        "selected":  30,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-031 MeasurementRepositoryTests.SessionResolution"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M34",
+        "file":  "Frontend/Pages/Measurement/MeasurementRepository.cs",
+        "kind":  "remove check",
+        "effect":  "orphan records accepted by migration",
+        "selected":  30,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-037 MeasurementRepositoryTests.MigrationRefusals"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M35",
+        "file":  "Frontend/Pages/Measurement/MeasurementRepository.cs",
+        "kind":  "boundary",
+        "effect":  "single duplicate Drillhole ID accepted",
+        "selected":  30,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-037 MeasurementRepositoryTests.MigrationRefusals"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M36",
+        "file":  "Frontend/Pages/Measurement/MeasurementRepository.cs",
+        "kind":  "remove statement",
+        "effect":  "samples not deleted with their record",
+        "selected":  30,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-034 MeasurementRepositoryTests.Delete",
+                         "INT-013 CapturePipelineTests.DeleteReloadExport"
+                     ],
+        "seconds":  17
+    },
+    {
+        "id":  "M37",
+        "file":  "Frontend/Pages/Measurement/CsvExportService.cs",
+        "kind":  "remove case",
+        "effect":  "\u0027-\u0027 formula prefix not neutralised",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-043 CsvExportTests.InjectionAndMixing"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M38",
+        "file":  "Frontend/Pages/Measurement/CsvExportService.cs",
+        "kind":  "remove trim",
+        "effect":  "formula after leading spaces not neutralised",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-043 CsvExportTests.InjectionAndMixing"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M39",
+        "file":  "Frontend/Pages/Measurement/CsvExportService.cs",
+        "kind":  "remove escaping",
+        "effect":  "embedded quotes not doubled",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-043 CsvExportTests.InjectionAndMixing"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M40",
+        "file":  "Frontend/Pages/Measurement/CsvExportService.cs",
+        "kind":  "remove validation",
+        "effect":  "mixed-session export allowed",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-043 CsvExportTests.InjectionAndMixing"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M41",
+        "file":  "Frontend/Pages/Measurement/CsvExportService.cs",
+        "kind":  "culture",
+        "effect":  "numbers exported in the local culture",
+        "selected":  23,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-042 CsvExportTests.Structure"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M42",
+        "file":  "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+        "kind":  "condition",
+        "effect":  "depth advances although edited during capture",
+        "selected":  40,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-029 MeasurementWorkflowTests.DepthProgression"
+                     ],
+        "seconds":  19
+    },
+    {
+        "id":  "M43",
+        "file":  "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+        "kind":  "remove validation",
+        "effect":  "0 cm step accepted",
+        "selected":  40,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-024 MeasurementWorkflowTests.DepthValidation"
+                     ],
+        "seconds":  19
+    },
+    {
+        "id":  "M44",
+        "file":  "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+        "kind":  "remove condition",
+        "effect":  "capture while the duration editor is open",
+        "selected":  40,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-032 MeasurementWorkflowTests.DurationEditor"
+                     ],
+        "seconds":  19
+    },
+    {
+        "id":  "M45",
+        "file":  "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+        "kind":  "negation",
+        "effect":  "incomplete warning on complete captures",
+        "selected":  40,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-030 MeasurementWorkflowTests.CaptureOutcomes"
+                     ],
+        "seconds":  19
+    },
+    {
+        "id":  "M46",
+        "file":  "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+        "kind":  "remove condition",
+        "effect":  "late session open not discarded",
+        "selected":  40,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  19
+    },
+    {
+        "id":  "M47",
+        "file":  "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+        "kind":  "remove condition",
+        "effect":  "late stored-drillhole load shown",
+        "selected":  40,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-036 MeasurementWorkflowTests.DrillholeSwitch"
+                     ],
+        "seconds":  23
+    },
+    {
+        "id":  "M48",
+        "file":  "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+        "kind":  "constant",
+        "effect":  "failed save not retried",
+        "selected":  40,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-035 MeasurementWorkflowTests.SaveFailureRetry",
+                         "FE-036 MeasurementWorkflowTests.SwitchRefusedWhileUnsaved",
+                         "FE-038 MeasurementWorkflowTests.NewMeasurementFlow"
+                     ],
+        "seconds":  25
+    },
+    {
+        "id":  "M49",
+        "file":  "Frontend/Pages/Measurement/MeasurementResult.cs",
+        "kind":  "boundary",
+        "effect":  "complete capture shown as incomplete",
+        "selected":  40,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  19
+    },
+    {
+        "id":  "M50",
+        "file":  "Frontend/Pages/Measurement/MeasurementCellFormat.cs",
+        "kind":  "rounding",
+        "effect":  "display rounding mode",
+        "selected":  18,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-046 StatusAndPresentationTests.CellFormatting"
+                     ],
+        "seconds":  11
+    },
+    {
+        "id":  "M51",
+        "file":  "Frontend/Pages/Measurement/MeasurementCellFormat.cs",
+        "kind":  "remove clean-up",
+        "effect":  "\u0027-0\u0027 shown",
+        "selected":  18,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-046 StatusAndPresentationTests.CellFormatting"
+                     ],
+        "seconds":  11
+    },
+    {
+        "id":  "M52",
+        "file":  "Frontend/Api/ApiClient.cs",
+        "kind":  "remove branch",
+        "effect":  "HTTP errors parsed as data",
+        "selected":  33,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-002 ApiClientTests.HttpErrors",
+                         "FE-010 DrillholeSelectionTests.FailedRefreshKeepsState",
+                         "INT-002 HttpIntegrationTests.ServiceUnavailablePropagation"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M53",
+        "file":  "Frontend/Api/ApiClient.cs",
+        "kind":  "swap messages",
+        "effect":  "timeout and refusal messages swapped",
+        "selected":  33,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-003 ApiClientTests.Unreachable",
+                         "FE-010 DrillholeSelectionTests.FailedRefreshKeepsState"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M54",
+        "file":  "Frontend/Api/ApiSettings.cs",
+        "kind":  "boundary",
+        "effect":  "0 s timeout accepted",
+        "selected":  33,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-005 ApiClientTests.SettingsDefaults"
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M55",
+        "file":  "Frontend/Api/BackendConnection.cs",
+        "kind":  "condition",
+        "effect":  "CameOnline raised on every successful probe",
+        "selected":  33,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M56",
+        "file":  "Frontend/Api/BackendConnection.cs",
+        "kind":  "remove condition",
+        "effect":  "overlapping probes",
+        "selected":  33,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  14
+    },
+    {
+        "id":  "M57",
+        "file":  "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+        "kind":  "predicate",
+        "effect":  "blank Hole IDs kept",
+        "selected":  39,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-013 DrillholeSelectionTests.CatalogCleaning"
+                     ],
+        "seconds":  16
+    },
+    {
+        "id":  "M58",
+        "file":  "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+        "kind":  "comparer",
+        "effect":  "case-variant duplicates kept",
+        "selected":  39,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-013 DrillholeSelectionTests.CatalogCleaning"
+                     ],
+        "seconds":  16
+    },
+    {
+        "id":  "M59",
+        "file":  "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+        "kind":  "constant",
+        "effect":  "exact match ranked last",
+        "selected":  39,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-014 DrillholeSelectionTests.RankingAndGroups"
+                     ],
+        "seconds":  16
+    },
+    {
+        "id":  "M60",
+        "file":  "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+        "kind":  "boundary",
+        "effect":  "closest match tie-break",
+        "selected":  39,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  16
+    },
+    {
+        "id":  "M61",
+        "file":  "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+        "kind":  "condition",
+        "effect":  "empty server list replaces the saved list",
+        "selected":  39,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-011 DrillholeSelectionTests.EmptyListKeepsSaved"
+                     ],
+        "seconds":  16
+    },
+    {
+        "id":  "M62",
+        "file":  "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+        "kind":  "condition",
+        "effect":  "reload on every CameOnline",
+        "selected":  39,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  16
+    },
+    {
+        "id":  "M63",
+        "file":  "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+        "kind":  "remove lock",
+        "effect":  "typing changes the drillhole while measuring",
+        "selected":  39,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-022 CoreInformationTests.SelectionLock"
+                     ],
+        "seconds":  16
+    },
+    {
+        "id":  "M64",
+        "file":  "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+        "kind":  "predicate",
+        "effect":  "blank Operator not autofilled",
+        "selected":  39,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-020 CoreInformationTests.SaveAndContinue"
+                     ],
+        "seconds":  16
+    },
+    {
+        "id":  "M65",
+        "file":  "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+        "kind":  "remove validation",
+        "effect":  "save without a drillhole",
+        "selected":  39,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-019 CoreInformationTests.SaveWithoutPick"
+                     ],
+        "seconds":  15
+    },
+    {
+        "id":  "M66",
+        "file":  "Frontend/Calculation/Core-Information/SqliteFileCheck.cs",
+        "kind":  "remove case",
+        "effect":  "busy database not reported as Busy",
+        "selected":  20,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-028 LocalFilesTests.FileCheckStates"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M67",
+        "file":  "Frontend/Calculation/Core-Information/GammaGuardDatabase/GammaGuardDatabaseCheck.cs",
+        "kind":  "constant",
+        "effect":  "wrong subfolder searched",
+        "selected":  20,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-029 LocalFilesTests.Discovery",
+                         "FE-044 StatusAndPresentationTests.DatabaseRowsAndRetry",
+                         "INT-015 CapturePipelineTests.StatusAndCaptureAgree"
+                     ],
+        "seconds":  12
+    },
+    {
+        "id":  "M68",
+        "file":  "Frontend/Calculation/Core-Information/GammaGuardDatabase/GammaGuardDatabaseCheck.cs",
+        "kind":  "ordering",
+        "effect":  "oldest database chosen",
+        "selected":  20,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-029 LocalFilesTests.Discovery"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M69",
+        "file":  "Frontend/Calculation/Core-Information/GammaGuardDatabase/GammaGuardDatabaseCheck.cs",
+        "kind":  "remove normalisation",
+        "effect":  "\u0027Gamma Guard\u0027 folder not recognised",
+        "selected":  20,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-029 LocalFilesTests.Discovery",
+                         "FE-044 StatusAndPresentationTests.DatabaseRowsAndRetry"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M70",
+        "file":  "Frontend/Calculation/Core-Information/BluetoothDevice/Ct007BluetoothCheck.cs",
+        "kind":  "remove check",
+        "effect":  "device with another address accepted",
+        "selected":  22,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-043 StatusAndPresentationTests.BluetoothSelection"
+                     ],
+        "seconds":  10
+    },
+    {
+        "id":  "M71",
+        "file":  "Frontend/ViewModels/StatusAnnouncements.cs",
+        "kind":  "negation",
+        "effect":  "online announcement condition inverted",
+        "selected":  18,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-042 StatusAndPresentationTests.Announcements"
+                     ],
+        "seconds":  10
+    },
+    {
+        "id":  "M72",
+        "file":  "Frontend/ViewModels/StatusAnnouncements.cs",
+        "kind":  "remove condition",
+        "effect":  "first known state announced",
+        "selected":  18,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-042 StatusAndPresentationTests.Announcements"
+                     ],
+        "seconds":  10
+    },
+    {
+        "id":  "M73",
+        "file":  "Frontend/Shared/Infrastructure/ToastService.cs",
+        "kind":  "boundary",
+        "effect":  "five toasts visible",
+        "selected":  20,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-041 StatusAndPresentationTests.ToastRules"
+                     ],
+        "seconds":  11
+    },
+    {
+        "id":  "M74",
+        "file":  "Frontend/Shared/Infrastructure/ToastService.cs",
+        "kind":  "constant",
+        "effect":  "errors shown for 3 s",
+        "selected":  20,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-019 CoreInformationTests.SaveWithoutPick",
+                         "FE-041 StatusAndPresentationTests.ToastRules"
+                     ],
+        "seconds":  11
+    },
+    {
+        "id":  "M75",
+        "file":  "Backend/Controllers/CoreInformation/Drillhole/DrillholeController.cs",
+        "kind":  "exception type",
+        "effect":  "SQL outage becomes HTTP 500",
+        "selected":  32,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-002 DrillholeApiTests.SqlFailureIs503",
+                         "INT-002 HttpIntegrationTests.ServiceUnavailablePropagation"
+                     ],
+        "seconds":  15
+    },
+    {
+        "id":  "M76",
+        "file":  "Backend/Controllers/CoreInformation/Drillhole/DrillholeController.cs",
+        "kind":  "constant",
+        "effect":  "outage status 500 instead of 503",
+        "selected":  32,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-002 DrillholeApiTests.SqlFailureIs503",
+                         "INT-002 HttpIntegrationTests.ServiceUnavailablePropagation"
+                     ],
+        "seconds":  13
+    },
+    {
+        "id":  "M77",
+        "file":  "Backend/Repositories/CoreInformation/Drillhole/DrillholeRepository.cs",
+        "kind":  "sql",
+        "effect":  "campaign taken from the wrong end",
+        "selected":  32,
+        "status":  "Survived",
+        "killedBy":  [
+
+                     ],
+        "seconds":  13
+    }
+]

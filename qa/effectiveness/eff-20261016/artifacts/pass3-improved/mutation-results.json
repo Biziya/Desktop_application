@@ -1,0 +1,62 @@
+[
+    {
+        "id":  "M26",
+        "file":  "Frontend/Calculation/Measurement/CaptureDurationSettings.cs",
+        "kind":  "boundary",
+        "effect":  "10 s duration rejected",
+        "selected":  16,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-030 LocalFilesTests.DurationSettings"
+                     ],
+        "seconds":  11
+    },
+    {
+        "id":  "M27",
+        "file":  "Frontend/Calculation/Measurement/CaptureDurationSettings.cs",
+        "kind":  "validation",
+        "effect":  "signed/whitespace durations accepted",
+        "selected":  16,
+        "status":  "Killed",
+        "killedBy":  [
+                         "BE-030 LocalFilesTests.DurationSettings"
+                     ],
+        "seconds":  11
+    },
+    {
+        "id":  "M49",
+        "file":  "Frontend/Pages/Measurement/MeasurementResult.cs",
+        "kind":  "boundary",
+        "effect":  "complete capture shown as incomplete",
+        "selected":  41,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-046 StatusAndPresentationTests.CellFormatting"
+                     ],
+        "seconds":  19
+    },
+    {
+        "id":  "M60",
+        "file":  "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+        "kind":  "boundary",
+        "effect":  "closest match tie-break",
+        "selected":  40,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-014 DrillholeSelectionTests.RankingAndGroups"
+                     ],
+        "seconds":  16
+    },
+    {
+        "id":  "M62",
+        "file":  "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+        "kind":  "condition",
+        "effect":  "reload on every CameOnline",
+        "selected":  40,
+        "status":  "Killed",
+        "killedBy":  [
+                         "FE-007 ApiClientTests.ReloadAfterRecovery"
+                     ],
+        "seconds":  16
+    }
+]
