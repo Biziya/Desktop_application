@@ -18,16 +18,16 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Control area, one row: control column (Starting Depth, Step, Start / Stop toggle — all the same width) | bar chart |
-             countdown. "to" is calculated (from + step), so there is no To input. Depth edits, also during acquisition,
+        <!-- Control area, one row: control column (Starting Depth, Step, Start / Stop toggle — all the same width) | countdown |
+             bar chart (remaining width). "to" is calculated (from + step), so there is no To input. Depth edits, also during acquisition,
              apply from the next capture. The chart takes the remaining width (about 205 px at the smallest window). -->
         <Border Style="{StaticResource Card}">
             <StackPanel>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Width="{local:Scale StartStopButtonWidth}" VerticalAlignment="Center">
@@ -79,18 +79,7 @@
                         </Button>
                     </StackPanel>
 
-                    <local:DepthBarChart Grid.Column="1"
-                                         Margin="24,0"
-                                         MinHeight="200"
-                                         ItemsSource="{Binding Results}"
-                                         BarBrush="{StaticResource Blue}"
-                                         BarSeparatorBrush="{StaticResource Surface}"
-                                         GridBrush="{StaticResource Line}"
-                                         AxisBrush="{StaticResource Muted}"
-                                         Foreground="{StaticResource LabelText}"
-                                         AutomationProperties.Name="Bar chart of ts_ms by depth"/>
-
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="24,0">
                         <TextBlock Text="Capture Countdown"
                                    FontSize="{local:Scale CountdownLabelFontSize}"
                                    Foreground="{StaticResource Muted}"
@@ -151,6 +140,17 @@
                             </Border>
                         </Popup>
                     </StackPanel>
+                    <local:DepthBarChart Grid.Column="2"
+                                         Margin="0,0,0,0"
+                                         MinHeight="200"
+                                         ItemsSource="{Binding Results}"
+                                         BarBrush="{StaticResource Blue}"
+                                         BarSeparatorBrush="{StaticResource Surface}"
+                                         GridBrush="{StaticResource Line}"
+                                         AxisBrush="{StaticResource Muted}"
+                                         Foreground="{StaticResource LabelText}"
+                                         AutomationProperties.Name="Bar chart of ts_ms by depth"/>
+
                 </Grid>
 
                 <!-- The drillhole warning: shown while no drillhole is saved for measuring (also when none is selected,

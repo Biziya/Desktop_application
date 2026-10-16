@@ -7,14 +7,15 @@ namespace Frontend.Calculation.Measurement;
 /// The capture duration (seconds), edited by clicking the countdown and kept in a small JSON file next to the
 /// measurement database (%LocalAppData%\CT007_Measurement_Studio\capture-settings.json). This is the one place the
 /// limits are defined: whole seconds from <see cref="MinSeconds"/> to <see cref="MaxSeconds"/>; 5 s when nothing is
-/// saved. The upper limit keeps one capture (one averaged row, one sample per second) within ten minutes.
+/// saved. The detector records about one sample per second, so a capture expects as many samples as seconds (2–10).
+/// A saved value outside the limits (e.g. from an earlier version that allowed longer captures) falls back to 5 s.
 /// Historical measurement records are never touched.
 /// </summary>
 public sealed class CaptureDurationSettings(string? path)
 {
     public const int DefaultSeconds = 5;
-    public const int MinSeconds = 1;
-    public const int MaxSeconds = 600;
+    public const int MinSeconds = 2;
+    public const int MaxSeconds = 10;
 
     /// <summary>Settings file beside the measurement database.</summary>
     public static string PathBeside(string databasePath) =>

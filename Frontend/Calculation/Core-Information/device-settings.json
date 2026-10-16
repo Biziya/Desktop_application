@@ -1,7 +1,8 @@
 {
-  "ct007Names": [ "CT007", "CT-007" ],
+  "ct007NamePrefix": "CT007-M-",
   "ct007Address": "",
   "gammaGuardDatabasePath": "",
   "gammaGuardFileName": "*.sqlite",
-  "checkIntervalSeconds": 5
+  "checkIntervalSeconds": 5,
+  "bluetoothCheckIntervalSeconds": 1
 }

@@ -28,7 +28,39 @@ public sealed class MeasurementResult : ObservableObject
 
     public required DateTimeOffset EndTime { get; init; }
 
+    // Samples the result is the average of (accepted samples actually received; never the configured duration).
     public required int SampleCount { get; init; }
+
+    // Samples the capture window should have contained (one per second of the duration); null for older rows.
+    public int? ExpectedSamples { get; init; }
+
+    // Length of the capture window in milliseconds (EndTime - StartTime); null for rows stored before it was recorded.
+    public long? DurationMs { get; init; }
+
+    // Fewer samples arrived than the window should contain: the average is over the samples received.
+    public bool IsIncomplete => ExpectedSamples is { } expected && SampleCount < expected;
+
+    // Table text of the Sample column: "5", or "3 of 5" for an incomplete capture.
+    public string SampleDisplay => IsIncomplete ? $"{SampleCount} of {ExpectedSamples}" : SampleCount.ToString(System.Globalization.CultureInfo.CurrentCulture);
+
+    // Averages of the accepted samples' temperature and pressure (null when none had a value). Stored, not in the table.
+    public double? Temperature { get; init; }
+
+    public double? Pressure { get; init; }
+
+    // Source detector of the capture (Gamma Guard detector_status) and the DEVICE's own session id (Gamma Guard
+    // samples.session_id — not this app's SessionId). Null for rows from before real device capture.
+    public string? DeviceSerial { get; init; }
+
+    public string? DeviceName { get; init; }
+
+    public string? DeviceMac { get; init; }
+
+    public string? DeviceSessionId { get; init; }
+
+    // Raw samples accepted for this capture, kept in memory until they are saved with the row (CaptureSamples).
+    // Null for rows loaded from the database.
+    public IReadOnlyList<Frontend.Calculation.Measurement.DeviceSample>? Samples { get; init; }
 
     public DeviceReading Reading { get; init; } = DeviceReading.Empty;
 

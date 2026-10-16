@@ -68,7 +68,6 @@ public sealed class CoreInformationViewModel : ObservableObject
         SaveCommand = new RelayCommand(_ => Save(saved));
         RefreshDrillholesCommand = new RelayCommand(_ => _ = LoadDrillholesAsync());
         ClearDrillholeCommand = new RelayCommand(_ => ClearDrillhole(), _ => CanClearDrillhole);
-        RefreshBluetoothCommand = new RelayCommand(_ => _ = devices.CheckBluetoothAsync());
         RefreshMeasurementDatabaseCommand = new RelayCommand(_ => _ = devices.CheckMeasurementDatabaseAsync());
         RefreshGammaGuardDatabaseCommand = new RelayCommand(_ => _ = devices.CheckGammaGuardDatabaseAsync(rediscover: true));
 
@@ -129,8 +128,6 @@ public sealed class CoreInformationViewModel : ObservableObject
     public RelayCommand SaveCommand { get; }
 
     public RelayCommand RefreshDrillholesCommand { get; }
-
-    public RelayCommand RefreshBluetoothCommand { get; }
 
     public RelayCommand RefreshMeasurementDatabaseCommand { get; }
 

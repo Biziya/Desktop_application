@@ -272,7 +272,7 @@ internal static class Program
             new[] { MeasurementColumns.From, MeasurementColumns.To, MeasurementColumns.Step }.All(c =>
                 c.Binding != c.Label && typeof(MeasurementResult).GetProperty(c.Binding)?.CanWrite == false),
             "Depth columns show saved depths, are read-only and keep labels separate from field names");
-        Check(MeasurementColumns.All.Where(c => c != MeasurementColumns.Step).All(c => Resolve(c.Binding, withReading) is { } bound && Equals(bound, c.Value(withReading))),
+        Check(MeasurementColumns.All.Where(c => c != MeasurementColumns.Step && c != MeasurementColumns.Sample).All(c => Resolve(c.Binding, withReading) is { } bound && Equals(bound, c.Value(withReading))),
             "Every other binding resolves to the same value the CSV writes");
         Check(Equals(Resolve(MeasurementColumns.Step.Binding, withReading), 50m) && Equals(MeasurementColumns.Step.Value(withReading), 0.5m) &&
             MeasurementColumns.Step.CsvHeader == "step_m", "Step column shows centimetres (50); its CSV value stays in metres (step_m 0.5)");
@@ -349,14 +349,15 @@ internal static class Program
         }
         var mainBackend = new StubBackend();
         var bluetoothChecks = 0;
-        var mainDevices = DeviceSettings.Default with { CheckInterval = TimeSpan.FromMilliseconds(30) };
+        var mainDevices = DeviceSettings.Default with { CheckInterval = TimeSpan.FromMilliseconds(30), BluetoothCheckInterval = TimeSpan.FromMilliseconds(30) };
         using (var main = new MainViewModel(new MemoryRepository(), settings with { StatusInterval = TimeSpan.FromMilliseconds(30) }, mainDevices, mainBackend,
-                   () => { Interlocked.Increment(ref bluetoothChecks); return [new KnownBluetoothDevice("SPP CT-007 A1", 0x001122AABBCC, true, true)]; }))
+                   () => { Interlocked.Increment(ref bluetoothChecks); return [new KnownBluetoothDevice("CT007-M-A1", 0x001122AABBCC, true, true)]; },
+                   new ControlledMeasurements()))
         {
             Check(main.CurrentPage == main.Core && main.IsCoreSelected && !main.IsMeasurementSelected, "Sidebar: Core Information selected at start");
             await Until(() => Ids(main.Core).Length == 3 && main.Backend.State == BackendState.Online);
             await Until(() => main.Devices.Bluetooth.State == LocalState.Connected);
-            Check(main.Core.Devices == main.Devices && main.Devices.Bluetooth.Detail == "SPP CT-007 A1", "App: Device Status comes from the local checks");
+            Check(main.Core.Devices == main.Devices && main.Devices.Bluetooth.Detail == "CT007-M-A1", "App: Device Status comes from the local checks");
             await Pick(main.Core, "GTZO_0002_1"); main.Core.Notes = "retained";
             for (int i = 0; i < 5; i++)
             {
@@ -404,16 +405,6 @@ internal static class Program
                 main.Measurement.SessionId == navigationSession, "Navigation does not duplicate, reset or start a session");
             main.Measurement.ToggleMeasurementCommand.Execute(null);
         }
-        var service = new MockMeasurementService(); var start = DateTimeOffset.Now; var elapsed = Stopwatch.StartNew();
-        var remaining = new List<TimeSpan>();
-        var capture = await service.CaptureAsync(start, TimeSpan.FromSeconds(3), remaining.Add, CancellationToken.None);
-        Check(elapsed.Elapsed.TotalSeconds >= 3 && elapsed.Elapsed.TotalSeconds < 4.5 && capture.Samples.Count == 3,
-            "Simulation follows the configured duration: 3 s → 3 samples at 1 sample per second");
-        Check(capture.EndTime-start == TimeSpan.FromSeconds(3) && remaining[0] == TimeSpan.FromSeconds(3) && remaining[^1] == TimeSpan.Zero,
-            "Exact interval and countdown from the configured duration to zero");
-        using var cancel = new CancellationTokenSource(); cancel.Cancel();
-        try { await service.CaptureAsync(start, TimeSpan.FromSeconds(5), _ => {}, cancel.Token); throw new Exception("Cancellation ignored"); }
-        catch (OperationCanceledException) { }
         var closingService = new ControlledMeasurements();
         var closingVm = new MeasurementViewModel(closingService, export, dialogs, new MemoryRepository()); closingVm.SetCore(core); closingVm.NextFrom = "150"; closingVm.Step = "50";
         closingVm.ToggleMeasurementCommand.Execute(null); closingVm.TriggerCommand.Execute(null); closingVm.Dispose(); await Until(() => !closingVm.IsCapturing);
@@ -509,7 +500,314 @@ internal static class Program
         await ToastChecks(settings);
         await DrillholeSelectionChecks(core, settings);
         await CaptureDurationChecks(core);
+        await DeviceCaptureChecks(core);
+        await ProgressMigrationChecks(core);
         await SqliteChecks(core);
+    }
+
+    /// <summary>A Gamma Guard database with the supplied schema, written by a separate connection (like the device software).</summary>
+    private sealed class FakeGammaGuard : IDisposable
+    {
+        public string Path { get; } = TempDb("gammaguard");
+        private readonly SqliteConnection writer;
+        public FakeGammaGuard()
+        {
+            writer = new SqliteConnection($"Data Source={Path}");
+            writer.Open();
+            Scalar(writer, """
+                CREATE TABLE samples (id INTEGER PRIMARY KEY AUTOINCREMENT, serial TEXT, session_id INTEGER, seq INTEGER, ts_ms INTEGER,
+                    count0 REAL, count0_raw REAL, hdm REAL, hdm_raw REAL, dose_rate REAL, temperature REAL, pressure REAL)
+                """);
+            Scalar(writer, """
+                CREATE TABLE detector_status (serial TEXT, name TEXT, mac TEXT, firmware TEXT, device_type TEXT, session_id INTEGER,
+                    state TEXT, response_time REAL, last_sample_ms INTEGER, updated_ms INTEGER)
+                """);
+        }
+        public void Detector(string serial, string name, string mac, long updatedMs) =>
+            Scalar(writer, $"INSERT INTO detector_status VALUES ('{serial}', '{name}', '{mac}', '2.1.0', 'CT007-M', 41, 'connected', 0.2, {updatedMs}, {updatedMs})");
+        public void Sample(string serial, long seq, long? ts, double? count0 = null, double? hdm = null, double? temperature = 21.5, long session = 41)
+        {
+            string N(double? v) => v is { } x ? x.ToString(CultureInfo.InvariantCulture) : "NULL";
+            Scalar(writer, $"INSERT INTO samples (serial, session_id, seq, ts_ms, count0, count0_raw, hdm, hdm_raw, dose_rate, temperature, pressure) " +
+                $"VALUES ('{serial}', {session}, {seq}, {(ts is { } t ? t : "NULL")}, {N(count0)}, {N(count0 * 2)}, {N(hdm)}, {N(hdm)}, {N(hdm / 10)}, {N(temperature)}, 1013.25)");
+        }
+        public byte[] Bytes() => File.ReadAllBytes(Path);
+        public void Dispose() => writer.Dispose();
+    }
+
+    /// <summary>Test clock: waiting advances "now" and lets the fake device write what it would have written by then.</summary>
+    private sealed class FakeCaptureClock(long start) : ICaptureClock
+    {
+        public long NowMs { get; private set; } = start;
+        public Action<long>? Advanced;
+        public bool Frozen;   // waits without time passing (to test Stop during a capture)
+        public async Task Delay(TimeSpan delay, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            if (Frozen) { await Task.Delay(20, token); return; }
+            await Task.Yield();
+            NowMs += (long)delay.TotalMilliseconds;
+            Advanced?.Invoke(NowMs);
+        }
+    }
+
+    private sealed class FixedDevice(CaptureDevice? device, string? refusal = null) : ICaptureDeviceResolver
+    {
+        public CaptureDevice Resolve() => device ?? throw new CaptureException(refusal ?? "No device");
+    }
+
+    /// <summary>Real capture from the Gamma Guard samples table: window, device filter, averaging, saving and linking.</summary>
+    private static async Task DeviceCaptureChecks(CoreSnapshot core)
+    {
+        const long T = 1_760_000_000_000;   // click time (Unix ms)
+        var detector = new DetectorIdentity("SN-1001", "CT007-M-0001", "00:11:22:AA:BB:01", "2.1.0", "CT007-M");
+
+        // Averaging: per field over valid values only; null stays null; ids and timestamps are not averaged.
+        var summary = SampleAveraging.Summarize(new[]
+        {
+            new DeviceSample(10, "SN", "41", 1, T + 1000, 10, null, 1, 2, null, 20, double.NaN),
+            new DeviceSample(11, "SN", "41", 2, T + 2000, null, null, 3, 4, null, 22, 1000),
+            new DeviceSample(12, "SN", "41", 3, T + 3000, 40, null, 5, 6, null, null, 1002)
+        });
+        Check(summary is { SampleCount: 3, FirstTsMs: T + 1000, Count0: 25, Count0Raw: null, Hdm: 3, HdmRaw: 4, DoseRate: null, Temperature: 21, Pressure: 1001, DeviceSessionId: "41" },
+            "Means use each field's valid values (count0 (10+40)/2 = 25, not /3); all-null fields stay null; NaN ignored; first ts_ms kept, not averaged");
+        Check(DeviceTime.Problem(1_760_000_000, T) is { } basisProblem && basisProblem.Contains("not in Unix milliseconds") &&
+            DeviceTime.Problem(T - 3_600_000, T) is null && DeviceTime.Problem(T - 86_400_000, T) is not null, "ts_ms time basis: ms checked; seconds or a far-off clock refused");
+
+        // Window per duration: trigger < ts <= trigger + duration; one sample per second; boundaries.
+        foreach (var seconds in new[] {2, 5, 10})
+        {
+            using var gg = new FakeGammaGuard();
+            gg.Sample("SN-1001", 1, T - 500, 99);         // before the click
+            gg.Sample("SN-1001", 2, T, 99);               // exactly at the click
+            for (var i = 1; i <= 12; i++) gg.Sample("SN-1001", 2 + i, T + i * 1000, i);
+            gg.Sample("SN-1001", 50, T + seconds * 1000 + 1, 99);   // one ms after the window
+            var untouched = gg.Bytes();
+            var clock = new FakeCaptureClock(T);
+            var service = new DeviceCaptureService(new FixedDevice(new CaptureDevice(detector, new GammaGuardDeviceDatabase(gg.Path))), clock);
+            var data = await service.CaptureAsync(DateTimeOffset.FromUnixTimeMilliseconds(T), TimeSpan.FromSeconds(seconds), _ => { }, CancellationToken.None);
+            Check(gg.Bytes().SequenceEqual(untouched) && !File.Exists(gg.Path + "-wal") && !File.Exists(gg.Path + "-journal"),
+                "Source database unchanged by a capture (byte-identical, no journal created)");
+            Check(data.DeviceSamples!.Count == seconds && data.ExpectedSamples == seconds &&
+                data.DeviceSamples.First().TsMs == T + 1000 && data.DeviceSamples.Last().TsMs == T + seconds * 1000 &&
+                data.EndTime - data.StartTime == TimeSpan.FromSeconds(seconds),
+                $"{seconds} s window: samples after the click up to and including +{seconds} s; the click itself and later rows excluded");
+        }
+
+        // Device filter, late writes, duplicates, nulls, a missing second — written while the capture runs.
+        using (var gg = new FakeGammaGuard())
+        {
+            for (var i = 0; i < 300; i++) gg.Sample("SN-1001", i, T - 400_000 + i * 1000, 7);   // history before the click
+            var clock = new FakeCaptureClock(T);
+            var planned = new List<(long WriteAt, Action Write)>
+            {
+                (T + 1100, () => gg.Sample("SN-1001", 401, T + 1000, 10, 1)),
+                (T + 1150, () => gg.Sample("SN-2002", 900, T + 1100, 500, 50)),            // another detector
+                (T + 2100, () => gg.Sample("SN-1001", 402, T + 2000, null, 3)),           // count0 missing
+                (T + 2150, () => gg.Sample("SN-1001", 402, T + 2000, null, 3)),           // duplicate write of seq 402
+                (T + 3100, () => gg.Sample("SN-1001", 403, null, 1000, 1000)),            // no timestamp
+                // seq 404 (T+4000) never arrives
+                (T + 5900, () => gg.Sample("SN-1001", 405, T + 5000, 40, 5)),             // written late, inside the window
+                (T + 9000, () => gg.Sample("SN-1001", 406, T + 4500, 77, 77)),            // too late: after the final read
+            };
+            clock.Advanced = now =>
+            {
+                foreach (var p in planned.Where(p => p.WriteAt <= now).ToList()) { p.Write(); planned.Remove(p); }
+            };
+            var remaining = new List<TimeSpan>();
+            var service = new DeviceCaptureService(new FixedDevice(new CaptureDevice(detector, new GammaGuardDeviceDatabase(gg.Path))), clock);
+            var data = await service.CaptureAsync(DateTimeOffset.FromUnixTimeMilliseconds(T), TimeSpan.FromSeconds(5), remaining.Add, CancellationToken.None);
+            var got = data.DeviceSamples!;
+            Check(got.Select(s => s.Seq).SequenceEqual(new long?[] {401, 402, 405}) && got.All(s => s.Serial == "SN-1001"),
+                "Only the selected detector's samples inside the window; duplicate and timestamp-less rows dropped; late write inside the window kept");
+            Check(clock.NowMs <= T + 5000 + (long)DeviceCaptureService.FinalReadLimit.TotalMilliseconds + 250 && remaining[0] == TimeSpan.FromSeconds(5) && remaining.Last() == TimeSpan.Zero,
+                "The final read is bounded (window end + 1.5 s); the countdown runs from the duration to zero");
+            var s2 = SampleAveraging.Summarize(got);
+            Check(s2 is { SampleCount: 3, Count0: 25, Hdm: 3 } && got.All(s => s.Temperature == 21.5 && s.Pressure == 1013.25 && s.DeviceSessionId == "41"),
+                "Averages over the 3 received samples (count0 over its 2 values); temperature, pressure and device session copied");
+        }
+
+        // The ViewModel with the real capture: result row, raw samples saved and linked, retries, restart, Stop.
+        var dbPath = TempDb("ct007-device");
+        var toasts = new ToastService();
+        using (var gg = new FakeGammaGuard())
+        {
+            var clock = new FakeCaptureClock(DateTimeOffset.Now.ToUnixTimeMilliseconds());
+            long click = 0;
+            var writes = new List<(long At, long Seq, double Count0)>();
+            clock.Advanced = now =>
+            {
+                foreach (var w in writes.Where(w => click + w.At <= now).ToList()) { gg.Sample("SN-1001", w.Seq, click + w.At, w.Count0, 2); writes.Remove(w); }
+            };
+            gg.Sample("SN-1001", 1, clock.NowMs - 2000, 999);   // newest sample before the click (time basis check)
+            var source = new GammaGuardDeviceDatabase(gg.Path);
+            var service = new DeviceCaptureService(new FixedDevice(new CaptureDevice(detector, source)), clock);
+            var repository = new SqliteMeasurementRepository(dbPath);
+            Guid sessionId;
+            using (var vm = new MeasurementViewModel(service, new FakeExport(), new FakeDialogs(), repository, toasts: toasts,
+                       durationSettings: new CaptureDurationSettings(null)))
+            {
+                vm.SetCore(core with { DrillholeId = "DEV-1" }); await Until(() => vm.SessionId is not null);
+                sessionId = vm.SessionId!.Value;
+                vm.NextFrom = "10"; vm.Step = "25"; vm.ToggleMeasurementCommand.Execute(null);
+
+                // Complete capture: 5 of 5 samples.
+                click = clock.NowMs;
+                writes.AddRange(new[] { (1000L, 11L, 10.0), (2000L, 12L, 20.0), (3000L, 13L, 30.0), (4000L, 14L, 40.0), (5000L, 15L, 50.0) });
+                vm.TriggerCommand.Execute(DateTimeOffset.FromUnixTimeMilliseconds(click));
+                vm.TriggerCommand.Execute(DateTimeOffset.FromUnixTimeMilliseconds(click + 10));   // ignored: capture running
+                await Until(() => vm.Results.Count == 1 && vm.CanTrigger);
+                var row = vm.Results[0];
+                Check(row is { SampleCount: 5, ExpectedSamples: 5, IsIncomplete: false, DurationMs: 5000, DeviceSerial: "SN-1001", DeviceName: "CT007-M-0001", DeviceSessionId: "41",
+                        Temperature: 21.5, Pressure: 1013.25, FromMm: 10000, ToMm: 10250 } &&
+                    row.Reading is { Count0: 30, Count0Raw: 60, Hdm: 2, TsMs: var firstTs } && firstTs == click + 1000 && !row.IsDemoTsMs &&
+                    row.StartTime.ToUnixTimeMilliseconds() == click && vm.NextFrom == "10.25",
+                    "Result: averages of the 5 samples, actual count, window, device, depth interval; extra click ignored; depth advanced once");
+
+                // Incomplete capture: 3 of 5 — averaged over 3, marked, warning toast.
+                await Until(() => !vm.IsCapturing);
+                click = clock.NowMs + 7;
+                writes.AddRange(new[] { (1000L, 21L, 1.0), (2000L, 22L, 2.0), (5000L, 25L, 6.0) });
+                vm.TriggerCommand.Execute(DateTimeOffset.FromUnixTimeMilliseconds(click));
+                await Until(() => vm.Results.Count == 2 && vm.CanTrigger);
+                var partial = vm.Results.Single(r => r.CaptureNumber == 2);
+                Check(partial is { SampleCount: 3, ExpectedSamples: 5, IsIncomplete: true, SampleDisplay: "3 of 5" } && partial.Reading.Count0 == 3 &&
+                    Toasted(toasts, ToastKind.Warning, "Incomplete capture: 3 of 5 samples received"), "Incomplete capture: average of the 3 received (3, not /5), marked 3 of 5, warning toast");
+
+                // No samples: error toast, no row, no depth advance.
+                var depth = vm.NextFrom;
+                click = clock.NowMs + 7;
+                vm.TriggerCommand.Execute(DateTimeOffset.FromUnixTimeMilliseconds(click));
+                await Until(() => Toasted(toasts, ToastKind.Error, "No samples were received") && vm.CanTrigger);
+                Check(vm.Results.Count == 2 && vm.NextFrom == depth, "No samples: error toast; nothing saved; depth not advanced");
+
+                // Stop during a capture: cancelled, no row, no depth advance; completed rows kept.
+                clock.Frozen = true;
+                vm.TriggerCommand.Execute(DateTimeOffset.FromUnixTimeMilliseconds(clock.NowMs));
+                await Until(() => vm.IsCapturing);
+                await Task.Delay(60);
+                vm.ToggleMeasurementCommand.Execute(null);
+                await Task.Delay(100);
+                Check(vm.Results.Count == 2 && vm.NextFrom == depth && !vm.IsCapturing, "Stop cancels the capture: no completed row, no depth advance, earlier rows kept");
+                clock.Frozen = false;
+
+                // Saving again (a later change) does not duplicate the record or its samples.
+                await Task.Delay(100);
+                vm.Step = "50"; vm.Step = "25";
+                await Task.Delay(150);
+            }
+
+            var reopened = new SqliteMeasurementRepository(dbPath);
+            var rows = await reopened.LoadAsync(sessionId);
+            var raw = await reopened.LoadSamplesAsync(sessionId, 1);
+            var raw2 = await reopened.LoadSamplesAsync(sessionId, 2);
+            Check(rows.Count == 2 && rows.Single(r => r.CaptureNumber == 1) is { SampleCount: 5, ExpectedSamples: 5, DurationMs: 5000, DeviceSerial: "SN-1001", DeviceMac: "00:11:22:AA:BB:01" } &&
+                rows.Single(r => r.CaptureNumber == 2) is { SampleCount: 3, ExpectedSamples: 5, IsIncomplete: true },
+                "After restart: results with count, expected count, duration and device");
+            Check(raw.Select(s => s.Seq).SequenceEqual(new long?[] {11, 12, 13, 14, 15}) && raw.All(s => s is { Serial: "SN-1001", DeviceSessionId: "41", Temperature: 21.5, Pressure: 1013.25 }) &&
+                raw.Select(s => s.Count0).SequenceEqual(new double?[] {10, 20, 30, 40, 50}) && raw2.Count == 3,
+                "Raw samples stored with source id, serial, device session, seq, ts_ms and every value; linked to their capture after restart");
+            using (var check = new SqliteConnection($"Data Source={dbPath}"))
+            {
+                check.Open();
+                Check(Scalar(check, "SELECT COUNT(*) FROM CaptureSamples") == "8" && Scalar(check, "SELECT COUNT(*) FROM MeasurementRecords") == "2" &&
+                    Scalar(check, "SELECT COUNT(DISTINCT source_id) FROM CaptureSamples") == "8",
+                    "Re-saving never duplicated records or samples; only accepted samples were copied (not the device history)");
+                Check(Scalar(check, "SELECT session_id FROM MeasurementRecords WHERE CaptureNo = 1") == sessionId.ToString("D") &&
+                    Scalar(check, "SELECT device_session_id FROM MeasurementRecords WHERE CaptureNo = 1") == "41",
+                    "App session_id and the device's session id are separate columns");
+            }
+            await reopened.DeleteAsync(sessionId, 2);
+            Check((await reopened.LoadSamplesAsync(sessionId, 2)).Count == 0 && (await reopened.LoadSamplesAsync(sessionId, 1)).Count == 5,
+                "Deleting a capture deletes its raw samples (only its own)");
+        }
+
+        // Device resolution at the click: one connected CT007-M → its detector_status row (by MAC, newest); otherwise refused.
+        using (var gg = new FakeGammaGuard())
+        {
+            gg.Detector("SN-OLD", "CT007-M-0001", "00-11-22-aa-bb-01", 100);
+            gg.Detector("SN-1001", "CT007-M-0001", "00:11:22:AA:BB:01", 200);
+            gg.Detector("SN-2002", "CT007-M-0002", "00:11:22:AA:BB:02", 300);
+            var connected = new List<KnownBluetoothDevice> { new("CT007-M-0001", 0x001122AABB01, true, true) };
+            using var monitor = new DeviceStatusMonitor(new Ct007BluetoothCheck(DeviceSettings.Default, () => connected.ToList()),
+                new MeasurementDatabaseCheck(TempDb("x")), new GammaGuardDatabaseCheck(DeviceSettings.Default with { GammaGuardDatabasePath = gg.Path }, []),
+                TimeSpan.FromMinutes(5), TimeSpan.FromSeconds(1));
+            await monitor.CheckAllAsync();
+            var now = DateTimeOffset.Now;
+            var resolver = new GammaGuardCaptureDevices(monitor, () => now);
+            Check(resolver.Resolve().Identity is { Serial: "SN-1001", Name: "CT007-M-0001" }, "The connected device maps to its detector_status serial (MAC match, newest row)");
+            connected.Add(new("CT007-M-0002", 0x001122AABB02, true, true));
+            await monitor.CheckBluetoothAsync();
+            string Refusal() { try { resolver.Resolve(); return ""; } catch (CaptureException e) { return e.Message; } }
+            Check(Refusal().StartsWith("More than one CT007-M device is connected"), "Two connected devices: refused, never mixed");
+            connected.Clear();
+            await monitor.CheckBluetoothAsync();
+            Check(Refusal() == "No CT007-M device is connected to this laptop." && monitor.ConnectedDevices.Count == 0,
+                "Disconnected: refused; the stale connected device is cleared at the next check");
+            connected.Add(new("CT007-M-0009", 0x001122AABB09, true, true));
+            await monitor.CheckBluetoothAsync();
+            Check(Refusal().Contains("has no detector_status entry"), "A connected device unknown to Gamma Guard is refused");
+            now = now.AddSeconds(10);
+            Check(Refusal().StartsWith("The CT-007 Bluetooth status is not current"), "A stale Bluetooth result is not trusted for a capture");
+        }
+
+        // A device whose ts_ms is not in milliseconds is refused instead of mis-matched with the click.
+        using (var gg = new FakeGammaGuard())
+        {
+            gg.Sample("SN-1001", 1, T / 1000, 5);
+            var service = new DeviceCaptureService(new FixedDevice(new CaptureDevice(detector, new GammaGuardDeviceDatabase(gg.Path))), new FakeCaptureClock(T));
+            try { await service.CaptureAsync(DateTimeOffset.FromUnixTimeMilliseconds(T), TimeSpan.FromSeconds(2), _ => { }, CancellationToken.None); throw new Exception("seconds accepted"); }
+            catch (CaptureException e) when (e.Message.Contains("not in Unix milliseconds")) { }
+        }
+    }
+
+    /// <summary>MeasurementProgress moves from millimetres to centimetres exactly once, keeping the physical depth.</summary>
+    private static async Task ProgressMigrationChecks(CoreSnapshot core)
+    {
+        var path = TempDb("ct007-v4");
+        var session = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        using (var connection = new SqliteConnection($"Data Source={path}"))
+        {
+            connection.Open();
+            Scalar(connection, """
+                CREATE TABLE MeasurementSessions (id TEXT NOT NULL PRIMARY KEY, CreatedAt TEXT NOT NULL, DrillholeID TEXT, DrillholeName TEXT,
+                    Project TEXT, "operator" TEXT, comment TEXT);
+                """);
+            Scalar(connection, """
+                CREATE TABLE MeasurementRecords (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL REFERENCES MeasurementSessions (id),
+                    SortOrder INTEGER NOT NULL, CaptureNo INTEGER NOT NULL, StartTime TEXT NOT NULL, EndTime TEXT NOT NULL, Sample INTEGER NOT NULL,
+                    TsMs INTEGER, Count0 REAL, Count0Raw REAL, Hdm REAL, HdmRaw REAL, DoseRate REAL, "from" INTEGER, "to" INTEGER, step INTEGER)
+                """);
+            Scalar(connection, "CREATE UNIQUE INDEX UX_MeasurementRecords_Session_CaptureNo ON MeasurementRecords (session_id, CaptureNo)");
+            Scalar(connection, "CREATE UNIQUE INDEX UX_MeasurementSessions_DrillholeID ON MeasurementSessions (DrillholeID)");
+            Scalar(connection, "CREATE TABLE MeasurementProgress (session_id TEXT NOT NULL PRIMARY KEY REFERENCES MeasurementSessions (id), next_from INTEGER NOT NULL, step INTEGER NOT NULL)");
+            Scalar(connection, $"INSERT INTO MeasurementSessions VALUES ('{session}', '2026-10-11T11:16:10.8510000+08:00', 'MIG-1', 'P', 'C', 'Op', '')");
+            Scalar(connection, $"INSERT INTO MeasurementRecords (session_id, SortOrder, CaptureNo, StartTime, EndTime, Sample, Count0, \"from\", \"to\", step) " +
+                $"VALUES ('{session}', 1, 1, '2026-10-11T11:16:10.8510000+08:00', '2026-10-11T11:16:15.8510000+08:00', 5, 12.5, 151000, 151250, 250)");
+            Scalar(connection, $"INSERT INTO MeasurementProgress VALUES ('{session}', 151255, 255)");
+            Scalar(connection, "PRAGMA user_version = 4");
+        }
+        var repository = new SqliteMeasurementRepository(path);
+        Check(await repository.LoadProgressAsync(session) == new DepthProgress(151255, 255), "v4 → v5: progress keeps its physical depth (151.255 m, 25.5 cm)");
+        using (var check = new SqliteConnection($"Data Source={path}"))
+        {
+            check.Open();
+            Check(Scalar(check, "SELECT next_from_cm || '/' || step_cm FROM MeasurementProgress") == "15125.5/25.5" &&
+                Scalar(check, "SELECT COUNT(*) FROM pragma_table_info('MeasurementProgress') WHERE name IN ('next_from', 'step')") == "0" &&
+                Scalar(check, "SELECT \"from\" || '-' || \"to\" || '/' || step FROM MeasurementRecords") == "151000-151250/250" &&
+                Scalar(check, "PRAGMA user_version") == "5", "Progress stored as next_from_cm / step_cm (÷10 once); records stay in millimetres");
+        }
+        var again = new SqliteMeasurementRepository(path);
+        Check(await again.LoadProgressAsync(session) == new DepthProgress(151255, 255), "Reopening does not convert again (no 100× error)");
+        using (var vm = new MeasurementViewModel(new ControlledMeasurements(), new FakeExport(), new FakeDialogs(), again))
+        {
+            vm.SetCore(core with { DrillholeId = "MIG-1" }); await Until(() => vm.SessionId == session && vm.NextFrom == "151.255");
+            Check(vm.NextFrom == "151.255" && vm.Step == "25.5" && vm.Results.Single() is { FromMm: 151000, StepMm: 250, DeviceSerial: null, Samples: null },
+                "Starting Depth 151.255 m and Step 25.5 cm shown; old records keep their values with no device data invented");
+            vm.NextFrom = "152"; vm.Step = "30";
+        }
+        await Task.Delay(100);
+        Check(await new SqliteMeasurementRepository(path).LoadProgressAsync(session) == new DepthProgress(152000, 300), "Saved and restored after restart: 152 m / 30 cm");
     }
 
     /// <summary>Toast durations, de-duplication, dismissal and once-per-transition connection announcements.</summary>
@@ -540,7 +838,7 @@ internal static class Program
         var stub = new StubBackend();
         using var api = new ApiClient(settings, stub);
         using var backend = new BackendConnection(api, TimeSpan.FromMinutes(5));
-        var bluetooth = new List<KnownBluetoothDevice> { new("CT007-A1", 1, true, true) };
+        var bluetooth = new List<KnownBluetoothDevice> { new("CT007-M-A1", 1, true, true) };
         using var devices = new DeviceStatusMonitor(new Ct007BluetoothCheck(DeviceSettings.Default, () => bluetooth.ToList()),
             new MeasurementDatabaseCheck(TempDb("ct007-announce")), new GammaGuardDatabaseCheck(DeviceSettings.Default, []), TimeSpan.FromMinutes(5));
         var announced = new ToastService();
@@ -556,14 +854,14 @@ internal static class Program
         stub.Offline = false;
         for (int i = 0; i < 3; i++) await backend.CheckNowAsync();
         Check(announced.Items.Count(t => t.Message == "Backend online again.") == 1, "Backend back online announced once");
-        bluetooth[0] = new KnownBluetoothDevice("CT007-A1", 1, false, true);
+        bluetooth[0] = new KnownBluetoothDevice("CT007-M-A1", 1, false, true);
         for (int i = 0; i < 3; i++) await devices.CheckBluetoothAsync();
         Check(announced.Items.Count(t => t.Message == "CT-007 device (Bluetooth) disconnected.") == 1 &&
             !announced.Items.Any(t => t.Message.StartsWith("Backend offline", StringComparison.Ordinal) && t.Message.Contains("Bluetooth")),
             "Device disconnect announced once and named as the Bluetooth device, separate from the backend");
-        bluetooth[0] = new KnownBluetoothDevice("CT007-A1", 1, true, true);
+        bluetooth[0] = new KnownBluetoothDevice("CT007-M-A1", 1, true, true);
         await devices.CheckBluetoothAsync();
-        Check(announced.Items.Any(t => t is { Kind: ToastKind.Success, Message: "CT-007 device (Bluetooth) connected: CT007-A1" }), "Device reconnect announced");
+        Check(announced.Items.Any(t => t is { Kind: ToastKind.Success, Message: "CT-007 device (Bluetooth) connected: CT007-M-A1" }), "Device reconnect announced");
     }
 
     /// <summary>Clear button, closest match, selection lock, and the Measurement page following the selected drillhole.</summary>
@@ -672,9 +970,9 @@ internal static class Program
     /// <summary>Editable capture duration: validation, persistence, the next capture's window, no accidental capture.</summary>
     private static async Task CaptureDurationChecks(CoreSnapshot core)
     {
-        Check(CaptureDurationSettings.TryParse("12", out var twelve) && twelve == 12 && CaptureDurationSettings.TryParse(" 600 ", out _) &&
-            !new[] {"", " ", "0", "-3", "abc", "2.5", "1e2", "601", "+5"}.Any(t => CaptureDurationSettings.TryParse(t, out _)),
-            "Duration: whole seconds 1–600 only (empty, zero, negative, non-numeric, decimals and > 600 rejected)");
+        Check(CaptureDurationSettings.TryParse("2", out var two) && two == 2 && CaptureDurationSettings.TryParse(" 10 ", out var ten) && ten == 10 &&
+            !new[] {"", " ", "0", "1", "-3", "abc", "2.5", "1e1", "11", "600", "+5"}.Any(t => CaptureDurationSettings.TryParse(t, out _)),
+            "Duration: whole seconds 2–10 only (empty, 0, 1, negative, non-numeric, decimals and > 10 rejected)");
         var settingsPath = Path.Combine(Path.GetTempPath(), $"ct007-duration-{Guid.NewGuid():N}", "capture-settings.json");
         Check(new CaptureDurationSettings(settingsPath).Load() == 5, "Default 5 s when nothing is saved");
 
@@ -691,18 +989,18 @@ internal static class Program
             // Opening and saving the editor never starts measuring or captures; invalid input keeps it open with a 5 s toast.
             vm.EditDurationCommand.Execute(null);
             Check(vm.IsEditingDuration && vm.DurationText == "5" && !vm.IsMeasurementModeActive && service.Calls == 0, "Editor opens with the current seconds");
-            foreach (var bad in new[] {"", "0", "-1", "abc", "601"})
+            foreach (var bad in new[] {"", "0", "1", "-1", "abc", "11"})
             {
                 vm.DurationText = bad; vm.SaveDurationCommand.Execute(null);
                 Check(vm.IsEditingDuration && vm.CaptureDuration == TimeSpan.FromSeconds(5) && toasts.Items.Last() is { Kind: ToastKind.Error, Duration.TotalSeconds: 5 },
                     $"Invalid duration '{bad}' rejected with a 5 s error toast; editor stays open");
             }
-            vm.DurationText = "12"; vm.CancelDurationCommand.Execute(null);
+            vm.DurationText = "10"; vm.CancelDurationCommand.Execute(null);
             Check(!vm.IsEditingDuration && vm.CaptureDuration == TimeSpan.FromSeconds(5), "Cancel (Escape) keeps the old duration");
-            vm.EditDurationCommand.Execute(null); vm.DurationText = "12"; vm.SaveDurationCommand.Execute(null);
-            Check(!vm.IsEditingDuration && vm.CaptureDuration == TimeSpan.FromSeconds(12) && vm.Countdown == "00:12" && !vm.IsMeasurementModeActive && service.Calls == 0,
-                "Save (Enter) sets 12 s; countdown shows 00:12; nothing started or captured");
-            Check(new CaptureDurationSettings(settingsPath).Load() == 12, "Duration persisted locally");
+            vm.EditDurationCommand.Execute(null); vm.DurationText = "8"; vm.SaveDurationCommand.Execute(null);
+            Check(!vm.IsEditingDuration && vm.CaptureDuration == TimeSpan.FromSeconds(8) && vm.Countdown == "00:08" && !vm.IsMeasurementModeActive && service.Calls == 0,
+                "Save (Enter) sets 8 s; countdown shows 00:08; nothing started or captured");
+            Check(new CaptureDurationSettings(settingsPath).Load() == 8, "Duration persisted locally");
 
             // While the editor is open, captures are refused (no accidental right-click capture).
             vm.ToggleMeasurementCommand.Execute(null);
@@ -713,29 +1011,31 @@ internal static class Program
 
             // The capture uses the configured window; ring progress and countdown follow it; a running capture keeps it.
             vm.TriggerCommand.Execute(null);
-            Check(service.Calls == 1 && service.LastDuration == TimeSpan.FromSeconds(12) && !vm.EditDurationCommand.CanExecute(null),
-                "Capture runs with 12 s; the duration cannot be edited while capturing");
-            service.Report(TimeSpan.FromSeconds(3));
-            Check(vm.Countdown == "00:03" && vm.CaptureProgress == 0.75, "Countdown and ring use the 12 s window (9 of 12 s elapsed = 75 %)");
+            Check(service.Calls == 1 && service.LastDuration == TimeSpan.FromSeconds(8) && !vm.EditDurationCommand.CanExecute(null),
+                "Capture runs with 8 s; the duration cannot be edited while capturing");
+            service.Report(TimeSpan.FromSeconds(2));
+            Check(vm.Countdown == "00:02" && vm.CaptureProgress == 0.75, "Countdown and ring use the 8 s window (6 of 8 s elapsed = 75 %)");
             service.Complete(); await Until(() => vm.CanTrigger);
-            Check(vm.Results[0] is { SampleCount: 12, AverageValue: 6.5 } && vm.Results[0].EndTime - vm.Results[0].StartTime == TimeSpan.FromSeconds(12) &&
-                vm.Countdown == "00:12" && vm.CaptureProgress == 0, "Row from the 12 collected samples (average 6.5); timer reset to 12 s");
+            Check(vm.Results[0] is { SampleCount: 8, AverageValue: 4.5 } && vm.Results[0].EndTime - vm.Results[0].StartTime == TimeSpan.FromSeconds(8) &&
+                vm.Countdown == "00:08" && vm.CaptureProgress == 0, "Row from the 8 collected samples (average 4.5); timer reset to 8 s");
 
             // Stop cancels an active capture and keeps completed rows; the timer resets to the configured duration.
             vm.TriggerCommand.Execute(null); service.Report(TimeSpan.FromSeconds(6));
             vm.ToggleMeasurementCommand.Execute(null);
-            Check(vm.Results.Count == 1 && vm.Countdown == "00:12" && vm.CaptureProgress == 0 && !vm.IsMeasurementModeActive,
+            Check(vm.Results.Count == 1 && vm.Countdown == "00:08" && vm.CaptureProgress == 0 && !vm.IsMeasurementModeActive,
                 "Stop cancels the capture, keeps the completed row and resets the timer");
-            vm.EditDurationCommand.Execute(null); vm.DurationText = "90"; vm.SaveDurationCommand.Execute(null);
-            Check(vm.Countdown == "01:30", "Longer durations show minutes:seconds");
+            vm.EditDurationCommand.Execute(null); vm.DurationText = "10"; vm.SaveDurationCommand.Execute(null);
+            Check(vm.Countdown == "00:10", "10 s is the maximum");
         }
         using (var restarted = new MeasurementViewModel(new ControlledMeasurements(), new FakeExport(), new FakeDialogs(), new MemoryRepository(),
                    durationSettings: new CaptureDurationSettings(settingsPath)))
         {
-            Check(restarted.CaptureDuration == TimeSpan.FromSeconds(90) && restarted.Countdown == "01:30", "Duration restored after restart");
+            Check(restarted.CaptureDuration == TimeSpan.FromSeconds(10) && restarted.Countdown == "00:10", "Duration restored after restart");
         }
         File.WriteAllText(settingsPath, """{"captureDurationSeconds": 0}""");
         Check(new CaptureDurationSettings(settingsPath).Load() == 5, "An invalid saved value falls back to 5 s");
+        File.WriteAllText(settingsPath, """{"captureDurationSeconds": 90}""");
+        Check(new CaptureDurationSettings(settingsPath).Load() == 5, "A saved value above the new 10 s maximum falls back to 5 s");
     }
 
     /// <summary>Step in centimetres at the UI boundary; rows always sorted by From; depth progression from the capture state.</summary>
@@ -799,13 +1099,19 @@ internal static class Program
         var settings = DeviceSettings.Default;
         LocalStatus Bt(params KnownBluetoothDevice[] devices) => new Ct007BluetoothCheck(settings, () => devices).Check();
         var other = new KnownBluetoothDevice("Headphones", 1, true, true);
-        Check(Bt(other, new KnownBluetoothDevice("ct 007 field", 2, true, true)) is { State: LocalState.Connected, Detail: "ct 007 field" },
-            "Connected CT-007 (name match ignores case, spaces and dashes)");
-        Check(Bt(other, new KnownBluetoothDevice("SPP CT-007", 2, false, true)) is { State: LocalState.Disconnected } paired && paired.Detail.Contains("paired") &&
-            paired.Detail.StartsWith("SPP CT-007"), "Paired but not connected → Disconnected with the name");
-        Check(Bt(new KnownBluetoothDevice("CT007", 3, false, true), new KnownBluetoothDevice("CT007", 4, true, true)).State == LocalState.Connected,
-            "Any connected CT-007 wins over a paired one");
-        Check(Bt(other).State == LocalState.Disconnected && Bt(other).Detail.Contains("No CT-007"), "Only other devices → Disconnected (confirmed)");
+        Check(Bt(other, new KnownBluetoothDevice("ct007-m-0012", 2, true, true)) is { State: LocalState.Connected, Detail: "ct007-m-0012" },
+            "Connected CT007-M device (name begins with CT007-M-, any case)");
+        Check(Bt(new KnownBluetoothDevice("SPP CT007-M-1", 2, true, true), new KnownBluetoothDevice("CT007-X-1", 3, true, true),
+                new KnownBluetoothDevice("CT-007", 4, true, true)).State == LocalState.Disconnected,
+            "Only names that BEGIN with CT007-M- count (not CT007-X-, CT-007 or a prefix in the middle)");
+        Check(Bt(other, new KnownBluetoothDevice("CT007-M-0012", 2, false, true)) is { State: LocalState.Disconnected } paired && paired.Detail.Contains("paired") &&
+            paired.Detail.StartsWith("CT007-M-0012"), "Paired but not connected → Disconnected with the name");
+        Check(Bt(new KnownBluetoothDevice("CT007-M-1", 3, false, true), new KnownBluetoothDevice("CT007-M-2", 4, true, true)) is { State: LocalState.Connected, Detail: "CT007-M-2" },
+            "The connected device is shown, not a merely paired one");
+        Check(new Ct007BluetoothCheck(settings, () => [new("CT007-M-1", 3, true, true), new("CT007-M-2", 4, true, true)]).CheckDevices() is
+            { Status.State: LocalState.Connected, Connected.Count: 2 } two && two.Status.Detail.Contains("2 devices connected"),
+            "Two connected CT007-M devices are both reported (a capture then refuses to pick one)");
+        Check(Bt(other).State == LocalState.Disconnected && Bt(other).Detail.Contains("No CT007-M"), "Only other devices → Disconnected (confirmed)");
         Check(Bt(new KnownBluetoothDevice("", 5, true, true)).State == LocalState.Disconnected, "A nameless device is not taken for the CT-007");
         Check(new Ct007BluetoothCheck(settings with { Ct007Address = "00:11:22:AA:BB:CC" }, () => [new KnownBluetoothDevice("", 0x001122AABBCC, true, true)]).Check()
             is { State: LocalState.Connected, Detail: "Name unavailable" }, "Configured address identifies the device; missing name shown as Name unavailable");
@@ -814,9 +1120,10 @@ internal static class Program
 
         // Settings file.
         var settingsFile = Path.Combine(Path.GetTempPath(), $"device-settings-{Guid.NewGuid():N}.json");
-        File.WriteAllText(settingsFile, """{"ct007Names":["Gamma7"],"ct007Address":"aa-bb","gammaGuardDatabasePath":"%TEMP%\\gg.sqlite","checkIntervalSeconds":2}""");
+        File.WriteAllText(settingsFile, """{"ct007NamePrefix":"GAMMA7-","ct007Address":"aa-bb","gammaGuardDatabasePath":"%TEMP%\\gg.sqlite","checkIntervalSeconds":2}""");
         var loaded = DeviceSettings.Load(settingsFile);
-        Check(loaded.Ct007Names.SequenceEqual(new[] {"Gamma7"}) && loaded.GammaGuardDatabasePath.EndsWith("gg.sqlite") && loaded.CheckInterval == TimeSpan.FromSeconds(2) &&
+        Check(loaded.Ct007NamePrefix == "GAMMA7-" && loaded.GammaGuardDatabasePath.EndsWith("gg.sqlite") && loaded.CheckInterval == TimeSpan.FromSeconds(2) &&
+            loaded.BluetoothCheckInterval == TimeSpan.FromSeconds(1) && DeviceSettings.Default.Ct007NamePrefix == "CT007-M-" &&
             loaded.GammaGuardFileName == "*.sqlite" && DeviceSettings.Load("missing.json") == DeviceSettings.Default, "device-settings.json is read; defaults fill gaps");
 
         // Measurement database: missing (never created by the check), available, not SQLite, busy.
@@ -869,7 +1176,7 @@ internal static class Program
         var gate = new ManualResetEventSlim(false);
         var runs = 0;
         using (var monitor = new DeviceStatusMonitor(
-                   new Ct007BluetoothCheck(settings, () => { Interlocked.Increment(ref runs); gate.Wait(TimeSpan.FromSeconds(2)); return [new KnownBluetoothDevice("CT007", 1, true, true)]; }),
+                   new Ct007BluetoothCheck(settings, () => { Interlocked.Increment(ref runs); gate.Wait(TimeSpan.FromSeconds(2)); return [new KnownBluetoothDevice("CT007-M-1", 1, true, true)]; }),
                    new MeasurementDatabaseCheck(dbPath), new GammaGuardDatabaseCheck(settings, []), TimeSpan.FromMinutes(5)))
         {
             var thread = Environment.CurrentManagedThreadId;
@@ -1348,7 +1655,7 @@ internal static class Program
             using (var check = new SqliteConnection($"Data Source={path};Foreign Keys=True"))
             {
                 check.Open();
-                Check(Scalar(check, "PRAGMA user_version") == "4", "Schema version 4");
+                Check(Scalar(check, "PRAGMA user_version") == "5", "Schema version 5");
                 Check(Scalar(check, "SELECT COUNT(*) FROM MeasurementSessions WHERE DrillholeID = 'C-3'") == "1", "One row per Drillhole ID");
                 Check(Scalar(check, "SELECT DrillholeID || '|' || DrillholeName || '|' || Project || '|' || \"operator\" FROM MeasurementSessions WHERE id = '" + captured + "'")
                     == "DH-001|North Ridge|Campaign 7|Field Tech", "Drillhole / Project / Campaign / Operator stored in their original columns");
@@ -1408,7 +1715,7 @@ internal static class Program
                         $"v{version} database upgraded with values, order and session isolation kept");
                     using var check = new SqliteConnection($"Data Source={legacy}");
                     check.Open();
-                    Check(Scalar(check, "PRAGMA user_version") == "4" &&
+                    Check(Scalar(check, "PRAGMA user_version") == "5" &&
                       Scalar(check, "SELECT COUNT(*) FROM MeasurementSessions WHERE DrillholeID IS NULL") == "2" &&
                       Scalar(check, "SELECT COUNT(*) FROM MeasurementRecords WHERE \"from\" IS NULL AND \"to\" IS NULL AND step IS NULL") == "3" &&
                           Scalar(check, "SELECT group_concat(id || ':' || session_id || ':' || CaptureNo, ' ') FROM (SELECT * FROM MeasurementRecords ORDER BY id)") ==

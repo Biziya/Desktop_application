@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO;
+using Frontend.Calculation.Measurement;
 using Microsoft.Data.Sqlite;
 
 namespace Frontend.Pages.Measurement;
@@ -25,7 +26,10 @@ public sealed record MeasurementSession(
 /// <summary>A drillhole with saved measurements and the Start Time of its most recent capture.</summary>
 public sealed record MeasuredDrillhole(string DrillholeId, DateTimeOffset LastMeasured);
 
-/// <summary>Where the next capture of a session starts and the selected step, both in millimetres (see Depth.cs).</summary>
+/// <summary>
+/// Where the next capture of a session starts and the selected step, in millimetres inside the app (see Depth.cs).
+/// Stored in MeasurementProgress in centimetres (next_from_cm, step_cm); the repository converts exactly (mm / 10).
+/// </summary>
 public sealed record DepthProgress(long NextFromMm, long StepMm);
 
 public interface IMeasurementRepository
@@ -74,11 +78,17 @@ public interface IMeasurementRepository
 public sealed class SqliteMeasurementRepository : IMeasurementRepository
 {
     // Raise when the schema changes, and add a step to Migrate that alters existing tables without dropping data.
-    private const int SchemaVersion = 4;
+    private const int SchemaVersion = 5;
 
-    // "from" and "to" are SQL keywords, so they are always quoted. Depths are whole millimetres.
+    // "from" and "to" are SQL keywords, so they are always quoted. Record depths are whole millimetres.
     private const string RecordColumns =
-        "SortOrder, CaptureNo, StartTime, EndTime, Sample, TsMs, Count0, Count0Raw, Hdm, HdmRaw, DoseRate, \"from\", \"to\", step";
+        "SortOrder, CaptureNo, StartTime, EndTime, Sample, TsMs, Count0, Count0Raw, Hdm, HdmRaw, DoseRate, \"from\", \"to\", step, " +
+        "duration_ms, expected_samples, temperature, pressure, device_serial, device_name, device_mac, device_session_id";
+
+    // Raw device samples of a capture (version 5). source_id/serial/device_session_id/seq/ts_ms are the Gamma Guard
+    // samples row as recorded; record_id links to the capture result in MeasurementRecords.
+    private const string SampleColumns =
+        "record_id, source_id, serial, device_session_id, seq, ts_ms, count0, count0_raw, hdm, hdm_raw, dose_rate, temperature, pressure";
 
     private const string SessionColumns = "id, CreatedAt, DrillholeID, DrillholeName, Project, \"operator\", comment";
 
@@ -186,10 +196,10 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
     public Task<DepthProgress?> LoadProgressAsync(Guid sessionId) => Run(connection =>
     {
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT next_from, step FROM MeasurementProgress WHERE session_id = $session";
+        command.CommandText = "SELECT next_from_cm, step_cm FROM MeasurementProgress WHERE session_id = $session";
         command.Parameters.AddWithValue("$session", Key(sessionId));
         using var reader = command.ExecuteReader();
-        return reader.Read() ? new DepthProgress(reader.GetInt64(0), reader.GetInt64(1)) : null;
+        return reader.Read() ? new DepthProgress(CentimetresToMm(reader.GetDouble(0)), CentimetresToMm(reader.GetDouble(1))) : null;
     });
 
     public Task SaveAsync(MeasurementSession session, IReadOnlyList<MeasurementResult> rows, DepthProgress? progress) => Run(connection =>
@@ -203,12 +213,12 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
             using var saveProgress = connection.CreateCommand();
             saveProgress.Transaction = transaction;
             saveProgress.CommandText = """
-                INSERT INTO MeasurementProgress (session_id, next_from, step) VALUES ($session, $nextFrom, $step)
-                ON CONFLICT (session_id) DO UPDATE SET next_from = excluded.next_from, step = excluded.step
+                INSERT INTO MeasurementProgress (session_id, next_from_cm, step_cm) VALUES ($session, $nextFrom, $step)
+                ON CONFLICT (session_id) DO UPDATE SET next_from_cm = excluded.next_from_cm, step_cm = excluded.step_cm
                 """;
             saveProgress.Parameters.AddWithValue("$session", Key(session.Id));
-            saveProgress.Parameters.AddWithValue("$nextFrom", progress.NextFromMm);
-            saveProgress.Parameters.AddWithValue("$step", progress.StepMm);
+            saveProgress.Parameters.AddWithValue("$nextFrom", progress.NextFromMm / 10.0);
+            saveProgress.Parameters.AddWithValue("$step", progress.StepMm / 10.0);
             saveProgress.ExecuteNonQuery();
         }
 
@@ -220,7 +230,8 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
         upsert.CommandText = $"""
             INSERT INTO MeasurementRecords (session_id, {RecordColumns})
             VALUES ($session, $sortOrder, $captureNo, $startTime, $endTime, $sample, $tsMs, $count0, $count0Raw, $hdm, $hdmRaw, $doseRate,
-                    $from, $to, $step)
+                    $from, $to, $step, $durationMs, $expectedSamples, $temperature, $pressure, $deviceSerial, $deviceName, $deviceMac,
+                    $deviceSessionId)
             ON CONFLICT (session_id, CaptureNo) DO UPDATE SET SortOrder = excluded.SortOrder
                 WHERE SortOrder <> excluded.SortOrder
             """;
@@ -250,22 +261,109 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
             upsert.Parameters.AddWithValue("$from", OrDbNull(row.FromMm));
             upsert.Parameters.AddWithValue("$to", OrDbNull(row.ToMm));
             upsert.Parameters.AddWithValue("$step", OrDbNull(row.StepMm));
+            upsert.Parameters.AddWithValue("$durationMs", OrDbNull(row.DurationMs));
+            upsert.Parameters.AddWithValue("$expectedSamples", OrDbNull(row.ExpectedSamples));
+            upsert.Parameters.AddWithValue("$temperature", OrDbNull(row.Temperature));
+            upsert.Parameters.AddWithValue("$pressure", OrDbNull(row.Pressure));
+            upsert.Parameters.AddWithValue("$deviceSerial", OrDbNull(row.DeviceSerial));
+            upsert.Parameters.AddWithValue("$deviceName", OrDbNull(row.DeviceName));
+            upsert.Parameters.AddWithValue("$deviceMac", OrDbNull(row.DeviceMac));
+            upsert.Parameters.AddWithValue("$deviceSessionId", OrDbNull(row.DeviceSessionId));
             upsert.ExecuteNonQuery();
+
+            if (row.Samples is { Count: > 0 } samples)
+            {
+                SaveSamples(connection, transaction, session.Id, row.CaptureNumber, samples);
+            }
         }
 
         transaction.Commit();
         return true;
     });
 
+    // The capture's raw samples are deleted with it, in the same transaction.
     public Task DeleteAsync(Guid sessionId, int captureNumber) => Run(connection =>
     {
+        using var transaction = connection.BeginTransaction();
         using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM MeasurementRecords WHERE session_id = $session AND CaptureNo = $captureNo";
+        command.Transaction = transaction;
+        command.CommandText = """
+            DELETE FROM CaptureSamples WHERE record_id IN
+                (SELECT id FROM MeasurementRecords WHERE session_id = $session AND CaptureNo = $captureNo);
+            DELETE FROM MeasurementRecords WHERE session_id = $session AND CaptureNo = $captureNo;
+            """;
         command.Parameters.AddWithValue("$session", Key(sessionId));
         command.Parameters.AddWithValue("$captureNo", captureNumber);
         command.ExecuteNonQuery();
+        transaction.Commit();
         return true;
     });
+
+    /// <summary>The raw device samples saved with one capture (in time order).</summary>
+    public Task<IReadOnlyList<DeviceSample>> LoadSamplesAsync(Guid sessionId, int captureNumber) => Run<IReadOnlyList<DeviceSample>>(connection =>
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT c.source_id, c.serial, c.device_session_id, c.seq, c.ts_ms, c.count0, c.count0_raw, c.hdm, c.hdm_raw,
+                   c.dose_rate, c.temperature, c.pressure
+            FROM CaptureSamples c JOIN MeasurementRecords r ON r.id = c.record_id
+            WHERE r.session_id = $session AND r.CaptureNo = $captureNo
+            ORDER BY c.ts_ms, c.source_id
+            """;
+        command.Parameters.AddWithValue("$session", Key(sessionId));
+        command.Parameters.AddWithValue("$captureNo", captureNumber);
+        using var reader = command.ExecuteReader();
+        var samples = new List<DeviceSample>();
+
+        while (reader.Read())
+        {
+            samples.Add(new DeviceSample(reader.GetInt64(0), reader.GetString(1), NullableString(reader, 2), NullableLong(reader, 3),
+                NullableLong(reader, 4), NullableDouble(reader, 5), NullableDouble(reader, 6), NullableDouble(reader, 7),
+                NullableDouble(reader, 8), NullableDouble(reader, 9), NullableDouble(reader, 10), NullableDouble(reader, 11)));
+        }
+
+        return samples;
+    });
+
+    // Inserts a capture's raw samples, linked to its MeasurementRecords row. (record_id, source_id) is unique, so a
+    // retried save of the same capture never duplicates a sample.
+    private static void SaveSamples(SqliteConnection connection, SqliteTransaction transaction, Guid sessionId, int captureNumber,
+        IReadOnlyList<DeviceSample> samples)
+    {
+        using var find = connection.CreateCommand();
+        find.Transaction = transaction;
+        find.CommandText = "SELECT id FROM MeasurementRecords WHERE session_id = $session AND CaptureNo = $captureNo";
+        find.Parameters.AddWithValue("$session", Key(sessionId));
+        find.Parameters.AddWithValue("$captureNo", captureNumber);
+        var recordId = Convert.ToInt64(find.ExecuteScalar(), CultureInfo.InvariantCulture);
+
+        using var insert = connection.CreateCommand();
+        insert.Transaction = transaction;
+        insert.CommandText = $"""
+            INSERT INTO CaptureSamples ({SampleColumns})
+            VALUES ($record, $source, $serial, $deviceSession, $seq, $ts, $count0, $count0Raw, $hdm, $hdmRaw, $doseRate, $temperature, $pressure)
+            ON CONFLICT (record_id, source_id) DO NOTHING
+            """;
+
+        foreach (var sample in samples)
+        {
+            insert.Parameters.Clear();
+            insert.Parameters.AddWithValue("$record", recordId);
+            insert.Parameters.AddWithValue("$source", sample.SourceId);
+            insert.Parameters.AddWithValue("$serial", sample.Serial);
+            insert.Parameters.AddWithValue("$deviceSession", OrDbNull(sample.DeviceSessionId));
+            insert.Parameters.AddWithValue("$seq", OrDbNull(sample.Seq));
+            insert.Parameters.AddWithValue("$ts", OrDbNull(sample.TsMs));
+            insert.Parameters.AddWithValue("$count0", OrDbNull(sample.Count0));
+            insert.Parameters.AddWithValue("$count0Raw", OrDbNull(sample.Count0Raw));
+            insert.Parameters.AddWithValue("$hdm", OrDbNull(sample.Hdm));
+            insert.Parameters.AddWithValue("$hdmRaw", OrDbNull(sample.HdmRaw));
+            insert.Parameters.AddWithValue("$doseRate", OrDbNull(sample.DoseRate));
+            insert.Parameters.AddWithValue("$temperature", OrDbNull(sample.Temperature));
+            insert.Parameters.AddWithValue("$pressure", OrDbNull(sample.Pressure));
+            insert.ExecuteNonQuery();
+        }
+    }
 
     public Task<MeasurementSession?> FindSessionAsync(string drillholeId) => Run(connection =>
     {
@@ -325,7 +423,15 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
                 FromMm = NullableLong(reader, 11),
                 ToMm = NullableLong(reader, 12),
                 StepMm = NullableLong(reader, 13),
-                RecordId = reader.GetInt64(14)
+                DurationMs = NullableLong(reader, 14),
+                ExpectedSamples = NullableLong(reader, 15) is { } expected ? (int)expected : null,
+                Temperature = NullableDouble(reader, 16),
+                Pressure = NullableDouble(reader, 17),
+                DeviceSerial = NullableString(reader, 18),
+                DeviceName = NullableString(reader, 19),
+                DeviceMac = NullableString(reader, 20),
+                DeviceSessionId = NullableString(reader, 21),
+                RecordId = reader.GetInt64(22)
             });
         }
 
@@ -459,6 +565,11 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
             AddDrillholeMetadataAndDepths(command);
         }
 
+        if (version < 5)
+        {
+            AddDeviceCapture(command);
+        }
+
         // Every record must point at an existing session; otherwise roll the upgrade back rather than store bad links.
         command.CommandText = "PRAGMA foreign_key_check";
 
@@ -521,6 +632,58 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
             """;
         command.ExecuteNonQuery();
     }
+
+    // Version 5 (real device capture). Runs once, inside the migration transaction:
+    // * MeasurementProgress: next_from / step (millimetres) become next_from_cm / step_cm (centimetres, REAL), each
+    //   value divided by 10 exactly once (the table is rebuilt, so the old mm columns cannot be read as cm later).
+    // * MeasurementRecords: capture window, expected sample count, averaged temperature/pressure and the source detector
+    //   (serial, name, MAC) plus the device's own session id. Existing rows keep NULL there — nothing is invented.
+    // * CaptureSamples: the raw Gamma Guard samples of each capture, linked to its MeasurementRecords row.
+    private static void AddDeviceCapture(SqliteCommand command)
+    {
+        command.CommandText = """
+            CREATE TABLE MeasurementProgress_v5 (
+                session_id   TEXT NOT NULL PRIMARY KEY REFERENCES MeasurementSessions (id),
+                next_from_cm REAL NOT NULL,
+                step_cm      REAL NOT NULL
+            );
+            INSERT INTO MeasurementProgress_v5 (session_id, next_from_cm, step_cm)
+                SELECT session_id, next_from / 10.0, step / 10.0 FROM MeasurementProgress;
+            DROP TABLE MeasurementProgress;
+            ALTER TABLE MeasurementProgress_v5 RENAME TO MeasurementProgress;
+            """;
+        command.ExecuteNonQuery();
+
+        AddMissingColumns(command, "MeasurementRecords",
+        [
+            "duration_ms INTEGER", "expected_samples INTEGER", "temperature REAL", "pressure REAL",
+            "device_serial TEXT", "device_name TEXT", "device_mac TEXT", "device_session_id TEXT"
+        ]);
+
+        command.CommandText = """
+            CREATE TABLE IF NOT EXISTS CaptureSamples (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                record_id         INTEGER NOT NULL REFERENCES MeasurementRecords (id),
+                source_id         INTEGER NOT NULL,
+                serial            TEXT    NOT NULL,
+                device_session_id TEXT,
+                seq               INTEGER,
+                ts_ms             INTEGER,
+                count0            REAL,
+                count0_raw        REAL,
+                hdm               REAL,
+                hdm_raw           REAL,
+                dose_rate         REAL,
+                temperature       REAL,
+                pressure          REAL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS UX_CaptureSamples_Record_Source ON CaptureSamples (record_id, source_id);
+            """;
+        command.ExecuteNonQuery();
+    }
+
+    // Stored centimetres back to whole millimetres (exact for every value written from millimetres).
+    private static long CentimetresToMm(double centimetres) => (long)Math.Round(centimetres * 10, MidpointRounding.AwayFromZero);
 
     private static void AddMissingColumns(SqliteCommand command, string table, string[] definitions)
     {

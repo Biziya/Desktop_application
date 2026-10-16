@@ -676,35 +676,21 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             Countdown = FormatCountdown(TimeSpan.Zero);
             CaptureProgress = 1;
 
-            if (data.Samples.Count == 0)
-            {
-                throw new InvalidOperationException("Capture contains no samples.");
-            }
-
-            var average = data.Samples.Average();
 
             // Display hold, kept on purpose: it gives WPF one render of "00:00" and the full ring before the
             // row is committed. It does not extend the capture interval, and Stop can still cancel during it.
             await Task.Delay(100, token);
             token.ThrowIfCancellationRequested();
+            var row = BuildResult(data, current, core, fromMm, toMm, stepValue, duration);
 
             // The row goes to its place in the From order (not necessarily the end).
-            AddSorted(new MeasurementResult
+            AddSorted(row);
+
+            if (row.IsIncomplete)
             {
-                SessionId = current.Id,
-                CaptureNumber = nextCapture++,
-                StartTime = data.StartTime,
-                EndTime = data.EndTime,
-                CompletedAt = data.CompletedAt,
-                SampleCount = data.Samples.Count,
-                Reading = data.Reading ?? DeviceReading.Empty,
-                AverageValue = average,
-                Unit = data.Unit,
-                Core = core,
-                FromMm = fromMm,
-                ToMm = toMm,
-                StepMm = stepValue
-            });
+                Notify(ToastKind.Warning,
+                    $"Incomplete capture: {row.SampleCount} of {row.ExpectedSamples} samples received. The result averages the {row.SampleCount} received.");
+            }
 
             // Advance once per completed capture, from this capture's own interval (never from the last displayed
             // row: the table is sorted by From) — unless the user typed a new starting depth meanwhile, which then
@@ -718,6 +704,11 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
+        }
+        catch (CaptureException error) when (!token.IsCancellationRequested)
+        {
+            // No (usable) samples, no device, database unavailable …: no row, no depth advance.
+            Notify(ToastKind.Error, error.Message);
         }
         catch (Exception)
         {
@@ -742,6 +733,72 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
                 RefreshCommands();
             }
         }
+    }
+
+    // The completed row of a capture. Device captures: the averages of the accepted samples (each field over its own
+    // valid values), the actual sample count, the window and the source detector; the raw samples ride along and are
+    // saved with the row. No samples at all is an error — nothing is invented.
+    private MeasurementResult BuildResult(
+        CaptureData data, MeasurementSession current, CoreSnapshot core, long fromMm, long toMm, long stepMm, TimeSpan duration)
+    {
+        if (data.DeviceSamples is { } samples)
+        {
+            if (samples.Count == 0)
+            {
+                throw new CaptureException(
+                    $"No samples were received from {data.Device?.Name ?? data.Device?.Serial ?? "the device"} during the {duration.TotalSeconds:0} s capture. Nothing was saved.");
+            }
+
+            var summary = SampleAveraging.Summarize(samples);
+
+            return new MeasurementResult
+            {
+                SessionId = current.Id,
+                CaptureNumber = nextCapture++,
+                StartTime = data.StartTime,
+                EndTime = data.EndTime,
+                CompletedAt = data.CompletedAt,
+                SampleCount = summary.SampleCount,
+                ExpectedSamples = data.ExpectedSamples,
+                DurationMs = (long)(data.EndTime - data.StartTime).TotalMilliseconds,
+                Reading = new DeviceReading(summary.FirstTsMs, summary.Count0, summary.Count0Raw, summary.Hdm, summary.HdmRaw, summary.DoseRate),
+                Temperature = summary.Temperature,
+                Pressure = summary.Pressure,
+                DeviceSerial = data.Device?.Serial,
+                DeviceName = data.Device?.Name,
+                DeviceMac = data.Device?.Mac,
+                DeviceSessionId = summary.DeviceSessionId,
+                Samples = samples,
+                Core = core,
+                FromMm = fromMm,
+                ToMm = toMm,
+                StepMm = stepMm
+            };
+        }
+
+        if (data.Samples.Count == 0)
+        {
+            throw new CaptureException("The capture returned no samples. Nothing was saved.");
+        }
+
+        return new MeasurementResult
+        {
+            SessionId = current.Id,
+            CaptureNumber = nextCapture++,
+            StartTime = data.StartTime,
+            EndTime = data.EndTime,
+            CompletedAt = data.CompletedAt,
+            SampleCount = data.Samples.Count,
+            ExpectedSamples = data.ExpectedSamples,
+            DurationMs = (long)(data.EndTime - data.StartTime).TotalMilliseconds,
+            Reading = data.Reading ?? DeviceReading.Empty,
+            AverageValue = data.Samples.Average(),
+            Unit = data.Unit,
+            Core = core,
+            FromMm = fromMm,
+            ToMm = toMm,
+            StepMm = stepMm
+        };
     }
 
     // Each row gets its demo value once, when it enters the table, so redraws and re-sorting keep the same value.

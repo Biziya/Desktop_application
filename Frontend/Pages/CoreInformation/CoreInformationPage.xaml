@@ -265,17 +265,11 @@
                     <TextBlock Text="Device Status" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
                     <Border Style="{StaticResource DeviceRow}" DataContext="{Binding Devices.Bluetooth}">
                         <DockPanel>
-                            <Button DockPanel.Dock="Right"
-                                    Content="Retry"
-                                    Style="{StaticResource SmallButton}"
-                                    Margin="12,0,0,0"
-                                    VerticalAlignment="Top"
-                                    Command="{Binding DataContext.RefreshBluetoothCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    Visibility="{Binding CanRetry, Converter={StaticResource BoolVisibility}}"/>
+                            <!-- No Retry: the Bluetooth connection is checked every second. -->
                             <TextBlock Style="{StaticResource DeviceStatusValue}"
                                        AutomationProperties.Name="Bluetooth device status"><Run Text="●  "/><Run Text="{Binding Text, Mode=OneWay}"/></TextBlock>
                             <StackPanel Margin="0,0,12,0">
-                                <TextBlock Text="SPP CT-007 Device — Bluetooth" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="CT007-M Device — Bluetooth" Style="{StaticResource FieldLabel}"/>
                                 <TextBlock Style="{StaticResource StatusMessage}" Text="{Binding Detail}" Margin="0,3,0,0"/>
                             </StackPanel>
                         </DockPanel>

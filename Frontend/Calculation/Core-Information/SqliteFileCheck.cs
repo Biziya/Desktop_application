@@ -12,6 +12,33 @@ public static class SqliteFileCheck
 {
     private const int BusyTimeoutSeconds = 2;
 
+    /// <summary>
+    /// The one way this app opens a database it must not change (the Gamma Guard database; the status check of its
+    /// own): Mode=ReadOnly (never creates the file, never writes), no pooling (the file is not kept open afterwards),
+    /// a short busy timeout, and no PRAGMA of any kind — journal settings stay as the owner set them.
+    /// </summary>
+    public static SqliteConnection OpenReadOnly(string path)
+    {
+        var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = path,
+            Mode = SqliteOpenMode.ReadOnly,
+            Pooling = false,
+            DefaultTimeout = BusyTimeoutSeconds
+        }.ToString());
+
+        try
+        {
+            connection.Open();
+            return connection;
+        }
+        catch
+        {
+            connection.Dispose();
+            throw;
+        }
+    }
+
     public static LocalStatus Check(string path, string missingDetail)
     {
         try
@@ -21,16 +48,7 @@ public static class SqliteFileCheck
                 return new LocalStatus(LocalState.Missing, "File not found", missingDetail, path);
             }
 
-            var connectionString = new SqliteConnectionStringBuilder
-            {
-                DataSource = path,
-                Mode = SqliteOpenMode.ReadOnly,
-                Pooling = false,
-                DefaultTimeout = BusyTimeoutSeconds
-            }.ToString();
-
-            using var connection = new SqliteConnection(connectionString);
-            connection.Open();
+            using var connection = OpenReadOnly(path);
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'";
             var tables = Convert.ToInt64(command.ExecuteScalar());

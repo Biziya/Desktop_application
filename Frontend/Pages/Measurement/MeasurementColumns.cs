@@ -42,8 +42,9 @@ public static class MeasurementColumns
         new(nameof(MeasurementResult.ToMetres), "To (m)", "to_m", false, r => r.ToMetres, "0.00#");
     public static readonly MeasurementColumn Step =
         new(nameof(MeasurementResult.StepCentimetres), "Step (cm)", "step_m", false, r => r.StepMetres, "0.#");
+    // Samples averaged: the table shows "3 of 5" for an incomplete capture; CSV keeps the plain count.
     public static readonly MeasurementColumn Sample =
-        new(nameof(MeasurementResult.SampleCount), "Sample", "Sample", true, r => r.SampleCount);
+        new(nameof(MeasurementResult.SampleDisplay), "Sample", "Sample", true, r => r.SampleCount);
     // The table shows DisplayTsMs (device value, or the in-memory demo value); CSV writes only the device value.
     public static readonly MeasurementColumn TsMs =
         new(nameof(MeasurementResult.DisplayTsMs), "ts_ms", "ts_ms", true, r => r.Reading.TsMs);

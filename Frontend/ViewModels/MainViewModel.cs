@@ -20,9 +20,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private ObservableObject currentPage;
     private bool isSidebarExpanded = true;
 
-    // DEMO / PREVIEW: random ts_ms for rows without a device value (in memory only; never saved or exported).
-    // Set to false once the CT007 service provides ts_ms.
-    private const bool ShowDemoTsMs = true;
 
     public MainViewModel()
         : this(new SqliteMeasurementRepository(SqliteMeasurementRepository.DefaultPath), ApiSettings.Load(ApiSettings.DefaultPath),
@@ -32,12 +29,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     /// <param name="handler">HTTP handler for the backend; null uses the network (tests pass a stub).</param>
     /// <param name="bluetoothDevices">Bluetooth device list; null reads Windows' list (tests pass a fake).</param>
+    /// <param name="captureService">Capture source; null reads the Gamma Guard database (tests pass a fake).</param>
     public MainViewModel(
         IMeasurementRepository repository,
         ApiSettings apiSettings,
         DeviceSettings deviceSettings,
         HttpMessageHandler? handler = null,
-        Func<IReadOnlyList<KnownBluetoothDevice>>? bluetoothDevices = null)
+        Func<IReadOnlyList<KnownBluetoothDevice>>? bluetoothDevices = null,
+        IMeasurementService? captureService = null)
     {
         // One HTTP setup and one connection monitor for the whole app, alive until the window closes.
         api = new ApiClient(apiSettings, handler);
@@ -48,7 +47,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             bluetoothDevices is null ? new Ct007BluetoothCheck(deviceSettings) : new Ct007BluetoothCheck(deviceSettings, bluetoothDevices),
             new MeasurementDatabaseCheck(repository.DatabasePath),
             new GammaGuardDatabaseCheck(deviceSettings),
-            deviceSettings.CheckInterval);
+            deviceSettings.CheckInterval,
+            deviceSettings.BluetoothCheckInterval);
 
         // One toast list for both pages; connection changes are announced once per transition.
         Toasts = new ToastService();
@@ -56,9 +56,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         // The Measurement page follows the drillhole selected on Core Information. At start nothing is selected, so
         // it starts empty (no earlier drillhole's rows are shown as if they belonged to the empty selection).
-        var device = new MockMeasurementService();
+        // Real capture: the samples the connected CT007-M detector writes to the local Gamma Guard database after each
+        // click (read-only). No simulated or demo values.
+        var device = captureService ?? new DeviceCaptureService(new GammaGuardCaptureDevices(Devices));
         Measurement = new MeasurementViewModel(
-            device, new CsvExportService(), new DialogService(), repository, showDemoTsMs: ShowDemoTsMs, toasts: Toasts,
+            device, new CsvExportService(), new DialogService(), repository, showDemoTsMs: false, toasts: Toasts,
             durationSettings: new CaptureDurationSettings(CaptureDurationSettings.PathBeside(repository.DatabasePath)));
         Core = new CoreInformationViewModel(
             core =>
