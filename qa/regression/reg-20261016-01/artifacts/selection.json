@@ -1,0 +1,137 @@
+﻿{
+    "runId":  "reg-20261016-01",
+    "baseline":  "cc031a51077154a1da3c465930d6730cd00bdc1e",
+    "head":  "6c47ad8c8267fdf3ad29295a0e2367282245a261",
+    "changedFiles":  [
+                         "qa/regression/",
+                         "qa/reports/run-20261016-final/coverage-analysis.md",
+                         "qa/reports/run-20261016-final/defect-report.md",
+                         "qa/reports/run-20261016-final/detailed-test-results.md",
+                         "qa/reports/run-20261016-final/manual-testing-checklist.md",
+                         "qa/reports/run-20261016-final/qa-summary.md",
+                         "qa/reports/run-20261016-final/recommendations.md",
+                         "Tests/regression/"
+                     ],
+    "full":  false,
+    "fullReasons":  [
+
+                    ],
+    "direct":  [
+
+               ],
+    "dependents":  [
+
+                   ],
+    "critical":  [
+                     "BE-020",
+                     "BE-025",
+                     "BE-027",
+                     "BE-032",
+                     "BE-036",
+                     "BE-037",
+                     "INT-007",
+                     "INT-008",
+                     "INT-010",
+                     "INT-012",
+                     "FE-026",
+                     "FE-035",
+                     "FE-036",
+                     "FE-005",
+                     "BE-030"
+                 ],
+    "selected":  [
+                     "BE-020",
+                     "BE-025",
+                     "BE-027",
+                     "BE-030",
+                     "BE-032",
+                     "BE-036",
+                     "BE-037",
+                     "FE-005",
+                     "FE-026",
+                     "FE-035",
+                     "FE-036",
+                     "INT-007",
+                     "INT-008",
+                     "INT-010",
+                     "INT-012"
+                 ],
+    "manualFollowUp":  [
+
+                       ],
+    "trace":  [
+                  {
+                      "file":  "qa/regression/",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/reports/run-20261016-final/coverage-analysis.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/reports/run-20261016-final/defect-report.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/reports/run-20261016-final/detailed-test-results.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/reports/run-20261016-final/manual-testing-checklist.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/reports/run-20261016-final/qa-summary.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/reports/run-20261016-final/recommendations.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  }
+              ],
+    "include":  [
+                    "Timing"
+                ]
+}

@@ -1,0 +1,18 @@
+﻿PASS BE-020 CaptureLogicTests.WindowMembership (8 ms)
+PASS BE-025 CaptureLogicTests.PollingAndFinalRead (46 ms)
+PASS BE-027 LocalFilesTests.BrokenOrLockedDatabase (3543 ms)
+PASS BE-027 LocalFilesTests.VendorDatabaseReadOnly (84 ms)
+FAIL BE-030 LocalFilesTests.DurationSettings (17 ms) - InvalidOperationException: The requested operation requires an element of type 'Number', but the target element has type 'String'.
+PASS BE-032 MeasurementRepositoryTests.AtomicSave (66 ms)
+PASS BE-036 MeasurementRepositoryTests.Migrations (275 ms)
+PASS BE-037 MeasurementRepositoryTests.MigrationRefusals (143 ms)
+FAIL FE-005 ApiClientTests.SettingsDefaults (11 ms) - InvalidOperationException: The requested operation requires an element of type 'Number', but the target element has type 'String'.
+PASS FE-026 MeasurementWorkflowTests.CaptureCycle (144 ms)
+PASS FE-035 MeasurementWorkflowTests.SaveFailureRetry (628 ms)
+PASS FE-036 MeasurementWorkflowTests.DrillholeSwitch (1273 ms)
+PASS FE-036 MeasurementWorkflowTests.SwitchRefusedWhileUnsaved (114 ms)
+PASS INT-007 CapturePipelineTests.CaptureToStorage (222 ms)
+PASS INT-008 CapturePipelineTests.ConcurrentWriter (53669 ms)
+PASS INT-010 CapturePipelineTests.AppDatabaseFailureAndRecovery (395 ms)
+PASS INT-012 CapturePipelineTests.NoSessionMixing (1311 ms)
+17 tests: 15 passed, 2 failed, 0 skipped.

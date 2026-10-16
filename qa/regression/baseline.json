@@ -1,0 +1,8 @@
+{
+  "commit": "cc031a51077154a1da3c465930d6730cd00bdc1e",
+  "productionCommit": "277d581",
+  "runId": "run-20261016-final",
+  "report": "qa/reports/run-20261016-final/qa-summary.md",
+  "results": "qa/execution/evidence/run-final-results.csv",
+  "note": "Last verified QA run: production code of 277d581 tested with the Tests/ suite as committed in cc031a5. Update only after a regression run has been reviewed."
+}
