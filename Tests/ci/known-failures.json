@@ -1,0 +1,7 @@
+{
+  "_comment": "Failures already confirmed as application defects (qa/reports/run-20261016-final/defect-report.md). CI reports them as warnings instead of failing the check, so that unrelated changes are not blocked. Remove an entry as soon as the defect is fixed: CI warns when a listed test passes. Matching is by test method, not by ID, so another failing test with the same ID still fails the check.",
+  "failures": [
+    { "id": "FE-005", "test": "ApiClientTests.SettingsDefaults", "defect": "DEF-001" },
+    { "id": "BE-030", "test": "LocalFilesTests.DurationSettings", "defect": "DEF-002" }
+  ]
+}

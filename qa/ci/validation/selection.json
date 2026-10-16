@@ -1,0 +1,92 @@
+﻿{
+    "runId":  "ci-local-01",
+    "baseline":  "aeeddcd",
+    "head":  "aeeddcd616e07d4c2aec6d9b1f36fe106d08df55",
+    "changedFiles":  [
+                         ".github/",
+                         "Tests/ci/",
+                         "Tests/regression/impact-map.json",
+                         "Tests/regression/Invoke-Regression.ps1"
+                     ],
+    "full":  true,
+    "fullReasons":  [
+                        ".github/ (CI pipeline or test-selection tooling changed)",
+                        "Tests/ci/ (CI pipeline or test-selection tooling changed)",
+                        "Tests/regression/impact-map.json (CI pipeline or test-selection tooling changed)",
+                        "Tests/regression/Invoke-Regression.ps1 (CI pipeline or test-selection tooling changed)"
+                    ],
+    "direct":  [
+
+               ],
+    "dependents":  [
+
+                   ],
+    "critical":  [
+                     "BE-020",
+                     "BE-025",
+                     "BE-027",
+                     "BE-032",
+                     "BE-036",
+                     "BE-037",
+                     "INT-007",
+                     "INT-008",
+                     "INT-010",
+                     "INT-012",
+                     "FE-026",
+                     "FE-035",
+                     "FE-036",
+                     "FE-005",
+                     "BE-030"
+                 ],
+    "selected":  {
+
+                 },
+    "manualFollowUp":  [
+
+                       ],
+    "trace":  [
+                  {
+                      "file":  ".github/",
+                      "rule":  "^(\\.github/|Tests/ci/|Tests/regression/(impact-map\\.json|Invoke-Regression\\.ps1)$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/ci/",
+                      "rule":  "^(\\.github/|Tests/ci/|Tests/regression/(impact-map\\.json|Invoke-Regression\\.ps1)$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/regression/impact-map.json",
+                      "rule":  "^(\\.github/|Tests/ci/|Tests/regression/(impact-map\\.json|Invoke-Regression\\.ps1)$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/regression/Invoke-Regression.ps1",
+                      "rule":  "^(\\.github/|Tests/ci/|Tests/regression/(impact-map\\.json|Invoke-Regression\\.ps1)$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  }
+              ],
+    "include":  [
+                    "Timing"
+                ]
+}

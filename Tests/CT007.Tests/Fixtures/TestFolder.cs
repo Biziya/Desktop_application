@@ -22,8 +22,15 @@ public sealed class TestFolder : IDisposable
 
     public void Dispose()
     {
-        // Pooled connections keep the files open; release them before deleting.
-        SqliteConnection.ClearAllPools();
+        // Pooled connections keep the files open; release them before deleting. If SQLite itself could not load
+        // (TypeInitializationException), there are no connections to release: still delete the folder.
+        try
+        {
+            SqliteConnection.ClearAllPools();
+        }
+        catch (TypeInitializationException)
+        {
+        }
 
         for (var attempt = 0; attempt < 5; attempt++)
         {

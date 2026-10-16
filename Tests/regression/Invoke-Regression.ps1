@@ -23,7 +23,8 @@ param(
     [string[]]$Include = @('Timing'),
     [string]$PackageSource = (Join-Path $env:USERPROFILE '.nuget\packages'),
     [string]$WorkRoot = (Join-Path $env:TEMP 'ct007-regression'),
-    [switch]$SelectOnly
+    [switch]$SelectOnly,
+    [switch]$WarnAsError   # static check: compiler warnings (in the test project and the projects it builds) fail the build
 )
 
 $ErrorActionPreference = 'Stop'
@@ -82,6 +83,12 @@ if ($SelectOnly) { return }
 
 # ---- 3. Isolated build ----------------------------------------------------------------------------------------
 $work = Join-Path $WorkRoot $RunId
+# Observed (Phase 7): SQLite's native e_sqlite3.dll fails to load once its full path reaches about 252 characters,
+# even with Windows long paths enabled, and every SQLite test then fails with TypeInitializationException.
+$nativePath = Join-Path $work 'Tests\CT007.Tests\bin\Debug\net10.0-windows10.0.19041.0\runtimes\win-x64\native\e_sqlite3.dll'
+if ($nativePath.Length -gt 245) {
+    throw "WorkRoot is too deep: the test build's native SQLite path would be $($nativePath.Length) characters (limit 245). Use a shorter -WorkRoot."
+}
 if (Test-Path $work) { Remove-Item -Recurse -Force $work }
 foreach ($dir in 'Frontend', 'Backend', 'Tests') {
     robocopy (Join-Path $repo $dir) (Join-Path $work $dir) /E /XD bin obj /NFL /NDL /NJH /NJS /NP | Out-Null
@@ -93,7 +100,7 @@ $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $project = Join-Path $work 'Tests\CT007.Tests\CT007.Tests.csproj'
 $buildLog = Join-Path $artifacts 'build.log'
 & dotnet restore $project --source $PackageSource 2>&1 | Out-File -Encoding utf8 $buildLog
-& dotnet build $project --no-restore -v q 2>&1 | Out-File -Encoding utf8 -Append $buildLog
+& dotnet build $project --no-restore -v q $(if ($WarnAsError) { '-warnaserror' }) 2>&1 | Out-File -Encoding utf8 -Append $buildLog
 if ($LASTEXITCODE -ne 0) { throw "test build failed: see $buildLog" }
 
 # ---- 4. Run ---------------------------------------------------------------------------------------------------

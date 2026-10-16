@@ -1,0 +1,177 @@
+# Continuous testing for CT007 Measurement Studio (frontend WPF + backend ASP.NET Core). Never deploys or releases.
+# One test harness (Tests/CT007.Tests) covers FE, BE, INT and E2E tests, so a single Windows job builds once and runs the
+# change-selected set (Tests/regression/impact-map.json). Docs: qa/ci/.
+name: Tests
+
+on:
+  pull_request:
+    branches: [main, development]
+  push:
+    branches: [main, development]
+    paths-ignore: ['qa/**', '**/*.md', 'Images/**']
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: 'changed = change-based selection; full = whole suite'
+        type: choice
+        options: [full, changed]
+        default: full
+      categories:
+        description: 'Opt-in categories (Timing, Sql, E2E)'
+        type: string
+        default: 'Timing,Sql,E2E'
+  # Release validation: an existing or future release workflow can call this with scope=full before it releases.
+  workflow_call:
+    inputs:
+      scope: { type: string, default: full }
+      categories: { type: string, default: 'Timing,Sql,E2E' }
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Build and test (Windows)
+    runs-on: windows-latest   # WPF and WinRT targets need Windows; GitHub-hosted runners are ephemeral
+    timeout-minutes: 45
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+      RUN_ID: ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # the change-based selection diffs against the base commit
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}\ct007\nuget
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Decide scope
+        id: scope
+        shell: pwsh
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_SCOPE: ${{ inputs.scope }}
+          INPUT_CATEGORIES: ${{ inputs.categories }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          $full = $false; $baseline = ''; $categories = 'Timing'
+          if ($env:EVENT -eq 'pull_request') { $baseline = $env:PR_BASE }
+          elseif ($env:EVENT -eq 'push') {
+            $baseline = $env:PUSH_BEFORE
+            # New branch or force-push: the previous commit is unknown or gone, so run everything.
+            if (-not $baseline -or $baseline -match '^0+$') { $full = $true }
+            else { git cat-file -e "$baseline^{commit}" 2>$null; if ($LASTEXITCODE -ne 0) { $full = $true } }
+          } else {
+            $full = ($env:INPUT_SCOPE -ne 'changed'); $categories = $env:INPUT_CATEGORIES
+            $baseline = (git rev-parse 'HEAD~1' 2>$null); if (-not $baseline) { $full = $true }
+          }
+          if (-not $baseline) { $baseline = (git rev-parse HEAD) }
+          "full=$full" >> $env:GITHUB_OUTPUT
+          "baseline=$baseline" >> $env:GITHUB_OUTPUT
+          "categories=$categories" >> $env:GITHUB_OUTPUT
+          "e2e=$($categories -match 'E2E')" >> $env:GITHUB_OUTPUT
+          "sql=$($categories -match 'Sql')" >> $env:GITHUB_OUTPUT
+          Write-Output "Scope: full=$full baseline=$baseline categories=$categories"
+
+      - name: Prepare disposable SQL Server LocalDB (Sql category only)
+        if: steps.scope.outputs.sql == 'True'
+        shell: pwsh
+        run: |
+          # Local, throwaway database on the ephemeral runner; no credentials (integrated security).
+          if (-not (Get-Command sqllocaldb -ErrorAction SilentlyContinue)) {
+            Write-Output '::warning::SQL Server LocalDB is not available on this runner: BE-006 will be reported as skipped.'; exit 0 }
+          sqllocaldb create ct007 -s | Out-Null
+          sqlcmd -S '(localdb)\ct007' -E -b -Q "IF DB_ID('CT007_Test') IS NULL CREATE DATABASE CT007_Test"
+          if ($LASTEXITCODE -ne 0) { Write-Output '::warning::Could not create CT007_Test: BE-006 will be skipped.'; exit 0 }
+          'CT007_TEST_SQL=Server=(localdb)\ct007;Database=CT007_Test;Integrated Security=true;TrustServerCertificate=true' >> $env:GITHUB_ENV
+
+      - name: Enable desktop E2E (E2E category, GitHub-hosted runner only)
+        if: steps.scope.outputs.e2e == 'True' && runner.environment == 'github-hosted'
+        shell: pwsh
+        # The E2E bench moves %LocalAppData%\CT007_Measurement_Studio aside; acceptable only on a throwaway runner account.
+        run: "'CT007_E2E_DEDICATED_ACCOUNT=1' >> $env:GITHUB_ENV"
+
+      - name: Build and run selected tests
+        id: run
+        continue-on-error: true   # the publish step below decides the check result from results.csv
+        shell: pwsh
+        env:
+          BASELINE: ${{ steps.scope.outputs.baseline }}
+          CATEGORIES: ${{ steps.scope.outputs.categories }}
+          FULL: ${{ steps.scope.outputs.full }}
+        run: |
+          $options = @{
+            RunId = $env:RUN_ID; Baseline = $env:BASELINE; Include = $env:CATEGORIES.Split(',')
+            PackageSource = 'https://api.nuget.org/v3/index.json'
+            WorkRoot = Join-Path $env:RUNNER_TEMP 'ct007'   # also the NuGet cache location above
+            WarnAsError = $true; Full = ($env:FULL -eq 'True')
+          }
+          & .\Tests\regression\Invoke-Regression.ps1 @options
+          exit $LASTEXITCODE
+
+      - name: Publish results and decide the check
+        if: always()
+        shell: pwsh
+        # E2E-* failures are informational until the desktop E2E run is verified on hosted runners (qa/ci/failure-policy.md).
+        run: .\Tests\ci\Publish-TestResults.ps1 -Artifacts "qa\regression\$env:RUN_ID\artifacts" -InformationalPrefixes 'E2E-'
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ env.RUN_ID }}
+          path: qa/regression/${{ env.RUN_ID }}/artifacts/
+          retention-days: 14
+          if-no-files-found: warn
+
+  ai-analysis:
+    # Optional, off by default: enable with repository variable CT007_AI_ANALYSIS=true and secret ANTHROPIC_API_KEY.
+    # Runs only after a failed test job, never for pull requests from forks, and uses the analysis script from the
+    # default branch (not from the pull request) so untrusted code never runs with the secret.
+    name: AI failure triage (optional)
+    needs: tests
+    if: >-
+      failure() && vars.CT007_AI_ANALYSIS == 'true' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      RUN_ID: ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: Tests/ci
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: test-results-${{ env.RUN_ID }}
+          path: artifacts
+      - name: Triage failures (suggestions only)
+        shell: pwsh
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: ./Tests/ci/Invoke-FailureAnalysis.ps1 -Artifacts artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-analysis-${{ env.RUN_ID }}
+          path: artifacts/ai-analysis.md
+          if-no-files-found: ignore

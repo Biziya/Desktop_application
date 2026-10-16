@@ -39,6 +39,10 @@ A production file that the map does not cover selects the full suite. `-PackageS
 
 After the results have been reviewed, update `baseline.json` by hand.
 
+Keep `-WorkRoot` short. SQLite's native DLL fails to load once its path reaches about 252 characters, so the script refuses a work folder deeper than that.
+
+CI (`.github/workflows/tests.yml`) runs the same script, then `Tests/ci/Publish-TestResults.ps1`, which writes JUnit XML and the job summary and decides pass or fail. Documentation is in `qa/ci/`.
+
 ## Isolation
 
 - Every test works in its own `%TEMP%\ct007-tests\<guid>` folder, and the folder is deleted afterwards.

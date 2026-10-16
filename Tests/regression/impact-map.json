@@ -37,6 +37,7 @@
     { "pattern": "^tools/check-db\\.ps1$", "direct": [], "dependents": [], "manual": "no automated test (BE-045 Unresolved): run the script against a v5 copy by hand" },
     { "pattern": "\\.(csproj|slnx|props|targets)$|^global\\.json$|^nuget\\.config$", "full": true, "reason": "build or dependency configuration" },
     { "pattern": "^Tests/CT007\\.Tests/", "full": true, "reason": "test code or fixtures changed" },
+    { "pattern": "^(\\.github/|Tests/ci/|Tests/regression/(impact-map\\.json|Invoke-Regression\\.ps1)$)", "full": true, "reason": "CI pipeline or test-selection tooling changed" },
     { "pattern": "^Frontend/Shared/Infrastructure/SidebarItem\\.cs$", "direct": ["FE-023"], "dependents": [], "manual": "sidebar visuals: MAN-008" },
     { "pattern": "^Frontend/AssemblyInfo\\.cs$", "full": true, "reason": "assembly-level attributes" },
     { "pattern": "^Backend/(Backend\\.http|Properties/launchSettings\\.json)$", "direct": ["BE-011"], "dependents": [], "manual": "local launch/port settings: re-check the frontend baseUrl default (FE-005) and MAN-015" },

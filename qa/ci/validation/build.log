@@ -1,0 +1,10 @@
+﻿  Determining projects to restore...
+  Restored C:\Users\user\AppData\Local\Temp\ct007-ci\ci-local-01\Frontend\Frontend.csproj (in 2.8 sec).
+  Restored C:\Users\user\AppData\Local\Temp\ct007-ci\ci-local-01\Backend\Backend.csproj (in 2.82 sec).
+  Restored C:\Users\user\AppData\Local\Temp\ct007-ci\ci-local-01\Tests\CT007.Tests\CT007.Tests.csproj (in 2.82 sec).
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:04.85
