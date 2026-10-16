@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows;
@@ -48,12 +49,17 @@ public partial class MeasurementPage : UserControl
             ResultsGrid.Columns.Insert(index++, new DataGridTextColumn
             {
                 Header = column.Label,
-                Binding = new Binding(column.Binding) { Mode = BindingMode.OneWay, StringFormat = column.DisplayFormat },
+                Binding = new Binding(column.Binding)
+                {
+                    Mode = BindingMode.OneWay,
+                    StringFormat = column.DisplayFormat,
+                    Converter = column.Formatter is { } format ? new CellFormatter(format) : null
+                },
                 IsReadOnly = true,
                 Width = (DataGridLength)widths.ConvertFromInvariantString(layout.Width)!,
                 MinWidth = layout.MinWidth,
                 MaxWidth = layout.MaxWidth,
-                ElementStyle = (Style)FindResource("CenteredTableText"),
+                ElementStyle = (Style)FindResource(column.Kind == MeasurementCellKind.Number ? "NumberTableText" : "TextTableText"),
                 HeaderStyle = (Style)FindResource("CenteredTableHeader")
             });
         }
@@ -94,5 +100,13 @@ public partial class MeasurementPage : UserControl
         {
             ResultsGrid.ScrollIntoView(e.NewItems[0]);
         }
+    }
+
+    // Table-only display formatting of a column (MeasurementCellFormat); the bound value itself is never changed.
+    private sealed class CellFormatter(Func<object?, string?> format) : IValueConverter
+    {
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => format(value) ?? "";
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => Binding.DoNothing;
     }
 }

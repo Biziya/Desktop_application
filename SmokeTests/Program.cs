@@ -524,6 +524,7 @@ internal static class Program
         await AutofillAndDepthInputChecks(core, settings);
         await MeasurementUnitsAndOrderChecks(core);
         await LocalDeviceStatusChecks();
+        await TableFormattingChecks(core);
         await DropdownPerformanceChecks(core, settings);
         await ToastChecks(settings);
         await DrillholeSelectionChecks(core, settings);
@@ -1164,6 +1165,63 @@ internal static class Program
     }
 
     /// <summary>Device Status checks of this laptop: Bluetooth list, measurement database, Gamma Guard discovery.</summary>
+    /// <summary>Table display: local timestamps, two-decimal values, alignment by meaning; storage and CSV unchanged.</summary>
+    private static async Task TableFormattingChecks(CoreSnapshot core)
+    {
+        // Decimals: at most two, display only; nulls stay empty; integers stay integers.
+        string? D(object? v) => MeasurementCellFormat.Decimal(v);
+        Check(D(1.777777) == "1.78" && D(2.3456) == "2.35" && D(5.0) == "5" && D(1.5) == "1.5" && D(-0.001) == "0" && D(0.125) == "0.13" &&
+            D(1234567.891) == "1234567.89" && D(null) is null && D(double.NaN) == "NaN", "Device values: at most two decimals (1.777777 → 1.78, 5 → 5, 1.5 → 1.5); null stays empty");
+
+        // ts_ms: Unix milliseconds (UTC) → this computer's local time, yyyy-MM-dd HH:mm:ss; invalid values never throw.
+        const long sampleMs = 1792115769651;
+        var expected = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UnixEpoch.AddMilliseconds(sampleMs), TimeZoneInfo.Local).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+        Check(MeasurementCellFormat.UnixMillisecondsLocal(sampleMs) == expected && MeasurementCellFormat.UnixMillisecondsLocal(null) is null &&
+            MeasurementCellFormat.UnixMillisecondsLocal(long.MaxValue) == long.MaxValue.ToString(CultureInfo.InvariantCulture),
+            $"ts_ms {sampleMs} shown as local time {expected}; missing → empty; out of range → raw number, no crash");
+        if (TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow) == TimeSpan.FromHours(8))
+        {
+            Check(MeasurementCellFormat.UnixMillisecondsLocal(sampleMs) == "2026-10-16 09:56:09", "UTC+8: 1792115769651 → 2026-10-16 09:56:09");
+        }
+
+        // Alignment by meaning: numbers left, text and timestamps right; ts_ms and the Sample text are typed by meaning.
+        var kinds = MeasurementColumns.All.ToDictionary(c => c.CsvHeader, c => c.Kind);
+        Check(new[] {"No", "Capture No", "from_m", "to_m", "step_m", "Sample", "count0", "count0_raw", "hdm", "hdm_raw", "dose_rate"}.All(h => kinds[h] == MeasurementCellKind.Number) &&
+            new[] {"Start Time", "End Time", "ts_ms", "session_id"}.All(h => kinds[h] == MeasurementCellKind.Text),
+            "Numbers left-aligned, text and timestamps right-aligned (by column meaning)");
+        Check(MeasurementColumns.All.Where(c => c.Formatter is not null).Select(c => c.CsvHeader)
+                .SequenceEqual(new[] {"ts_ms", "count0", "count0_raw", "hdm", "hdm_raw", "dose_rate"}) &&
+            MeasurementColumns.All.Select(c => c.Label).SequenceEqual(new[] {"No", "Capture No", "Start Time", "End Time", "From (m)", "To (m)", "Step (cm)", "Sample", "ts_ms", "count0", "count0_raw", "hdm", "hdm_raw", "dose_rate", "Session"}),
+            "Formatting only on ts_ms and device values; header labels unchanged");
+
+        // Model, SQLite and CSV keep full precision and Unix milliseconds.
+        var path = TempDb("ct007-format");
+        var service = new ControlledMeasurements { Reading = new DeviceReading(TsMs: sampleMs, Count0: 1.777777, Count0Raw: 2.3456, Hdm: 5, HdmRaw: null, DoseRate: 0.123456789) };
+        var export = new FakeExport();
+        Guid session;
+        using (var vm = new MeasurementViewModel(service, export, new FakeDialogs(), new SqliteMeasurementRepository(path)))
+        {
+            vm.SetCore(core with { DrillholeId = "FMT-1" }); await Until(() => vm.SessionId is not null);
+            session = vm.SessionId!.Value;
+            vm.NextFrom = "10"; vm.Step = "25"; vm.ToggleMeasurementCommand.Execute(null);
+            vm.TriggerCommand.Execute(null); service.Complete(); await Until(() => vm.Results.Count == 1 && vm.CanTrigger);
+            var row = vm.Results[0];
+            Check(row.Reading is { TsMs: sampleMs, Count0: 1.777777, Count0Raw: 2.3456, DoseRate: 0.123456789 } && row.DisplayTsMs == sampleMs &&
+                MeasurementColumns.TsMs.Formatter!(Resolve(MeasurementColumns.TsMs.Binding, row)) == expected &&
+                MeasurementColumns.Count0.Formatter!(Resolve(MeasurementColumns.Count0.Binding, row)) == "1.78" &&
+                MeasurementColumns.HdmRaw.Formatter!(Resolve(MeasurementColumns.HdmRaw.Binding, row)) is null,
+                "The table formats the bound model values; the model keeps full precision and Unix milliseconds");
+            vm.ExportCommand.Execute(null); await Until(() => export.Rows is not null);
+            var csv = CsvExportService.Serialize(export.Rows!.ToArray(), export.Session!);
+            Check(csv.Contains("\"1792115769651\"") && csv.Contains("\"1.777777\"") && csv.Contains("\"0.123456789\"") && !csv.Contains("1.78\"") &&
+                !csv.Contains(expected), "CSV unchanged: raw Unix milliseconds and full-precision values");
+            vm.ToggleMeasurementCommand.Execute(null);
+        }
+        await Task.Delay(100);
+        var stored = (await new SqliteMeasurementRepository(path).LoadAsync(session)).Single();
+        Check(stored.Reading is { TsMs: sampleMs, Count0: 1.777777, Count0Raw: 2.3456, DoseRate: 0.123456789 }, "SQLite keeps full precision and Unix milliseconds");
+    }
+
     private static async Task LocalDeviceStatusChecks()
     {
         // Bluetooth: dropdown list (identification rule), the selected device by address, connected vs paired, failure.
@@ -1188,6 +1246,27 @@ internal static class Program
             is { State: LocalState.Unavailable, Text: "Status unavailable", Detail: "Bluetooth is turned off." }, "Check failure → Status unavailable, not Disconnected");
         Check(new Ct007BluetoothCheck(settings with { Ct007Address = "00:11:22:AA:BB:CC" }, () => [new KnownBluetoothDevice("", 0x001122AABBCC, true, true)]).ListDevices()
             .Single().Display == "Name unavailable  (00:11:22:AA:BB:CC)", "Configured address identifies a listed device; missing name shown as Name unavailable");
+
+        // The Windows reader (WinRT, as in the former backend): the list opens only CT007-M names; each check reads the
+        // ONE selected device by its Windows device ID, using its live connection status.
+        var winrt = new FakeBluetoothReader();
+        var check = new Ct007BluetoothCheck(settings, winrt);
+        winrt.Devices.AddRange([new("Headphones", 9, true, true, "BT#9"), new("CT007-M-B2", 0xB2, false, true, "BT#B2"), new("CT007-M-B2", 0xB2, true, false, "BLE#B2", true)]);
+        var options = check.ListDevices();
+        Check(winrt.NamesAsked.SetEquals(new[] {"Headphones", "CT007-M-B2"}) && winrt.NamesAccepted.SequenceEqual(new[] {"CT007-M-B2", "CT007-M-B2"}) &&
+            options.Single() is { Address: 0xB2, DeviceId: "BLE#B2", LowEnergy: true },
+            "List: only CT007-M names are opened; one entry per address, the connected (Classic or LE) entry kept with its device ID");
+        var b2 = new BluetoothDeviceOption(0xB2, "CT007-M-B2", "BT#B2");
+        winrt.Live = new("CT007-M-B2", 0xB2, true, true, "BT#B2");
+        Check(check.CheckSelected(b2) is { State: LocalState.Connected, Detail: "CT007-M-B2" } && winrt.Reads.Last() == "BT#B2", "Check: the selected device read by its device ID; live status Connected");
+        winrt.Live = new("CT007-M-B2", 0xB2, false, true, "BT#B2");
+        Check(check.CheckSelected(b2).Detail == "CT007-M-B2 — paired with this laptop, not connected", "Paired but not connected → Disconnected");
+        winrt.Live = new("CT007-M-B2", 0xB2, false, false, "BT#B2");
+        Check(check.CheckSelected(b2) is { State: LocalState.Disconnected, Detail: "CT007-M-B2 — not paired, not connected" }, "Known but neither paired nor connected → Disconnected");
+        winrt.Live = new("Other", 0xC3, true, true, "BT#B2");
+        Check(check.CheckSelected(b2).Detail.Contains("no longer paired"), "A device with another address under that ID is not the selected one");
+        winrt.Fail = new TimeoutException("Windows did not answer the Bluetooth check in time.");
+        Check(check.CheckSelected(b2) is { State: LocalState.Unavailable, Detail: "Windows did not answer the Bluetooth check in time." }, "Timeout / Bluetooth off → Status unavailable");
 
         // Settings file.
         var settingsFile = Path.Combine(Path.GetTempPath(), $"device-settings-{Guid.NewGuid():N}.json");
@@ -1992,6 +2071,26 @@ internal static class Program
             return new HttpResponseMessage(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
         }
     }
+    private sealed class FakeBluetoothReader : IBluetoothReader
+    {
+        public List<KnownBluetoothDevice> Devices { get; } = [];
+        public HashSet<string> NamesAsked { get; } = [];
+        public List<string> NamesAccepted { get; } = [];
+        public List<string?> Reads { get; } = [];
+        public KnownBluetoothDevice? Live { get; set; }
+        public Exception? Fail { get; set; }
+
+        public IReadOnlyList<KnownBluetoothDevice> ListDevices(Func<string, bool> nameMatches) =>
+            Devices.Where(d => { NamesAsked.Add(d.Name); var ok = nameMatches(d.Name); if (ok) NamesAccepted.Add(d.Name); return ok; }).ToList();
+
+        public KnownBluetoothDevice? ReadDevice(BluetoothDeviceOption device)
+        {
+            if (Fail is not null) throw Fail;
+            Reads.Add(device.DeviceId);
+            return Live;
+        }
+    }
+
     private sealed class FakeExport : ICsvExportService
     {
         public IReadOnlyList<MeasurementResult>? Rows { get; private set; }

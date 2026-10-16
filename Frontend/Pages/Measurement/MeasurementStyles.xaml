@@ -83,6 +83,17 @@
         <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
     </Style>
 
+    <!-- Body cells by column meaning (MeasurementColumn.Kind): numbers left, text and timestamps right. The small margin
+         keeps the text off the vertical grid lines. Headers keep CenteredTableHeader. -->
+    <Style x:Key="NumberTableText" TargetType="TextBlock" BasedOn="{StaticResource CenteredTableText}">
+        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="Margin" Value="4,0"/>
+    </Style>
+    <Style x:Key="TextTableText" TargetType="TextBlock" BasedOn="{StaticResource CenteredTableText}">
+        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="Margin" Value="4,0"/>
+    </Style>
+
     <!-- Header text is centred and wraps (also inside a word such as count0_raw) instead of widening the column. -->
     <Style x:Key="CenteredTableHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
         <Setter Property="HorizontalContentAlignment" Value="Center"/>

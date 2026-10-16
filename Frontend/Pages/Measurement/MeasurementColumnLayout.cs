@@ -30,13 +30,14 @@ public static class MeasurementColumnLayout
         [MeasurementColumns.To.Binding] = new(Visible: true, Width: "1*", MinWidth: 56),
         [MeasurementColumns.Step.Binding] = new(Visible: true, Width: "1*", MinWidth: 52),
         [MeasurementColumns.Sample.Binding] = new(Visible: true, Width: "0.9*", MinWidth: 52),
-        // Device values get somewhat more room; full-precision values that still do not fit show "…" + tooltip.
-        [MeasurementColumns.TsMs.Binding] = new(Visible: true, Width: "1.5*", MinWidth: 64),
-        [MeasurementColumns.Count0.Binding] = new(Visible: true, Width: "1.2*", MinWidth: 52),
-        [MeasurementColumns.Count0Raw.Binding] = new(Visible: true, Width: "1.3*", MinWidth: 56),
-        [MeasurementColumns.Hdm.Binding] = new(Visible: true, Width: "1.2*", MinWidth: 48),
-        [MeasurementColumns.HdmRaw.Binding] = new(Visible: true, Width: "1.2*", MinWidth: 52),
-        [MeasurementColumns.DoseRate.Binding] = new(Visible: true, Width: "1.2*", MinWidth: 56),
+        // ts_ms shows a local timestamp ("2026-10-16 09:56:09"), so it gets the most room; device values show at most two
+        // decimals and need less. A value that still does not fit shows "…" + tooltip.
+        [MeasurementColumns.TsMs.Binding] = new(Visible: true, Width: "2.2*", MinWidth: 64),
+        [MeasurementColumns.Count0.Binding] = new(Visible: true, Width: "1*", MinWidth: 52),
+        [MeasurementColumns.Count0Raw.Binding] = new(Visible: true, Width: "1.1*", MinWidth: 56),
+        [MeasurementColumns.Hdm.Binding] = new(Visible: true, Width: "1*", MinWidth: 48),
+        [MeasurementColumns.HdmRaw.Binding] = new(Visible: true, Width: "1*", MinWidth: 52),
+        [MeasurementColumns.DoseRate.Binding] = new(Visible: true, Width: "1*", MinWidth: 56),
         [MeasurementColumns.SessionId.Binding] = new(Visible: false, Width: "Auto", MinWidth: 280),
     };
 

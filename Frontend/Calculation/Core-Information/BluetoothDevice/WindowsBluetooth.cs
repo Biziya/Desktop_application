@@ -1,128 +1,131 @@
-using System.ComponentModel;
-using System.Runtime.InteropServices;
+using Windows.Devices.Bluetooth;
+using Windows.Devices.Enumeration;
+using Windows.Devices.Radios;
+using Windows.Foundation;
+// The enclosing namespace is called "BluetoothDevice", so the WinRT type needs an alias.
+using WinBluetoothDevice = Windows.Devices.Bluetooth.BluetoothDevice;
 
 namespace Frontend.Calculation.CoreInformation.BluetoothDevice;
 
 /// <summary>
-/// Lists the Bluetooth (BR/EDR — the CT-007 uses the Serial Port Profile) devices this laptop knows, with the Windows
-/// Bluetooth API (BluetoothApis.dll). It only reads Windows' device list: no inquiry scan, no pairing, no connection.
+/// Reads Bluetooth devices of THIS laptop with the Windows Runtime Bluetooth API — the detection logic of the former
+/// backend's BluetoothDeviceRepository, which worked on the measurement laptop: Bluetooth Classic and Bluetooth LE are
+/// both enumerated, and every device's state is re-read from its live <c>ConnectionStatus</c>, so a paired but
+/// disconnected device is never reported as connected. Differences from the backend: paired devices are listed too
+/// (for the selection dropdown, marked not connected), a device is identified by its Bluetooth address and Windows
+/// device ID, and a failure is thrown (shown as "Status unavailable") instead of being reported as not connected.
+/// Reading only: no inquiry scan, no pairing, no connection. Every Windows call is bounded by <see cref="CallTimeout"/>.
 /// </summary>
-internal static class WindowsBluetooth
+internal sealed class WindowsBluetooth : IBluetoothReader
 {
-    private const int ErrorNoMoreItems = 259;
+    /// <summary>A Windows Bluetooth call that takes longer than this fails the check (it never hangs the monitor).</summary>
+    public static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(3);
 
-    public static IReadOnlyList<KnownBluetoothDevice> ListKnownDevices()
+    public IReadOnlyList<KnownBluetoothDevice> ListDevices(Func<string, bool> nameMatches)
     {
-        // Without a radio that is switched on, the state of the device cannot be read.
-        var radioParams = new FindRadioParams { Size = Marshal.SizeOf<FindRadioParams>() };
-        var radioFind = BluetoothFindFirstRadio(ref radioParams, out var radio);
-
-        if (radioFind == IntPtr.Zero)
+        EnsureRadioOn();
+        var candidates = new Dictionary<string, (DeviceInformation Info, bool LowEnergy)>(StringComparer.OrdinalIgnoreCase);
+        var selectors = new[]
         {
-            var error = Marshal.GetLastWin32Error();
-            throw new InvalidOperationException(error == ErrorNoMoreItems
-                ? "No Bluetooth adapter is available on this laptop, or Bluetooth is turned off."
-                : new Win32Exception(error).Message);
-        }
-
-        CloseHandle(radio);
-        BluetoothFindRadioClose(radioFind);
-
-        var search = new DeviceSearchParams
-        {
-            Size = Marshal.SizeOf<DeviceSearchParams>(),
-            ReturnAuthenticated = true,
-            ReturnRemembered = true,
-            ReturnConnected = true,
-            ReturnUnknown = false,
-            IssueInquiry = false,
-            Radio = IntPtr.Zero
+            (WinBluetoothDevice.GetDeviceSelectorFromPairingState(true), false),
+            (WinBluetoothDevice.GetDeviceSelectorFromConnectionStatus(BluetoothConnectionStatus.Connected), false),
+            (BluetoothLEDevice.GetDeviceSelectorFromPairingState(true), true),
+            (BluetoothLEDevice.GetDeviceSelectorFromConnectionStatus(BluetoothConnectionStatus.Connected), true)
         };
-        var info = new DeviceInfo { Size = Marshal.SizeOf<DeviceInfo>() };
-        var devices = new List<KnownBluetoothDevice>();
-        var find = BluetoothFindFirstDevice(ref search, ref info);
 
-        if (find == IntPtr.Zero)
+        foreach (var (selector, lowEnergy) in selectors)
         {
-            var error = Marshal.GetLastWin32Error();
-            return error == ErrorNoMoreItems ? devices : throw new Win32Exception(error);
-        }
-
-        try
-        {
-            do
+            foreach (var info in Wait(DeviceInformation.FindAllAsync(selector)))
             {
-                devices.Add(new KnownBluetoothDevice(info.Name ?? "", info.Address, info.Connected, info.Remembered || info.Authenticated));
-                info = new DeviceInfo { Size = Marshal.SizeOf<DeviceInfo>() };
+                if (nameMatches(info.Name ?? ""))
+                {
+                    candidates.TryAdd(info.Id, (info, lowEnergy));
+                }
             }
-            while (BluetoothFindNextDevice(find, ref info));
         }
-        finally
+
+        var devices = new List<KnownBluetoothDevice>();
+
+        foreach (var (id, (info, lowEnergy)) in candidates)
         {
-            BluetoothFindDeviceClose(find);
+            if (Open(id, lowEnergy) is { } device)
+            {
+                devices.Add(device with { Name = string.IsNullOrWhiteSpace(info.Name) ? device.Name : info.Name, Paired = device.Paired || info.Pairing.IsPaired });
+            }
         }
 
         return devices;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct FindRadioParams
+    public KnownBluetoothDevice? ReadDevice(BluetoothDeviceOption selected)
     {
-        public int Size;
+        EnsureRadioOn();
+
+        if (selected.DeviceId is { Length: > 0 } id && Open(id, selected.LowEnergy) is { } byId)
+        {
+            return byId;
+        }
+
+        // No Windows ID (or it is gone): look the address up, as Bluetooth Classic first (the CT-007's serial port).
+        using (var classic = Wait(WinBluetoothDevice.FromBluetoothAddressAsync(selected.Address)))
+        {
+            if (classic is not null)
+            {
+                return Read(classic);
+            }
+        }
+
+        using var lowEnergyDevice = Wait(BluetoothLEDevice.FromBluetoothAddressAsync(selected.Address));
+        return lowEnergyDevice is null ? null : Read(lowEnergyDevice);
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct DeviceSearchParams
+    private static KnownBluetoothDevice? Open(string id, bool lowEnergy)
     {
-        public int Size;
-        [MarshalAs(UnmanagedType.Bool)] public bool ReturnAuthenticated;
-        [MarshalAs(UnmanagedType.Bool)] public bool ReturnRemembered;
-        [MarshalAs(UnmanagedType.Bool)] public bool ReturnUnknown;
-        [MarshalAs(UnmanagedType.Bool)] public bool ReturnConnected;
-        [MarshalAs(UnmanagedType.Bool)] public bool IssueInquiry;
-        public byte TimeoutMultiplier;
-        public IntPtr Radio;
+        if (lowEnergy)
+        {
+            using var device = Wait(BluetoothLEDevice.FromIdAsync(id));
+            return device is null ? null : Read(device);
+        }
+
+        using (var device = Wait(WinBluetoothDevice.FromIdAsync(id)))
+        {
+            return device is null ? null : Read(device);
+        }
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct SystemTime
+    private static KnownBluetoothDevice Read(WinBluetoothDevice device) =>
+        new(device.Name ?? "", device.BluetoothAddress, device.ConnectionStatus == BluetoothConnectionStatus.Connected,
+            device.DeviceInformation?.Pairing?.IsPaired == true, device.DeviceId, false);
+
+    private static KnownBluetoothDevice Read(BluetoothLEDevice device) =>
+        new(device.Name ?? "", device.BluetoothAddress, device.ConnectionStatus == BluetoothConnectionStatus.Connected,
+            device.DeviceInformation?.Pairing?.IsPaired == true, device.DeviceId, true);
+
+    // Without an adapter whose radio is on, the device state cannot be known: the check fails (Status unavailable).
+    private static void EnsureRadioOn()
     {
-        public ushort Year, Month, DayOfWeek, Day, Hour, Minute, Second, Milliseconds;
+        var adapter = Wait(BluetoothAdapter.GetDefaultAsync())
+                      ?? throw new InvalidOperationException("No Bluetooth adapter is available on this laptop.");
+        var radio = Wait(adapter.GetRadioAsync());
+
+        if (radio?.State != RadioState.On)
+        {
+            throw new InvalidOperationException("Bluetooth is turned off on this laptop.");
+        }
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct DeviceInfo
+    // Runs on the monitor's thread-pool thread (never the UI thread), so waiting here cannot deadlock.
+    private static T Wait<T>(IAsyncOperation<T> operation)
     {
-        public int Size;
-        public ulong Address;
-        public uint ClassOfDevice;
-        [MarshalAs(UnmanagedType.Bool)] public bool Connected;
-        [MarshalAs(UnmanagedType.Bool)] public bool Remembered;
-        [MarshalAs(UnmanagedType.Bool)] public bool Authenticated;
-        public SystemTime LastSeen;
-        public SystemTime LastUsed;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 248)] public string? Name;
+        using var timeout = new CancellationTokenSource(CallTimeout);
+
+        try
+        {
+            return operation.AsTask(timeout.Token).GetAwaiter().GetResult();
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+        {
+            throw new TimeoutException("Windows did not answer the Bluetooth check in time.");
+        }
     }
-
-    [DllImport("BluetoothApis.dll", SetLastError = true)]
-    private static extern IntPtr BluetoothFindFirstRadio(ref FindRadioParams parameters, out IntPtr radio);
-
-    [DllImport("BluetoothApis.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool BluetoothFindRadioClose(IntPtr find);
-
-    [DllImport("BluetoothApis.dll", SetLastError = true)]
-    private static extern IntPtr BluetoothFindFirstDevice(ref DeviceSearchParams search, ref DeviceInfo info);
-
-    [DllImport("BluetoothApis.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool BluetoothFindNextDevice(IntPtr find, ref DeviceInfo info);
-
-    [DllImport("BluetoothApis.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool BluetoothFindDeviceClose(IntPtr find);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool CloseHandle(IntPtr handle);
 }
