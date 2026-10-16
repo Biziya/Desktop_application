@@ -1,0 +1,108 @@
+PASS BE-001 DrillholeApiTests.DrillholesContract (2545 ms)
+PASS BE-002 DrillholeApiTests.SqlFailureIs503 (3143 ms)
+PASS BE-005 DrillholeApiTests.RequestCancellation (435 ms)
+SKIP BE-006 DrillholeApiTests.SqlProjection (0 ms) - category Sql not included
+PASS BE-008 DrillholeApiTests.OpenApiDocument (85 ms)
+PASS BE-011 DrillholeApiTests.RoutingContract (27 ms)
+PASS BE-015 DepthAndOrderTests.ParseMetres (2 ms)
+PASS BE-016 DepthAndOrderTests.ParseCentimetres (0 ms)
+PASS BE-017 DepthAndOrderTests.Formatting (8 ms)
+PASS BE-018 DepthAndOrderTests.NoCumulativeDrift (0 ms)
+PASS BE-019 DepthAndOrderTests.Ordering (8 ms)
+PASS BE-020 CaptureLogicTests.WindowMembership (10 ms)
+PASS BE-021 CaptureLogicTests.ExpectedSamples (0 ms)
+PASS BE-022 CaptureLogicTests.Averaging (12 ms)
+PASS BE-023 CaptureLogicTests.TimeBasis (0 ms)
+PASS BE-024 CaptureLogicTests.DetectorPick (3 ms)
+PASS BE-024 CaptureLogicTests.ResolveNeedsAvailableDatabase (375 ms)
+PASS BE-025 CaptureLogicTests.PollingAndFinalRead (41 ms)
+PASS BE-026 CaptureLogicTests.TimeCheckAndCancellation (117 ms)
+PASS BE-027 LocalFilesTests.BrokenOrLockedDatabase (2193 ms)
+FAIL BE-027 LocalFilesTests.VendorDatabaseReadOnly (71 ms) - IOException: The process cannot access the file 'C:\Users\user\AppData\Local\Temp\ct007-tests\9be802f15b0547f28abe530a946e946c\wal.sqlite' because it is being used by another process.
+PASS BE-028 LocalFilesTests.FileCheckStates (2161 ms)
+PASS BE-029 LocalFilesTests.Discovery (69 ms)
+FAIL BE-030 LocalFilesTests.DurationSettings (56 ms) - InvalidOperationException: The requested operation requires an element of type 'Number', but the target element has type 'String'.
+PASS BE-031 MeasurementRepositoryTests.SessionResolution (1198 ms)
+PASS BE-032 MeasurementRepositoryTests.AtomicSave (54 ms)
+PASS BE-033 MeasurementRepositoryTests.IsolationAndUniqueCaptureNumbers (29 ms)
+PASS BE-034 MeasurementRepositoryTests.Delete (37 ms)
+PASS BE-035 MeasurementRepositoryTests.RoundTripPrecision (35 ms)
+PASS BE-036 MeasurementRepositoryTests.Migrations (311 ms)
+FAIL BE-037 MeasurementRepositoryTests.MigrationRefusals (136 ms) - SqliteException: SQLite Error 19: 'FOREIGN KEY constraint failed'.
+PASS BE-038 MeasurementRepositoryTests.MigrationIdempotence (424 ms)
+PASS BE-039 MeasurementRepositoryTests.MeasuredOrdering (27 ms)
+PASS BE-040 MeasurementRepositoryTests.DrillholeCacheReplace (619 ms)
+PASS BE-042 CsvExportTests.Structure (6 ms)
+PASS BE-043 CsvExportTests.InjectionAndMixing (0 ms)
+PASS BE-046 MeasurementRepositoryTests.TextFields (36 ms)
+SKIP E2E-001 DesktopWorkflowTests.MainJourney (0 ms) - category E2E not included
+SKIP E2E-002 DesktopWorkflowTests.RestartPersistence (0 ms) - category E2E not included
+SKIP E2E-003 DesktopWorkflowTests.OfflineOperation (0 ms) - category E2E not included
+SKIP E2E-004 DesktopWorkflowTests.DeleteWithDialog (0 ms) - category E2E not included
+PASS FE-001 ApiClientTests.OkResponse (4 ms)
+PASS FE-002 ApiClientTests.HttpErrors (1 ms)
+PASS FE-003 ApiClientTests.Unreachable (1006 ms)
+PASS FE-004 ApiClientTests.InvalidPayloads (5 ms)
+FAIL FE-005 ApiClientTests.SettingsDefaults (39 ms) - InvalidOperationException: The requested operation requires an element of type 'Number', but the target element has type 'String'.
+SKIP FE-006 ApiClientTests.ProbePolling (0 ms) - category Timing not included
+PASS FE-007 ApiClientTests.ReloadAfterRecovery (359 ms)
+SKIP FE-008 ApiClientTests.LoopsStopOnDispose (0 ms) - category Timing not included
+PASS FE-009 DrillholeSelectionTests.CacheThenServer (30 ms)
+PASS FE-010 DrillholeSelectionTests.FailedRefreshKeepsState (15 ms)
+PASS FE-011 DrillholeSelectionTests.EmptyListKeepsSaved (19 ms)
+PASS FE-012 DrillholeSelectionTests.LoadIsReused (30 ms)
+PASS FE-013 DrillholeSelectionTests.CatalogCleaning (0 ms)
+PASS FE-014 DrillholeSelectionTests.RankingAndGroups (0 ms)
+PASS FE-015 DrillholeSelectionTests.NoImplicitPick (17 ms)
+PASS FE-016 DrillholeSelectionTests.DebounceAndStaleResults (944 ms)
+PASS FE-018 DrillholeSelectionTests.UnicodeIds (21 ms)
+PASS FE-019 CoreInformationTests.SaveWithoutPick (188 ms)
+PASS FE-020 CoreInformationTests.SaveAndContinue (340 ms)
+PASS FE-021 CoreInformationTests.EditDisarms (488 ms)
+PASS FE-022 CoreInformationTests.SelectionLock (339 ms)
+SKIP FE-023 CoreInformationTests.NavigationKeepsState (0 ms) - category Timing not included
+PASS FE-024 MeasurementWorkflowTests.DepthValidation (4 ms)
+PASS FE-025 MeasurementWorkflowTests.StartRequirements (1 ms)
+PASS FE-026 MeasurementWorkflowTests.CaptureCycle (125 ms)
+PASS FE-027 MeasurementWorkflowTests.StopWhileCapturing (314 ms)
+SKIP FE-028 MeasurementWorkflowTests.StopWhileProcessing (0 ms) - category Timing not included
+PASS FE-029 MeasurementWorkflowTests.DepthProgression (357 ms)
+PASS FE-030 MeasurementWorkflowTests.CaptureOutcomes (261 ms)
+PASS FE-031 MeasurementWorkflowTests.LateProgressIgnored (16 ms)
+PASS FE-032 MeasurementWorkflowTests.DurationEditor (153 ms)
+PASS FE-033 MeasurementWorkflowTests.SortedInsert (333 ms)
+PASS FE-034 MeasurementWorkflowTests.DeleteFlow (504 ms)
+PASS FE-035 MeasurementWorkflowTests.SaveFailureRetry (608 ms)
+PASS FE-036 MeasurementWorkflowTests.DrillholeSwitch (1236 ms)
+PASS FE-036 MeasurementWorkflowTests.SwitchRefusedWhileUnsaved (113 ms)
+PASS FE-037 MeasurementWorkflowTests.StoredMetadataWins (126 ms)
+PASS FE-038 MeasurementWorkflowTests.NewMeasurementFlow (244 ms)
+PASS FE-039 MeasurementWorkflowTests.ExportCommandFlow (533 ms)
+PASS FE-040 DrillholeSelectionTests.MeasuredGroupRefresh (308 ms)
+PASS FE-041 StatusAndPresentationTests.ToastRules (7 ms)
+PASS FE-042 StatusAndPresentationTests.Announcements (39 ms)
+PASS FE-043 StatusAndPresentationTests.BluetoothSelection (326 ms)
+PASS FE-044 StatusAndPresentationTests.DatabaseRowsAndRetry (14 ms)
+PASS FE-045 StatusAndPresentationTests.DeviceSettingsLoad (41 ms)
+PASS FE-046 StatusAndPresentationTests.CellFormatting (2 ms)
+PASS FE-047 StatusAndPresentationTests.ColumnLayouts (1 ms)
+SKIP FE-048 MeasurementWorkflowTests.CloseDuringWork (0 ms) - category Timing not included
+PASS FE-049 MeasurementWorkflowTests.DemoTsMs (221 ms)
+PASS INT-001 HttpIntegrationTests.FieldMapping (499 ms)
+PASS INT-002 HttpIntegrationTests.ServiceUnavailablePropagation (3071 ms)
+SKIP INT-003 HttpIntegrationTests.OfflineStartAndRecovery (0 ms) - category Timing not included
+SKIP INT-004 HttpIntegrationTests.SlowBackend (0 ms) - category Timing not included
+PASS INT-005 HttpIntegrationTests.ContractAlignment (1 ms)
+PASS INT-006 HttpIntegrationTests.CacheAcrossRestart (19 ms)
+FAIL INT-007 CapturePipelineTests.CaptureToStorage (33 ms) - IOException: The process cannot access the file 'C:\Users\user\AppData\Local\Temp\ct007-tests\3b9dbb07ab2343bba08c551830b012a0\gg.sqlite' because it is being used by another process.
+SKIP INT-008 CapturePipelineTests.ConcurrentWriter (0 ms) - category Timing not included
+PASS INT-009 CapturePipelineTests.GammaGuardUnavailable (2507 ms)
+PASS INT-010 CapturePipelineTests.AppDatabaseFailureAndRecovery (376 ms)
+PASS INT-011 CapturePipelineTests.ReopenMeasuredDrillhole (164 ms)
+PASS INT-012 CapturePipelineTests.NoSessionMixing (1294 ms)
+PASS INT-013 CapturePipelineTests.DeleteReloadExport (523 ms)
+PASS INT-014 CapturePipelineTests.ValuesAgreeAcrossLayers (406 ms)
+PASS INT-015 CapturePipelineTests.StatusAndCaptureAgree (188 ms)
+SKIP INT-016 CapturePipelineTests.DatabaseStatusUnderLock (0 ms) - category Timing not included
+PASS INT-017 CapturePipelineTests.UpgradeThenMeasure (402 ms)
+107 tests: 88 passed, 5 failed, 14 skipped.

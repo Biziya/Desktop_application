@@ -1,0 +1,20 @@
+// WPF projects do not get System.IO / System.Net.Http as implicit usings.
+global using System.Globalization;
+global using System.IO;
+global using System.Net;
+global using System.Net.Http;
+global using System.Text;
+global using Microsoft.Data.Sqlite;
+global using Frontend.Api;
+global using Frontend.Api.CoreInformation.Drillholes;
+global using Frontend.Calculation.CoreInformation;
+global using Frontend.Calculation.CoreInformation.BluetoothDevice;
+global using Frontend.Calculation.CoreInformation.GammaGuardDatabase;
+global using Frontend.Calculation.CoreInformation.MeasurementDatabase;
+global using Frontend.Calculation.Measurement;
+global using Frontend.Pages.CoreInformation;
+global using Frontend.Pages.Measurement;
+global using Frontend.Shared.Infrastructure;
+global using Frontend.Shared.Models;
+global using Frontend.ViewModels;
+global using Ct007.Tests.Fixtures;
