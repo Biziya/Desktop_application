@@ -1,6 +1,6 @@
 # Testing Commands Reference
 
-Every command below comes from the project's own files: `Tests/CT007.Tests/TestRunner.cs`, `Tests/README.md`, `Tests/regression/Invoke-Regression.ps1`, `Tests/ci/Publish-TestResults.ps1`, `Tests/mutation/Invoke-MutationRun.ps1` and `.github/workflows/tests.yml`. **None of them was executed while this guide was written** (static verification only).
+Every command below comes from the project's own files: `Tests/CT007.Tests/TestRunner.cs`, `Tests/README.md`, `Tests/regression/Invoke-Regression.ps1`, `Tests/ci/Publish-TestResults.ps1`, `Tests/mutation/Invoke-MutationRun.ps1` and `.github/workflows/tests.yml`. **Verified on 2026-10-17** by running them in Windows PowerShell 5.1 (.NET SDK 10.0.402); exceptions are marked.
 
 How to use the commands step by step: [manual-test-execution.md](manual-test-execution.md). Reading the output: [testing-results-guide.md](testing-results-guide.md).
 
@@ -8,7 +8,7 @@ How to use the commands step by step: [manual-test-execution.md](manual-test-exe
 
 - **Working directory:** the repository root (the folder that contains `CT007.slnx`) for every command, unless the table says otherwise.
 - **Shell:** Windows PowerShell 5.1 or PowerShell 7 (the VS Code terminal).
-- **Quote every argument that contains a comma**, as shown. Unquoted, PowerShell splits `--include=Timing,Sql` into two arguments, and `Sql` would then be treated as a test-ID filter.
+- **Arguments with commas are quoted** in this guide (`"--include=Timing,Sql"`). Windows PowerShell 5.1 was verified to pass the unquoted form unchanged as well; quoting keeps the commands safe to paste into other shells.
 - **The test runner.** `Tests/CT007.Tests` is one console program; it is not xUnit or NUnit, so `dotnet test` does not apply. It contains all frontend (`FE-`), backend (`BE-`), integration (`INT-`) and desktop end-to-end (`E2E-`) tests: 110 `[Test]` methods at the time of writing (51 FE, 38 BE, 17 INT, 4 E2E). After a build, the commands use this shortcut:
 
   ```powershell
@@ -28,7 +28,7 @@ How to use the commands step by step: [manual-test-execution.md](manual-test-exe
 | Build the test harness (also builds Frontend and Backend) | repo root | `dotnet build Tests\CT007.Tests\CT007.Tests.csproj` | `Build succeeded` and `0 Error(s)`; the runner in `Tests\CT007.Tests\bin\Debug\net10.0-windows10.0.19041.0\` |
 | Frontend build validation | repo root | `dotnet build Frontend\Frontend.csproj` | `Frontend\bin\Debug\net10.0-windows10.0.19041.0\Frontend.exe`, plus the four section `*.yaml` files under `Pages\` |
 | Backend build validation | repo root | `dotnet build Backend\Backend.csproj` | `Backend\bin\Debug\net10.0-windows10.0.19041.0\Backend.dll` |
-| Static analysis: compiler warnings as errors (the CI static check) | repo root | `dotnet restore Tests\CT007.Tests\CT007.Tests.csproj`<br>`dotnet build Tests\CT007.Tests\CT007.Tests.csproj --no-restore -warnaserror` | Fails on any compiler warning in the test project, Frontend or Backend. Same sequence as `Invoke-Regression.ps1 -WarnAsError` |
+| Static analysis: compiler warnings as errors (the CI static check) | repo root | `dotnet restore Tests\CT007.Tests\CT007.Tests.csproj`<br>`dotnet build Tests\CT007.Tests\CT007.Tests.csproj --no-restore -warnaserror` | Fails on any compiler warning in the test project, Frontend or Backend. Same sequence as `Invoke-Regression.ps1 -WarnAsError`. **Currently fails (2026-10-17)** with 4 package-vulnerability errors, NU1902 / NU1903; see [troubleshooting](testing-troubleshooting.md#package-vulnerability-warnings-nu1902--nu1903) |
 | Type checking | — | Part of every C# build above (nullable reference types are enabled) | No separate tool |
 
 ## Running tests
@@ -44,10 +44,10 @@ How to use the commands step by step: [manual-test-execution.md](manual-test-exe
 | SQL Server projection test (needs LocalDB, see the environment section below) | repo root | `& $tests BE-006 "--include=Sql"` | `SKIP` unless `CT007_TEST_SQL` is set |
 | Integration tests (HTTP and capture pipeline) | repo root | `& $tests INT- "--include=Timing"` | 17 tests; INT-003, 004, 008 and 016 need `Timing` |
 | Desktop E2E: real `Frontend.exe`, UI Automation, mouse input (**dedicated Windows test account only**) | repo root | `$env:CT007_E2E_DEDICATED_ACCOUNT = "1"`<br>`& $tests E2E- "--include=E2E"` | 4 tests, about 2–4 minutes each; `SKIP` with a reason when prerequisites are missing |
-| Timing category (real-time waits, about 70 s) | repo root | `& $tests "--include=Timing"` | Default set plus FE-006, 008, 023, 028, 048 and INT-003, 004, 008, 016 |
+| Timing category (real-time waits, about 1.5 min; INT-008 alone takes about 1 min) | repo root | `& $tests "--include=Timing"` | Default set plus FE-006, 008, 023, 028, 048 and INT-003, 004, 008, 016 |
 | One test | repo root | `& $tests FE-047` | One line |
 | One module (test file, see note 2) | repo root | for example `& $tests FE-001 FE-002 FE-003 FE-004 FE-005 FE-006 FE-007 FE-008 "--include=Timing"` | That file's tests |
-| Critical regression set (the IDs CI runs on every change) | repo root | `& $tests BE-020 BE-025 BE-027 BE-032 BE-036 BE-037 INT-007 INT-008 INT-010 INT-012 FE-026 FE-035 FE-036 FE-005 BE-030 "--include=Timing"` | 15 tests; FE-005 and BE-030 are known defects and fail |
+| Critical regression set (the IDs CI runs on every change) | repo root | `& $tests BE-020 BE-025 BE-027 BE-032 BE-036 BE-037 INT-007 INT-008 INT-010 INT-012 FE-026 FE-035 FE-036 FE-005 BE-030 "--include=Timing"` | 15 IDs, 19 test methods; FE-005 and BE-030 are known defects and fail |
 | All eligible tests | repo root | `& $tests "--include=Timing,Sql,E2E"` | Sql and E2E tests run only if their environment is prepared; otherwise they show as `SKIP` |
 | Any run, with a results file | repo root | append `"--results=$env:TEMP\ct007-results.csv"` to any `& $tests` command | CSV file `id,test,outcome,ms,message` |
 

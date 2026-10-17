@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/CT007.Tests/CT007.Tests.csproj" />
+  </Folder>
   <Project Path="Backend/Backend.csproj" />
   <Project Path="Frontend/Frontend.csproj" />
   <Project Path="SmokeTests/SmokeTests.csproj" />

@@ -10,7 +10,7 @@ How the automated tests run in CI, and how to trigger and inspect runs. Source: 
 | Workflow | **Tests** (`.github/workflows/tests.yml`). It tests only and never deploys or releases |
 | Test job | **Build and test (Windows)** on `windows-latest` (GitHub-hosted, ephemeral), timeout 45 min. Covers frontend and backend in one build |
 | Optional job | **AI failure triage (optional)** on `ubuntu-latest`. It runs only after a failed test job, when the variable `CT007_AI_ANALYSIS=true` and the secret `ANTHROPIC_API_KEY` exist, and never for fork PRs. It only suggests; it never changes the result |
-| Status | `qa/ci/ci-overview.md` (2026-10-16) records the workflow as **validated locally, not yet run on GitHub**. Check the Actions tab for later runs |
+| Status | `qa/ci/ci-overview.md` (2026-10-16) records the workflow as **validated locally, not yet run on GitHub**. Check the Actions tab for later runs. **Expected to fail at the moment (verified locally 2026-10-17):** the CI build step uses nuget.org with `-WarnAsError`, which turns 4 package-vulnerability warnings into errors ([details](testing-troubleshooting.md#package-vulnerability-warnings-nu1902--nu1903)); once that is resolved, FE-047 also fails ([details](testing-troubleshooting.md#fe-047-fails-header-ts_ms-changed-to-date)) |
 
 ## 2. Triggers
 

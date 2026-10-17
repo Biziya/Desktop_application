@@ -10,7 +10,7 @@ The runner prints one line per test, in ID order, and a summary as the last line
 PASS FE-047 StatusAndPresentationTests.ColumnLayouts (311 ms)
 FAIL FE-005 ApiClientTests.SettingsNonNumericValue (2 ms) — InvalidOperationException: The requested operation requires ...
 SKIP BE-006 DrillholeApiTests.SqlProjection (0 ms) — category Sql not included
-110 tests: 94 passed, 2 failed, 14 skipped.
+110 tests: 93 passed, 3 failed, 14 skipped.
 ```
 
 | Part | Meaning |

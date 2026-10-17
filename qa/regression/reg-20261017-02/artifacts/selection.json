@@ -1,0 +1,3436 @@
+﻿{
+    "runId":  "reg-20261017-02",
+    "baseline":  "cc031a51077154a1da3c465930d6730cd00bdc1e",
+    "head":  "0dc6ab0190acdfc63ee65bd00893f24624471137",
+    "changedFiles":  [
+                         ".github/workflows/tests.yml",
+                         "Backend/obj/Backend.csproj.nuget.dgspec.json",
+                         "Backend/obj/Backend.csproj.nuget.g.props",
+                         "Backend/obj/project.assets.json",
+                         "Backend/obj/project.nuget.cache",
+                         "Frontend/App.xaml",
+                         "Frontend/App.xaml.cs",
+                         "Frontend/Calculation/Core-Information/DeviceStatusMonitor.cs",
+                         "Frontend/Frontend.csproj",
+                         "Frontend/obj/Frontend.csproj.nuget.dgspec.json",
+                         "Frontend/obj/Frontend.csproj.nuget.g.props",
+                         "Frontend/obj/project.assets.json",
+                         "Frontend/obj/project.nuget.cache",
+                         "Frontend/Pages/CoreInformation/CoreInformationPage.xaml",
+                         "Frontend/Pages/CoreInformation/CoreInformationPage.xaml.cs",
+                         "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+                         "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatus.yaml",
+                         "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatusSettings.cs",
+                         "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatusView.xaml",
+                         "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatusView.xaml.cs",
+                         "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeCatalog.cs",
+                         "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformation.yaml",
+                         "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformationSettings.cs",
+                         "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformationView.xaml",
+                         "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformationView.xaml.cs",
+                         "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeOption.cs",
+                         "Frontend/Pages/Measurement/CapturePanel/CapturePanel.yaml",
+                         "Frontend/Pages/Measurement/CapturePanel/CapturePanelSettings.cs",
+                         "Frontend/Pages/Measurement/CapturePanel/CapturePanelView.xaml",
+                         "Frontend/Pages/Measurement/CapturePanel/CapturePanelView.xaml.cs",
+                         "Frontend/Pages/Measurement/CapturePanel/CountdownRing.cs",
+                         "Frontend/Pages/Measurement/CapturePanel/DepthBarChart.cs",
+                         "Frontend/Pages/Measurement/CsvExportService.cs",
+                         "Frontend/Pages/Measurement/MeasurementColumnLayout.cs",
+                         "Frontend/Pages/Measurement/MeasurementColumns.cs",
+                         "Frontend/Pages/Measurement/MeasurementPage.xaml",
+                         "Frontend/Pages/Measurement/MeasurementPage.xaml.cs",
+                         "Frontend/Pages/Measurement/MeasurementRepository.cs",
+                         "Frontend/Pages/Measurement/MeasurementState.cs",
+                         "Frontend/Pages/Measurement/MeasurementStyles.xaml",
+                         "Frontend/Pages/Measurement/MeasurementUiConstants.xaml",
+                         "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+                         "Frontend/Pages/Measurement/ScaleExtension.cs",
+                         "Frontend/Pages/Measurement/Table/MeasurementCellFormat.cs",
+                         "Frontend/Pages/Measurement/Table/MeasurementTable.yaml",
+                         "Frontend/Pages/Measurement/Table/MeasurementTableColumns.cs",
+                         "Frontend/Pages/Measurement/Table/MeasurementTableSettings.cs",
+                         "Frontend/Pages/Measurement/Table/MeasurementTableView.xaml",
+                         "Frontend/Pages/Measurement/Table/MeasurementTableView.xaml.cs",
+                         "Frontend/Pages/PageSettings.cs",
+                         "Frontend/README.md",
+                         "Frontend/Shared/Infrastructure/YamlSettings.cs",
+                         "Frontend/Shared/Styles/Theme.xaml",
+                         "Frontend/ViewModels/MainViewModel.cs",
+                         "qa/architecture/architecture-overview.md",
+                         "qa/architecture/backend-architecture.md",
+                         "qa/architecture/database-architecture.md",
+                         "qa/architecture/feature-workflows.md",
+                         "qa/architecture/frontend-architecture.md",
+                         "qa/architecture/integration-architecture.md",
+                         "qa/architecture/technical-decisions.md",
+                         "qa/ci/ci-overview.md",
+                         "qa/ci/failure-policy.md",
+                         "qa/ci/setup-requirements.md",
+                         "qa/ci/test-execution-matrix.md",
+                         "qa/ci/validation/build.log",
+                         "qa/ci/validation/console.log",
+                         "qa/ci/validation/junit.xml",
+                         "qa/ci/validation/results.csv",
+                         "qa/ci/validation/selection.json",
+                         "qa/ci/validation/summary.md",
+                         "qa/effectiveness/eff-20261016/artifacts/final-classification.json",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/baseline.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/build-baseline.log",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M01.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M02.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M03.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M04.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M05.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M06.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M07.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M08.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M09.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M10.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M11.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M12.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M13.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M14.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M15.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M16.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M17.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M18.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M19.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M20.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M21.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M22.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M23.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M24.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M25.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M26.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M27.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M28.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M29.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M30.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M31.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M32.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M33.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M34.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M35.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M36.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M37.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M38.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M39.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M40.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M41.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M42.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M43.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M44.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M45.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M46.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M47.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M48.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M49.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M50.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M51.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M52.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M53.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M54.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M55.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M56.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M57.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M58.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M59.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M60.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M61.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M62.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M63.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M64.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M65.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M66.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M67.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M68.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M69.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M70.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M71.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M72.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M73.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M74.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M75.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M76.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M77.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass1/mutation-results.json",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/baseline.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/build-baseline.log",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M01.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M25.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M26.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M27.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M31.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M46.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M49.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M55.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M56.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M60.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M62.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M77.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutation-results.json",
+                         "qa/effectiveness/eff-20261016/artifacts/pass3-improved/baseline.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass3-improved/build-baseline.log",
+                         "qa/effectiveness/eff-20261016/artifacts/pass3-improved/mutants/M26.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass3-improved/mutants/M27.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass3-improved/mutants/M49.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass3-improved/mutants/M60.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass3-improved/mutants/M62.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/pass3-improved/mutation-results.json",
+                         "qa/effectiveness/eff-20261016/artifacts/validation/build.log",
+                         "qa/effectiveness/eff-20261016/artifacts/validation/console.log",
+                         "qa/effectiveness/eff-20261016/artifacts/validation/junit.xml",
+                         "qa/effectiveness/eff-20261016/artifacts/validation/results.csv",
+                         "qa/effectiveness/eff-20261016/artifacts/validation/selection.json",
+                         "qa/effectiveness/eff-20261016/artifacts/validation/summary.md",
+                         "qa/effectiveness/eff-20261016/assertion-quality.md",
+                         "qa/effectiveness/eff-20261016/effectiveness-summary.md",
+                         "qa/effectiveness/eff-20261016/improvement-log.md",
+                         "qa/effectiveness/eff-20261016/mutation-results.md",
+                         "qa/effectiveness/eff-20261016/requirement-traceability.md",
+                         "qa/guides/ci-cd-testing-guide.md",
+                         "qa/guides/manual-test-execution.md",
+                         "qa/guides/testing-commands.md",
+                         "qa/guides/testing-quick-start.md",
+                         "qa/guides/testing-results-guide.md",
+                         "qa/guides/testing-troubleshooting.md",
+                         "qa/maintenance/maint-20261016/artifacts/run-01/build.log",
+                         "qa/maintenance/maint-20261016/artifacts/run-01/console.log",
+                         "qa/maintenance/maint-20261016/artifacts/run-01/results.csv",
+                         "qa/maintenance/maint-20261016/artifacts/run-01/selection.json",
+                         "qa/maintenance/maint-20261016/artifacts/run-02/build.log",
+                         "qa/maintenance/maint-20261016/artifacts/run-02/console.log",
+                         "qa/maintenance/maint-20261016/artifacts/run-02/results.csv",
+                         "qa/maintenance/maint-20261016/artifacts/run-02/selection.json",
+                         "qa/maintenance/maint-20261016/coverage-review.md",
+                         "qa/maintenance/maint-20261016/flaky-test-analysis.md",
+                         "qa/maintenance/maint-20261016/maintenance-changes.md",
+                         "qa/maintenance/maint-20261016/test-optimization.md",
+                         "qa/maintenance/maint-20261016/test-quality-review.md",
+                         "qa/maintenance/maint-20261016/validation-results.md",
+                         "qa/README.md",
+                         "qa/regression/baseline.json",
+                         "qa/regression/reg-20261016-01/artifacts/build.log",
+                         "qa/regression/reg-20261016-01/artifacts/console.log",
+                         "qa/regression/reg-20261016-01/artifacts/results.csv",
+                         "qa/regression/reg-20261016-01/artifacts/selection.json",
+                         "qa/regression/reg-20261016-01/change-summary.md",
+                         "qa/regression/reg-20261016-01/coverage-changes.md",
+                         "qa/regression/reg-20261016-01/impact-analysis.md",
+                         "qa/regression/reg-20261016-01/regression-findings.md",
+                         "qa/regression/reg-20261016-01/regression-test-results.md",
+                         "qa/regression/reg-20261017-01/",
+                         "qa/reports/run-20261016-final/coverage-analysis.md",
+                         "qa/reports/run-20261016-final/defect-report.md",
+                         "qa/reports/run-20261016-final/detailed-test-results.md",
+                         "qa/reports/run-20261016-final/manual-testing-checklist.md",
+                         "qa/reports/run-20261016-final/qa-summary.md",
+                         "qa/reports/run-20261016-final/recommendations.md",
+                         "qa/requirements/business-rules.md",
+                         "qa/requirements/functional-requirements.md",
+                         "qa/requirements/nonfunctional-requirements.md",
+                         "qa/requirements/project-overview.md",
+                         "qa/requirements/unresolved-requirements.md",
+                         "Tests/ci/Invoke-FailureAnalysis.ps1",
+                         "Tests/ci/known-failures.json",
+                         "Tests/ci/Publish-TestResults.ps1",
+                         "Tests/CT007.Tests/Backend/CsvExportTests.cs",
+                         "Tests/CT007.Tests/Backend/DrillholeApiTests.cs",
+                         "Tests/CT007.Tests/Backend/LocalFilesTests.cs",
+                         "Tests/CT007.Tests/EndToEnd/DesktopWorkflowTests.cs",
+                         "Tests/CT007.Tests/Fixtures/AppDatabase.cs",
+                         "Tests/CT007.Tests/Fixtures/Fakes.cs",
+                         "Tests/CT007.Tests/Fixtures/Make.cs",
+                         "Tests/CT007.Tests/Fixtures/TestBackend.cs",
+                         "Tests/CT007.Tests/Fixtures/TestFolder.cs",
+                         "Tests/CT007.Tests/Frontend/ApiClientTests.cs",
+                         "Tests/CT007.Tests/Frontend/DrillholeSelectionTests.cs",
+                         "Tests/CT007.Tests/Frontend/StatusAndPresentationTests.cs",
+                         "Tests/CT007.Tests/GlobalUsings.cs",
+                         "Tests/CT007.Tests/Integration/CapturePipelineTests.cs",
+                         "Tests/CT007.Tests/Integration/HttpIntegrationTests.cs",
+                         "Tests/CT007.Tests/TestRunner.cs",
+                         "Tests/mutation/generate_mutants.py",
+                         "Tests/mutation/Invoke-MutationRun.ps1",
+                         "Tests/mutation/mutants.json",
+                         "Tests/README.md",
+                         "Tests/regression/impact-map.json",
+                         "Tests/regression/Invoke-Regression.ps1"
+                     ],
+    "full":  true,
+    "fullReasons":  [
+                        ".github/workflows/tests.yml (CI pipeline or test-selection tooling changed)",
+                        "unmapped production file Backend/obj/Backend.csproj.nuget.dgspec.json",
+                        "Backend/obj/Backend.csproj.nuget.g.props (build or dependency configuration)",
+                        "unmapped production file Backend/obj/project.assets.json",
+                        "unmapped production file Backend/obj/project.nuget.cache",
+                        "Frontend/Frontend.csproj (build or dependency configuration)",
+                        "unmapped production file Frontend/obj/Frontend.csproj.nuget.dgspec.json",
+                        "Frontend/obj/Frontend.csproj.nuget.g.props (build or dependency configuration)",
+                        "unmapped production file Frontend/obj/project.assets.json",
+                        "unmapped production file Frontend/obj/project.nuget.cache",
+                        "unmapped production file Frontend/Pages/Measurement/MeasurementColumnLayout.cs",
+                        "unmapped production file Frontend/Pages/Measurement/MeasurementColumns.cs",
+                        "unmapped production file Frontend/Pages/Measurement/MeasurementState.cs",
+                        "unmapped production file Frontend/Pages/Measurement/ScaleExtension.cs",
+                        "Tests/ci/Invoke-FailureAnalysis.ps1 (CI pipeline or test-selection tooling changed)",
+                        "Tests/ci/known-failures.json (CI pipeline or test-selection tooling changed)",
+                        "Tests/ci/Publish-TestResults.ps1 (CI pipeline or test-selection tooling changed)",
+                        "Tests/CT007.Tests/Backend/CsvExportTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Backend/DrillholeApiTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Backend/LocalFilesTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/EndToEnd/DesktopWorkflowTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Fixtures/AppDatabase.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Fixtures/Fakes.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Fixtures/Make.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Fixtures/TestBackend.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Fixtures/TestFolder.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Frontend/ApiClientTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Frontend/DrillholeSelectionTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Frontend/StatusAndPresentationTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/GlobalUsings.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Integration/CapturePipelineTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/Integration/HttpIntegrationTests.cs (test code or fixtures changed)",
+                        "Tests/CT007.Tests/TestRunner.cs (test code or fixtures changed)",
+                        "Tests/regression/impact-map.json (CI pipeline or test-selection tooling changed)",
+                        "Tests/regression/Invoke-Regression.ps1 (CI pipeline or test-selection tooling changed)"
+                    ],
+    "direct":  [
+                   "BE-031",
+                   "BE-032",
+                   "BE-033",
+                   "BE-034",
+                   "BE-035",
+                   "BE-036",
+                   "BE-037",
+                   "BE-038",
+                   "BE-039",
+                   "BE-040",
+                   "BE-042",
+                   "BE-043",
+                   "BE-046",
+                   "E2E-001",
+                   "E2E-002",
+                   "E2E-003",
+                   "E2E-004",
+                   "FE-007",
+                   "FE-008",
+                   "FE-009",
+                   "FE-010",
+                   "FE-011",
+                   "FE-012",
+                   "FE-013",
+                   "FE-014",
+                   "FE-015",
+                   "FE-016",
+                   "FE-017",
+                   "FE-018",
+                   "FE-019",
+                   "FE-020",
+                   "FE-021",
+                   "FE-022",
+                   "FE-023",
+                   "FE-024",
+                   "FE-025",
+                   "FE-026",
+                   "FE-027",
+                   "FE-028",
+                   "FE-029",
+                   "FE-030",
+                   "FE-031",
+                   "FE-032",
+                   "FE-033",
+                   "FE-034",
+                   "FE-035",
+                   "FE-036",
+                   "FE-037",
+                   "FE-038",
+                   "FE-039",
+                   "FE-040",
+                   "FE-043",
+                   "FE-045",
+                   "FE-046",
+                   "FE-047",
+                   "FE-048",
+                   "FE-049",
+                   "FE-052"
+               ],
+    "dependents":  [
+                       "BE-024",
+                       "E2E-001",
+                       "E2E-002",
+                       "E2E-003",
+                       "E2E-004",
+                       "FE-009",
+                       "FE-021",
+                       "FE-022",
+                       "FE-039",
+                       "FE-040",
+                       "FE-042",
+                       "FE-044",
+                       "FE-046",
+                       "FE-049",
+                       "INT-001",
+                       "INT-002",
+                       "INT-003",
+                       "INT-004",
+                       "INT-005",
+                       "INT-006",
+                       "INT-007",
+                       "INT-008",
+                       "INT-009",
+                       "INT-010",
+                       "INT-011",
+                       "INT-012",
+                       "INT-013",
+                       "INT-014",
+                       "INT-015",
+                       "INT-016",
+                       "INT-017"
+                   ],
+    "critical":  [
+                     "BE-020",
+                     "BE-025",
+                     "BE-027",
+                     "BE-032",
+                     "BE-036",
+                     "BE-037",
+                     "INT-007",
+                     "INT-008",
+                     "INT-010",
+                     "INT-012",
+                     "FE-026",
+                     "FE-035",
+                     "FE-036",
+                     "FE-005",
+                     "BE-030"
+                 ],
+    "selected":  {
+
+                 },
+    "manualFollowUp":  [
+                           "Frontend/App.xaml: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/App.xaml: visual change: MAN-008",
+                           "Frontend/App.xaml.cs: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/App.xaml.cs: visual change: MAN-008",
+                           "Frontend/Pages/CoreInformation/CoreInformationPage.xaml: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/CoreInformation/CoreInformationPage.xaml.cs: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatus.yaml: section labels and sizes: MAN-008 (both pages look as before)",
+                           "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatusSettings.cs: section labels and sizes: MAN-008 (both pages look as before)",
+                           "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatusView.xaml: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatusView.xaml.cs: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformation.yaml: section labels and sizes: MAN-008 (both pages look as before)",
+                           "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformationSettings.cs: section labels and sizes: MAN-008 (both pages look as before)",
+                           "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformationView.xaml: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformationView.xaml.cs: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/Measurement/CapturePanel/CapturePanel.yaml: section labels and sizes: MAN-008 (both pages look as before)",
+                           "Frontend/Pages/Measurement/CapturePanel/CapturePanelSettings.cs: section labels and sizes: MAN-008 (both pages look as before)",
+                           "Frontend/Pages/Measurement/CapturePanel/CapturePanelView.xaml: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/Measurement/CapturePanel/CapturePanelView.xaml.cs: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/Measurement/CapturePanel/CountdownRing.cs: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/Measurement/CapturePanel/DepthBarChart.cs: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/Measurement/MeasurementPage.xaml: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/Measurement/MeasurementPage.xaml.cs: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/Measurement/MeasurementStyles.xaml: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/Measurement/MeasurementUiConstants.xaml: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/Measurement/Table/MeasurementTable.yaml: section labels and sizes: MAN-008 (both pages look as before)",
+                           "Frontend/Pages/Measurement/Table/MeasurementTableSettings.cs: section labels and sizes: MAN-008 (both pages look as before)",
+                           "Frontend/Pages/Measurement/Table/MeasurementTableView.xaml: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/Measurement/Table/MeasurementTableView.xaml.cs: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Pages/PageSettings.cs: section labels and sizes: MAN-008 (both pages look as before)",
+                           "Frontend/Shared/Infrastructure/YamlSettings.cs: section labels and sizes: MAN-008 (both pages look as before)",
+                           "Frontend/Shared/Styles/Theme.xaml: UI-only change: run MAN-006, MAN-008, MAN-009 (and MAN-017 for the delete dialog)",
+                           "Frontend/Shared/Styles/Theme.xaml: visual change: MAN-008"
+                       ],
+    "trace":  [
+                  {
+                      "file":  ".github/workflows/tests.yml",
+                      "rule":  "^(\\.github/|Tests/ci/|Tests/regression/(impact-map\\.json|Invoke-Regression\\.ps1)$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Backend/obj/Backend.csproj.nuget.g.props",
+                      "rule":  "\\.(csproj|slnx|props|targets)$|^global\\.json$|^nuget\\.config$",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/App.xaml",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/App.xaml",
+                      "rule":  "^Frontend/(Shared/Styles|Icons|App\\.xaml)",
+                      "direct":  [
+                                     "E2E-001"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/App.xaml.cs",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/App.xaml.cs",
+                      "rule":  "^Frontend/(Shared/Styles|Icons|App\\.xaml)",
+                      "direct":  [
+                                     "E2E-001"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Calculation/Core-Information/DeviceStatusMonitor.cs",
+                      "rule":  "^Frontend/Calculation/Core-Information/(BluetoothDevice/|DeviceSettings\\.cs|device-settings\\.json|DeviceStatusMonitor\\.cs)",
+                      "direct":  [
+                                     "FE-043",
+                                     "FE-045"
+                                 ],
+                      "dependents":  [
+                                         "FE-042",
+                                         "FE-044",
+                                         "BE-024",
+                                         "INT-015",
+                                         "INT-016"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Frontend.csproj",
+                      "rule":  "\\.(csproj|slnx|props|targets)$|^global\\.json$|^nuget\\.config$",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/obj/Frontend.csproj.nuget.g.props",
+                      "rule":  "\\.(csproj|slnx|props|targets)$|^global\\.json$|^nuget\\.config$",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/CoreInformationPage.xaml",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/CoreInformationPage.xaml",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/CoreInformationPage.xaml.cs",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/CoreInformationPage.xaml.cs",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatus.yaml",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatus.yaml",
+                      "rule":  "^Frontend/Pages/(.+\\.yaml|PageSettings\\.cs|.+/[A-Za-z]+Settings\\.cs)$|^Frontend/Shared/Infrastructure/YamlSettings\\.cs$",
+                      "direct":  [
+                                     "FE-047",
+                                     "FE-052"
+                                 ],
+                      "dependents":  [
+                                         "E2E-001"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatusSettings.cs",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatusSettings.cs",
+                      "rule":  "^Frontend/Pages/(.+\\.yaml|PageSettings\\.cs|.+/[A-Za-z]+Settings\\.cs)$|^Frontend/Shared/Infrastructure/YamlSettings\\.cs$",
+                      "direct":  [
+                                     "FE-047",
+                                     "FE-052"
+                                 ],
+                      "dependents":  [
+                                         "E2E-001"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatusView.xaml",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatusView.xaml",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatusView.xaml.cs",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DeviceStatus/DeviceStatusView.xaml.cs",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeCatalog.cs",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformation.yaml",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformation.yaml",
+                      "rule":  "^Frontend/Pages/(.+\\.yaml|PageSettings\\.cs|.+/[A-Za-z]+Settings\\.cs)$|^Frontend/Shared/Infrastructure/YamlSettings\\.cs$",
+                      "direct":  [
+                                     "FE-047",
+                                     "FE-052"
+                                 ],
+                      "dependents":  [
+                                         "E2E-001"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformationSettings.cs",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformationSettings.cs",
+                      "rule":  "^Frontend/Pages/(.+\\.yaml|PageSettings\\.cs|.+/[A-Za-z]+Settings\\.cs)$|^Frontend/Shared/Infrastructure/YamlSettings\\.cs$",
+                      "direct":  [
+                                     "FE-047",
+                                     "FE-052"
+                                 ],
+                      "dependents":  [
+                                         "E2E-001"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformationView.xaml",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformationView.xaml",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformationView.xaml.cs",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeInformationView.xaml.cs",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeOption.cs",
+                      "rule":  "^Frontend/Pages/CoreInformation/",
+                      "direct":  [
+                                     "FE-007",
+                                     "FE-009",
+                                     "FE-010",
+                                     "FE-011",
+                                     "FE-012",
+                                     "FE-013",
+                                     "FE-014",
+                                     "FE-015",
+                                     "FE-016",
+                                     "FE-017",
+                                     "FE-018",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-001",
+                                         "INT-002",
+                                         "INT-003",
+                                         "INT-004",
+                                         "INT-005",
+                                         "INT-006",
+                                         "INT-011",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/CapturePanel/CapturePanel.yaml",
+                      "rule":  "^Frontend/Pages/(.+\\.yaml|PageSettings\\.cs|.+/[A-Za-z]+Settings\\.cs)$|^Frontend/Shared/Infrastructure/YamlSettings\\.cs$",
+                      "direct":  [
+                                     "FE-047",
+                                     "FE-052"
+                                 ],
+                      "dependents":  [
+                                         "E2E-001"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/CapturePanel/CapturePanelSettings.cs",
+                      "rule":  "^Frontend/Pages/(.+\\.yaml|PageSettings\\.cs|.+/[A-Za-z]+Settings\\.cs)$|^Frontend/Shared/Infrastructure/YamlSettings\\.cs$",
+                      "direct":  [
+                                     "FE-047",
+                                     "FE-052"
+                                 ],
+                      "dependents":  [
+                                         "E2E-001"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/CapturePanel/CapturePanelView.xaml",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/CapturePanel/CapturePanelView.xaml.cs",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/CapturePanel/CountdownRing.cs",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/CapturePanel/DepthBarChart.cs",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/CsvExportService.cs",
+                      "rule":  "^Frontend/Pages/Measurement/(CsvExportService|Table/MeasurementTableColumns)\\.cs$",
+                      "direct":  [
+                                     "BE-042",
+                                     "BE-043",
+                                     "FE-047"
+                                 ],
+                      "dependents":  [
+                                         "FE-039",
+                                         "FE-049",
+                                         "INT-001",
+                                         "INT-013",
+                                         "INT-014"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/MeasurementPage.xaml",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/MeasurementPage.xaml.cs",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/MeasurementRepository.cs",
+                      "rule":  "^Frontend/Pages/Measurement/MeasurementRepository\\.cs$",
+                      "direct":  [
+                                     "BE-031",
+                                     "BE-032",
+                                     "BE-033",
+                                     "BE-034",
+                                     "BE-035",
+                                     "BE-036",
+                                     "BE-037",
+                                     "BE-038",
+                                     "BE-039",
+                                     "BE-040",
+                                     "BE-046"
+                                 ],
+                      "dependents":  [
+                                         "INT-007",
+                                         "INT-010",
+                                         "INT-011",
+                                         "INT-012",
+                                         "INT-013",
+                                         "INT-014",
+                                         "INT-015",
+                                         "INT-016",
+                                         "INT-017",
+                                         "FE-009"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/MeasurementStyles.xaml",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/MeasurementUiConstants.xaml",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/MeasurementViewModel.cs",
+                      "rule":  "^Frontend/Pages/Measurement/(MeasurementViewModel|MeasurementResult|MeasurementService)\\.cs$",
+                      "direct":  [
+                                     "FE-024",
+                                     "FE-025",
+                                     "FE-026",
+                                     "FE-027",
+                                     "FE-028",
+                                     "FE-029",
+                                     "FE-030",
+                                     "FE-031",
+                                     "FE-032",
+                                     "FE-033",
+                                     "FE-034",
+                                     "FE-035",
+                                     "FE-036",
+                                     "FE-037",
+                                     "FE-038",
+                                     "FE-039",
+                                     "FE-048",
+                                     "FE-049"
+                                 ],
+                      "dependents":  [
+                                         "FE-021",
+                                         "FE-022",
+                                         "FE-040",
+                                         "FE-046",
+                                         "INT-007",
+                                         "INT-008",
+                                         "INT-009",
+                                         "INT-010",
+                                         "INT-011",
+                                         "INT-012",
+                                         "INT-013",
+                                         "INT-014",
+                                         "INT-015",
+                                         "INT-016",
+                                         "INT-017"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/Table/MeasurementCellFormat.cs",
+                      "rule":  "^Frontend/Pages/Measurement/Table/MeasurementCellFormat\\.cs$",
+                      "direct":  [
+                                     "FE-046",
+                                     "FE-047"
+                                 ],
+                      "dependents":  [
+                                         "INT-014"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/Table/MeasurementTable.yaml",
+                      "rule":  "^Frontend/Pages/(.+\\.yaml|PageSettings\\.cs|.+/[A-Za-z]+Settings\\.cs)$|^Frontend/Shared/Infrastructure/YamlSettings\\.cs$",
+                      "direct":  [
+                                     "FE-047",
+                                     "FE-052"
+                                 ],
+                      "dependents":  [
+                                         "E2E-001"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/Table/MeasurementTableColumns.cs",
+                      "rule":  "^Frontend/Pages/Measurement/(CsvExportService|Table/MeasurementTableColumns)\\.cs$",
+                      "direct":  [
+                                     "BE-042",
+                                     "BE-043",
+                                     "FE-047"
+                                 ],
+                      "dependents":  [
+                                         "FE-039",
+                                         "FE-049",
+                                         "INT-001",
+                                         "INT-013",
+                                         "INT-014"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/Table/MeasurementTableSettings.cs",
+                      "rule":  "^Frontend/Pages/(.+\\.yaml|PageSettings\\.cs|.+/[A-Za-z]+Settings\\.cs)$|^Frontend/Shared/Infrastructure/YamlSettings\\.cs$",
+                      "direct":  [
+                                     "FE-047",
+                                     "FE-052"
+                                 ],
+                      "dependents":  [
+                                         "E2E-001"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/Table/MeasurementTableView.xaml",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/Measurement/Table/MeasurementTableView.xaml.cs",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Pages/PageSettings.cs",
+                      "rule":  "^Frontend/Pages/(.+\\.yaml|PageSettings\\.cs|.+/[A-Za-z]+Settings\\.cs)$|^Frontend/Shared/Infrastructure/YamlSettings\\.cs$",
+                      "direct":  [
+                                     "FE-047",
+                                     "FE-052"
+                                 ],
+                      "dependents":  [
+                                         "E2E-001"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/README.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Shared/Infrastructure/YamlSettings.cs",
+                      "rule":  "^Frontend/Pages/(.+\\.yaml|PageSettings\\.cs|.+/[A-Za-z]+Settings\\.cs)$|^Frontend/Shared/Infrastructure/YamlSettings\\.cs$",
+                      "direct":  [
+                                     "FE-047",
+                                     "FE-052"
+                                 ],
+                      "dependents":  [
+                                         "E2E-001"
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Shared/Styles/Theme.xaml",
+                      "rule":  "\\.xaml(\\.cs)?$|^Frontend/Windows/|^Frontend/Pages/Measurement/CapturePanel/(DepthBarChart|CountdownRing|ScaleExtension)\\.cs$",
+                      "direct":  [
+                                     "E2E-001",
+                                     "E2E-002",
+                                     "E2E-003",
+                                     "E2E-004"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/Shared/Styles/Theme.xaml",
+                      "rule":  "^Frontend/(Shared/Styles|Icons|App\\.xaml)",
+                      "direct":  [
+                                     "E2E-001"
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Frontend/ViewModels/MainViewModel.cs",
+                      "rule":  "^Frontend/ViewModels/MainViewModel\\.cs$",
+                      "direct":  [
+                                     "FE-008",
+                                     "FE-019",
+                                     "FE-020",
+                                     "FE-021",
+                                     "FE-022",
+                                     "FE-023",
+                                     "FE-040"
+                                 ],
+                      "dependents":  [
+                                         "INT-003",
+                                         "INT-017",
+                                         "E2E-001",
+                                         "E2E-002",
+                                         "E2E-003",
+                                         "E2E-004"
+                                     ]
+                  },
+                  {
+                      "file":  "qa/architecture/architecture-overview.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/architecture/backend-architecture.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/architecture/database-architecture.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/architecture/feature-workflows.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/architecture/frontend-architecture.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/architecture/integration-architecture.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/architecture/technical-decisions.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/ci/ci-overview.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/ci/failure-policy.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/ci/setup-requirements.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/ci/test-execution-matrix.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/ci/validation/build.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/ci/validation/console.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/ci/validation/junit.xml",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/ci/validation/results.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/ci/validation/selection.json",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/ci/validation/summary.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/final-classification.json",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/baseline.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/build-baseline.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M01.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M02.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M03.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M04.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M05.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M06.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M07.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M08.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M09.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M10.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M11.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M12.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M13.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M14.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M15.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M16.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M17.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M18.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M19.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M20.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M21.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M22.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M23.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M24.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M25.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M26.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M27.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M28.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M29.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M30.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M31.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M32.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M33.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M34.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M35.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M36.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M37.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M38.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M39.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M40.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M41.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M42.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M43.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M44.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M45.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M46.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M47.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M48.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M49.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M50.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M51.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M52.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M53.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M54.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M55.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M56.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M57.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M58.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M59.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M60.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M61.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M62.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M63.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M64.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M65.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M66.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M67.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M68.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M69.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M70.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M71.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M72.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M73.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M74.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M75.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M76.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutants/M77.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass1/mutation-results.json",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/baseline.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/build-baseline.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M01.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M25.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M26.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M27.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M31.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M46.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M49.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M55.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M56.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M60.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M62.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutants/M77.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass2-timing/mutation-results.json",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass3-improved/baseline.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass3-improved/build-baseline.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass3-improved/mutants/M26.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass3-improved/mutants/M27.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass3-improved/mutants/M49.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass3-improved/mutants/M60.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass3-improved/mutants/M62.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/pass3-improved/mutation-results.json",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/validation/build.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/validation/console.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/validation/junit.xml",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/validation/results.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/validation/selection.json",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/artifacts/validation/summary.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/assertion-quality.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/effectiveness-summary.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/improvement-log.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/mutation-results.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/effectiveness/eff-20261016/requirement-traceability.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/guides/ci-cd-testing-guide.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/guides/manual-test-execution.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/guides/testing-commands.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/guides/testing-quick-start.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/guides/testing-results-guide.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/guides/testing-troubleshooting.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/artifacts/run-01/build.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/artifacts/run-01/console.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/artifacts/run-01/results.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/artifacts/run-01/selection.json",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/artifacts/run-02/build.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/artifacts/run-02/console.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/artifacts/run-02/results.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/artifacts/run-02/selection.json",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/coverage-review.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/flaky-test-analysis.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/maintenance-changes.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/test-optimization.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/test-quality-review.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/maintenance/maint-20261016/validation-results.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/README.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/regression/baseline.json",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/regression/reg-20261016-01/artifacts/build.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/regression/reg-20261016-01/artifacts/console.log",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/regression/reg-20261016-01/artifacts/results.csv",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/regression/reg-20261016-01/artifacts/selection.json",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/regression/reg-20261016-01/change-summary.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/regression/reg-20261016-01/coverage-changes.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/regression/reg-20261016-01/impact-analysis.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/regression/reg-20261016-01/regression-findings.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/regression/reg-20261016-01/regression-test-results.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/regression/reg-20261017-01/",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/reports/run-20261016-final/coverage-analysis.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/reports/run-20261016-final/defect-report.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/reports/run-20261016-final/detailed-test-results.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/reports/run-20261016-final/manual-testing-checklist.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/reports/run-20261016-final/qa-summary.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/reports/run-20261016-final/recommendations.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/requirements/business-rules.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/requirements/functional-requirements.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/requirements/nonfunctional-requirements.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/requirements/project-overview.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "qa/requirements/unresolved-requirements.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/ci/Invoke-FailureAnalysis.ps1",
+                      "rule":  "^(\\.github/|Tests/ci/|Tests/regression/(impact-map\\.json|Invoke-Regression\\.ps1)$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/ci/known-failures.json",
+                      "rule":  "^(\\.github/|Tests/ci/|Tests/regression/(impact-map\\.json|Invoke-Regression\\.ps1)$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/ci/Publish-TestResults.ps1",
+                      "rule":  "^(\\.github/|Tests/ci/|Tests/regression/(impact-map\\.json|Invoke-Regression\\.ps1)$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Backend/CsvExportTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Backend/DrillholeApiTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Backend/LocalFilesTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/EndToEnd/DesktopWorkflowTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Fixtures/AppDatabase.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Fixtures/Fakes.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Fixtures/Make.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Fixtures/TestBackend.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Fixtures/TestFolder.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Frontend/ApiClientTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Frontend/DrillholeSelectionTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Frontend/StatusAndPresentationTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/GlobalUsings.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Integration/CapturePipelineTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/Integration/HttpIntegrationTests.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/CT007.Tests/TestRunner.cs",
+                      "rule":  "^Tests/CT007\\.Tests/",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/README.md",
+                      "rule":  "^(qa/|SmokeTests/|Images/|.*\\.md$|(.*/)?\\.gitignore$|.*\\.gitkeep$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/regression/impact-map.json",
+                      "rule":  "^(\\.github/|Tests/ci/|Tests/regression/(impact-map\\.json|Invoke-Regression\\.ps1)$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  },
+                  {
+                      "file":  "Tests/regression/Invoke-Regression.ps1",
+                      "rule":  "^(\\.github/|Tests/ci/|Tests/regression/(impact-map\\.json|Invoke-Regression\\.ps1)$)",
+                      "direct":  [
+
+                                 ],
+                      "dependents":  [
+
+                                     ]
+                  }
+              ],
+    "include":  [
+                    "Timing"
+                ]
+}
