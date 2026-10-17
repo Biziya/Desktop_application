@@ -1,0 +1,77 @@
+<!--
+  Capture panel: labels, sizes and spacing of Starting Depth, Step, the Start / Stop toggle, the countdown and the bar chart.
+
+  * Section A - MULTIPLIERS: the sizes you normally edit. Final size = Default size x Multiplier. 1.0 = original look,
+    1.5 = +50%, 2.0 = double, 0.8 = -20%. Decimals are fine.
+  * Section B - DEFAULT SIZES: the original sizes. Leave these unchanged. They are applied with {local:Scale Name}
+    (ScaleExtension.cs), which reads "Name" and "NameMultiplier" here; a size without a multiplier is used as is.
+  * Section C - LABELS and Section D - SPACING AND LAYOUT: used as they are ({StaticResource Name}).
+  This dictionary is merged into CapturePanelView.xaml only.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ===================== A. MULTIPLIERS (edit these) ===================== -->
+
+    <!-- Countdown: ring, ring line and number enlarged together by 25% (175 px ring, 40 px number, 10 px line).
+         The ring column stays as tall as the Starting Depth / Step / Start-Stop column, so the card does not grow
+         and the chart and table keep their space. -->
+    <sys:Double x:Key="CountdownFontSizeMultiplier">1.25</sys:Double>
+    <sys:Double x:Key="CountdownRingSizeMultiplier">1.25</sys:Double>
+    <sys:Double x:Key="CountdownRingThicknessMultiplier">1.25</sys:Double>
+    <sys:Double x:Key="CountdownLabelFontSizeMultiplier">1.0</sys:Double>
+
+    <!-- Start / Stop button (both states). Its height is not scaled: it always equals the input boxes
+         (ControlHeight in Shared/Styles/Theme.xaml). -->
+    <sys:Double x:Key="StartStopButtonWidthMultiplier">1.0</sys:Double>
+    <sys:Double x:Key="StartStopButtonFontSizeMultiplier">1.0</sys:Double>
+    <sys:Double x:Key="StartStopButtonIconFontSizeMultiplier">1.0</sys:Double>
+
+    <!-- Starting Depth and Step labels -->
+    <sys:Double x:Key="LabelFontSizeMultiplier">1.0</sys:Double>
+
+    <!-- ===================== B. DEFAULT SIZES (original values - do not edit) ===================== -->
+
+    <!-- Countdown -->
+    <sys:Double x:Key="CountdownFontSize">32</sys:Double>
+    <sys:Double x:Key="CountdownRingSize">140</sys:Double>
+    <sys:Double x:Key="CountdownRingThickness">8</sys:Double>
+    <sys:Double x:Key="CountdownLabelFontSize">14</sys:Double>
+
+    <!-- Start / Stop button. Width is also the width of the Starting Depth and Step boxes above it. The height is
+         ControlHeight (40, same as those boxes), so text and padding are sized to fit a 40 px button. -->
+    <sys:Double x:Key="StartStopButtonWidth">200</sys:Double>
+    <sys:Double x:Key="StartStopButtonFontSize">16</sys:Double>
+    <sys:Double x:Key="StartStopButtonIconFontSize">13</sys:Double>      <!-- the play/stop glyph -->
+    <Thickness x:Key="StartStopButtonPadding">16,0</Thickness>           <!-- no multiplier: used as is -->
+
+    <sys:Double x:Key="LabelFontSize">14</sys:Double>
+
+    <!-- ===================== C. LABELS ===================== -->
+
+    <sys:String x:Key="StartingDepthLabel">Starting Depth (m)</sys:String>
+    <sys:String x:Key="StepLabel">Step (cm)</sys:String>
+    <sys:String x:Key="CountdownLabel">Capture Countdown</sys:String>
+    <sys:String x:Key="DurationEditorLabel">Capture duration (seconds)</sys:String>
+    <!-- One toggle: green glyph + "Start" while stopped, red glyph + "Stop" while measuring. -->
+    <sys:String x:Key="StartLabel">Start</sys:String>
+    <sys:String x:Key="StopLabel">Stop</sys:String>
+    <sys:String x:Key="StartGlyph">▶</sys:String>
+    <sys:String x:Key="StopGlyph">■</sys:String>
+    <!-- Bar chart: x = depth, y = ts_ms. -->
+    <sys:String x:Key="ChartXAxisLabel">Depth (m)</sys:String>
+    <sys:String x:Key="ChartYAxisLabel">ts_ms</sys:String>
+    <sys:String x:Key="ChartEmptyText">Captured intervals appear here as bars.</sys:String>
+
+    <!-- ===================== D. SPACING AND LAYOUT ===================== -->
+
+    <Thickness x:Key="StepLabelMargin">0,14,0,0</Thickness>              <!-- between Starting Depth and Step -->
+    <Thickness x:Key="StartStopButtonMargin">0,18,0,0</Thickness>        <!-- between Step and Start / Stop -->
+    <Thickness x:Key="CountdownColumnMargin">24,0</Thickness>            <!-- space left and right of the countdown -->
+    <Thickness x:Key="CountdownLabelMargin">0,0,0,10</Thickness>
+    <sys:Double x:Key="DurationEditorWidth">230</sys:Double>
+    <sys:Double x:Key="ChartMinHeight">200</sys:Double>                  <!-- the chart takes the remaining width -->
+    <sys:Double x:Key="ChartAxisLabelFontSize">12</sys:Double>
+    <sys:Double x:Key="ChartTickFontSize">11</sys:Double>
+</ResourceDictionary>

@@ -6,6 +6,14 @@ using Frontend.Shared.Models;
 
 namespace Frontend.Pages.Measurement;
 
+public enum MeasurementState
+{
+    Idle,
+    Ready,
+    Capturing,
+    Processing
+}
+
 public sealed class MeasurementViewModel : ObservableObject, IDisposable
 {
     private readonly IMeasurementService measurement;
@@ -230,35 +238,6 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         session is { DrillholeId: { } drillhole } && savedCore is { } core && drillhole == core.DrillholeId;
 
     /// <summary>
-    /// Shows the most recently stored session after a restart, sorted by From. Start then continues it.
-    /// It does not create a session, and it is skipped if a session is already active.
-    /// </summary>
-    public async Task RestoreLatestSessionAsync()
-    {
-        try
-        {
-            if (await repository.LoadLatestSessionAsync() is not { } latest)
-            {
-                return;
-            }
-
-            var rows = await repository.LoadAsync(latest.Id);
-            var progress = await repository.LoadProgressAsync(latest.Id);
-
-            if (disposed || session is not null || openingSession)
-            {
-                return;
-            }
-
-            ShowSession(latest, rows, progress);
-        }
-        catch (Exception error)
-        {
-            Notify(ToastKind.Error, $"Stored measurements could not be loaded: {error.Message}");
-        }
-    }
-
-    /// <summary>
     /// Follows the drillhole selected on Core Information (empty when none is selected). Empty: the table and chart
     /// are emptied and Start, export and delete are unavailable — nothing stored is deleted. A drillhole: its stored
     /// rows (sorted by From), session and depth progress are shown, without creating a session; Save &amp; Continue
@@ -281,31 +260,17 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
 
         StopMeasurementMode();
-        session = null;
-        nextCapture = 1;
-        Results.Clear();
-        Changed(nameof(SessionId));
-        SetDepthInputs("", "");
-        RefreshCommands();
+        ClearSession();
 
         if (drillholeId.Length > 0)
         {
-            _ = ShowStoredDrillholeAsync(drillholeId, version);
-        }
-    }
-
-    private async Task ShowStoredDrillholeAsync(string drillholeId, int version)
-    {
-        openingSession = true;
-        depthsTypedWhileOpening = false;
-        RefreshCommands();
-
-        try
-        {
-            await persistence;
-
-            if (await repository.FindSessionAsync(drillholeId) is { } stored)
+            _ = LoadSessionAsync(version, $"Stored measurements of {drillholeId} could not be loaded", async () =>
             {
+                if (await repository.FindSessionAsync(drillholeId) is not { } stored)
+                {
+                    return;
+                }
+
                 var rows = await repository.LoadAsync(stored.Id);
                 var progress = await repository.LoadProgressAsync(stored.Id);
 
@@ -313,25 +278,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
                 {
                     ShowSession(stored, rows, progress);
                 }
-            }
-        }
-        catch (Exception error)
-        {
-            Notify(ToastKind.Error, $"Stored measurements of {drillholeId} could not be loaded: {error.Message}");
-        }
-        finally
-        {
-            if (version == viewVersion)
-            {
-                openingSession = false;
-                RefreshCommands();
-
-                if (depthsTypedWhileOpening)
-                {
-                    depthsTypedWhileOpening = false;
-                    DepthInputsChanged(save: true);
-                }
-            }
+            });
         }
     }
 
@@ -354,18 +301,12 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     // Looks up the session of the core's Drillhole ID (creating it only if none exists) and shows its rows and
     // saved progress. The same Drillhole ID always resolves to the same session, also after a restart.
-    private async Task OpenDrillholeAsync(CoreSnapshot core)
+    private Task OpenDrillholeAsync(CoreSnapshot core)
     {
         var version = ++viewVersion;
-        openingSession = true;
-        depthsTypedWhileOpening = false;
-        RefreshCommands();
 
-        try
+        return LoadSessionAsync(version, "The drillhole session could not be opened", async () =>
         {
-            // Queued saves of the current session finish first, so nothing is reloaded half-saved.
-            await persistence;
-
             if (hasUnsavedRows)
             {
                 SaveSession();
@@ -391,10 +332,25 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             {
                 Notify(ToastKind.Warning, $"Drillhole {core.DrillholeId} already exists. Its stored project, campaign, operator and notes are kept.");
             }
+        });
+    }
+
+    // Loads a drillhole's session while Start is unavailable. Queued saves of the current session finish first, so
+    // nothing is reloaded half-saved; a failure is reported as "<failure>: <reason>".
+    private async Task LoadSessionAsync(int version, string failure, Func<Task> load)
+    {
+        openingSession = true;
+        depthsTypedWhileOpening = false;
+        RefreshCommands();
+
+        try
+        {
+            await persistence;
+            await load();
         }
         catch (Exception error)
         {
-            Notify(ToastKind.Error, $"The drillhole session could not be opened: {error.Message}");
+            Notify(ToastKind.Error, $"{failure}: {error.Message}");
         }
         finally
         {
@@ -412,6 +368,16 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
                 }
             }
         }
+    }
+
+    // Empties the table and the depth inputs; nothing stored is deleted.
+    private void ClearSession()
+    {
+        session = null;
+        nextCapture = 1;
+        Results.Clear();
+        Changed(nameof(SessionId));
+        SetDepthInputs("", "");
     }
 
     // Shows a stored session: its rows sorted by From and its saved starting depth and step (the step converted from
@@ -515,9 +481,9 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     private void RefreshCommands()
     {
-        EditDurationCommand?.Refresh();
-        SaveDurationCommand?.Refresh();
-        CancelDurationCommand?.Refresh();
+        EditDurationCommand.Refresh();
+        SaveDurationCommand.Refresh();
+        CancelDurationCommand.Refresh();
         ToggleMeasurementCommand.Refresh();
         TriggerCommand.Refresh();
         NewMeasurementCommand.Refresh();
@@ -562,11 +528,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             return;
         }
 
-        session = null;
-        nextCapture = 1;
-        Results.Clear();
-        Changed(nameof(SessionId));
-        SetDepthInputs("", "");
+        ClearSession();
         SetCore(null);
         Notify(ToastKind.Information, "Enter the next drillhole in Core Information and click Save & Continue. Earlier measurements remain stored.");
     }
@@ -676,7 +638,6 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             Countdown = FormatCountdown(TimeSpan.Zero);
             CaptureProgress = 1;
 
-
             // Display hold, kept on purpose: it gives WPF one render of "00:00" and the full ring before the
             // row is committed. It does not extend the capture interval, and Stop can still cancel during it.
             await Task.Delay(100, token);
@@ -737,49 +698,22 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     // The completed row of a capture. Device captures: the averages of the accepted samples (each field over its own
     // valid values), the actual sample count, the window and the source detector; the raw samples ride along and are
-    // saved with the row. No samples at all is an error — nothing is invented.
+    // saved with the row. Other services (tests) deliver plain values. No samples at all is an error — nothing is invented.
     private MeasurementResult BuildResult(
         CaptureData data, MeasurementSession current, CoreSnapshot core, long fromMm, long toMm, long stepMm, TimeSpan duration)
     {
-        if (data.DeviceSamples is { } samples)
+        var deviceSamples = data.DeviceSamples;
+        var sampleCount = deviceSamples?.Count ?? data.Samples.Count;
+
+        if (sampleCount == 0)
         {
-            if (samples.Count == 0)
-            {
-                throw new CaptureException(
-                    $"No samples were received from {data.Device?.Name ?? data.Device?.Serial ?? "the device"} during the {duration.TotalSeconds:0} s capture. Nothing was saved.");
-            }
-
-            var summary = SampleAveraging.Summarize(samples);
-
-            return new MeasurementResult
-            {
-                SessionId = current.Id,
-                CaptureNumber = nextCapture++,
-                StartTime = data.StartTime,
-                EndTime = data.EndTime,
-                CompletedAt = data.CompletedAt,
-                SampleCount = summary.SampleCount,
-                ExpectedSamples = data.ExpectedSamples,
-                DurationMs = (long)(data.EndTime - data.StartTime).TotalMilliseconds,
-                Reading = new DeviceReading(summary.FirstTsMs, summary.Count0, summary.Count0Raw, summary.Hdm, summary.HdmRaw, summary.DoseRate),
-                Temperature = summary.Temperature,
-                Pressure = summary.Pressure,
-                DeviceSerial = data.Device?.Serial,
-                DeviceName = data.Device?.Name,
-                DeviceMac = data.Device?.Mac,
-                DeviceSessionId = summary.DeviceSessionId,
-                Samples = samples,
-                Core = core,
-                FromMm = fromMm,
-                ToMm = toMm,
-                StepMm = stepMm
-            };
+            throw new CaptureException(deviceSamples is null
+                ? "The capture returned no samples. Nothing was saved."
+                : $"No samples were received from {data.Device?.Name ?? data.Device?.Serial ?? "the device"} during the {duration.TotalSeconds:0} s capture. Nothing was saved.");
         }
 
-        if (data.Samples.Count == 0)
-        {
-            throw new CaptureException("The capture returned no samples. Nothing was saved.");
-        }
+        var summary = deviceSamples is null ? null : SampleAveraging.Summarize(deviceSamples);
+        var device = deviceSamples is null ? null : data.Device;
 
         return new MeasurementResult
         {
@@ -788,12 +722,21 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             StartTime = data.StartTime,
             EndTime = data.EndTime,
             CompletedAt = data.CompletedAt,
-            SampleCount = data.Samples.Count,
+            SampleCount = sampleCount,
             ExpectedSamples = data.ExpectedSamples,
             DurationMs = (long)(data.EndTime - data.StartTime).TotalMilliseconds,
-            Reading = data.Reading ?? DeviceReading.Empty,
-            AverageValue = data.Samples.Average(),
-            Unit = data.Unit,
+            Reading = summary is null
+                ? data.Reading ?? DeviceReading.Empty
+                : new DeviceReading(summary.FirstTsMs, summary.Count0, summary.Count0Raw, summary.Hdm, summary.HdmRaw, summary.DoseRate),
+            Temperature = summary?.Temperature,
+            Pressure = summary?.Pressure,
+            DeviceSerial = device?.Serial,
+            DeviceName = device?.Name,
+            DeviceMac = device?.Mac,
+            DeviceSessionId = summary?.DeviceSessionId,
+            Samples = deviceSamples,
+            AverageValue = deviceSamples is null ? data.Samples.Average() : null,
+            Unit = deviceSamples is null ? data.Unit : null,
             Core = core,
             FromMm = fromMm,
             ToMm = toMm,
@@ -863,20 +806,20 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    // Stores the whole table (one session, displayed order). Stored rows only get their SortOrder updated, so a row
-    // whose earlier save failed is saved by the next change, Stop or close — never twice.
+    // Stores the whole table (one session, displayed order) without waiting. Stored rows only get their SortOrder
+    // updated, so a row whose earlier save failed is saved by the next change, Stop or close — never twice.
     private void SaveSession() => _ = SaveSessionAsync();
 
-    private async Task<bool> SaveSessionAsync(Func<Exception, string>? failureMessage = null)
+    private async Task SaveSessionAsync()
     {
         if (session is not { } current)
         {
-            return false;
+            return;
         }
 
         var rows = Results.ToArray();
         var progress = nextFromMm is { } from && stepMm is { } size ? new DepthProgress(from, size) : null;
-        var saved = await Persist(() => repository.SaveAsync(current, rows, progress), failureMessage);
+        var saved = await Persist(() => repository.SaveAsync(current, rows, progress));
 
         // Saves complete in request order, so the latest result describes the table.
         if (session == current)
@@ -888,8 +831,6 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         {
             MeasurementsSaved?.Invoke();
         }
-
-        return saved;
     }
 
     // Queues a write without blocking the UI. A failure is reported (by default: the rows stay in the table).

@@ -1,0 +1,50 @@
+<!--
+  Drillhole Information: labels, sizes and spacing. Labels are display text only: Drillhole → DrillholeId (SQLite
+  DrillholeID), Project → DrillholeName (DrillholeName), Campaign → ProjectArea (Project). Changing a label renames no
+  field, and the CSV headers (CsvExportService.cs) stay as they are.
+  Merged into DrillholeInformationView.xaml, and into MeasurementPage.xaml for the drillhole warning.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ===== Labels ===== -->
+    <sys:String x:Key="DrillholeSectionTitle">Drillhole Information</sys:String>
+    <sys:String x:Key="DrillholeLabel">Drillhole</sys:String>
+    <sys:String x:Key="ProjectLabel">Project</sys:String>
+    <sys:String x:Key="CampaignLabel">Campaign</sys:String>
+    <sys:String x:Key="OperatorLabel">Operator</sys:String>
+    <sys:String x:Key="NotesLabel">Notes</sys:String>
+    <sys:String x:Key="AutofilledToolTip">Filled from the selected drillhole.</sys:String>
+    <sys:String x:Key="ClearDrillholeToolTip">Clear drillhole</sys:String>
+    <sys:String x:Key="DrillholeLockedToolTip">Stop the measurement to change the drillhole.</sys:String>
+    <sys:String x:Key="RetryDrillholesLabel">Retry</sys:String>
+    <sys:String x:Key="SaveAndContinueLabel" xml:space="preserve">Save &amp; Continue   ›</sys:String>
+
+    <!-- ===== Field widths ===== -->
+    <!-- Row 1: Drillhole (widest, for long Hole IDs), Project, Campaign (compact: a year), Operator (fits DOMAIN\username);
+         row 2: Notes, full width. The minimum widths add up to the space available at the smallest window with the
+         sidebar open. -->
+    <GridLength x:Key="DrillholeColumnWidth">2.3*</GridLength>
+    <sys:Double x:Key="DrillholeColumnMinWidth">200</sys:Double>
+    <GridLength x:Key="ProjectColumnWidth">1.3*</GridLength>
+    <sys:Double x:Key="ProjectColumnMinWidth">120</sys:Double>
+    <GridLength x:Key="CampaignColumnWidth">110</GridLength>
+    <GridLength x:Key="OperatorColumnWidth">1.6*</GridLength>
+    <sys:Double x:Key="OperatorColumnMinWidth">150</sys:Double>
+    <sys:Double x:Key="NotesHeight">76</sys:Double>
+
+    <!-- ===== Spacing ===== -->
+    <Thickness x:Key="FieldMargin">0,0,14,16</Thickness>                 <!-- right of and below every field -->
+    <Thickness x:Key="NotesPadding">11,9</Thickness>
+    <!-- The right padding keeps the text clear of the × and the chevron inside the Drillhole box. -->
+    <Thickness x:Key="DrillholeBoxPadding">11,0,62,0</Thickness>
+    <Thickness x:Key="ClearDrillholeMargin">0,7,32,0</Thickness>         <!-- the ×, left of the chevron -->
+    <Thickness x:Key="RetryDrillholesMargin">8,5,0,0</Thickness>
+    <Thickness x:Key="SaveAndContinueMargin">0,4,14,0</Thickness>
+
+    <!-- ===== Drillhole warning (Measurement page, below the capture panel) ===== -->
+    <sys:String x:Key="DrillholeWarningText">Complete Core Information and click Save &amp; Continue to enable Start.</sys:String>
+    <sys:Double x:Key="DrillholeWarningFontSize">14</sys:Double>
+    <Thickness x:Key="DrillholeWarningMargin">0,12,0,0</Thickness>
+</ResourceDictionary>

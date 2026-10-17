@@ -14,7 +14,7 @@
 
 | Layer | Main types | Location |
 |---|---|---|
-| Views | `MainWindow`, `CoreInformationPage`, `MeasurementPage`, `ConfirmationWindow`; controls `DepthBarChart`, `CountdownRing`, `ScaleExtension` | `MainWindow.*`, `Pages/*/…Page.xaml(.cs)`, `Windows/ConfirmationWindow/` |
+| Views | `MainWindow`, `CoreInformationPage`, `MeasurementPage` (composition) with section views `DrillholeInformationView`, `DeviceStatusView`, `CapturePanelView`, `MeasurementTableView`, `ConfirmationWindow`; controls `DepthBarChart`, `CountdownRing`, `ScaleExtension` | `MainWindow.*`, `Pages/*/…Page.xaml(.cs)`, `Pages/*/<Section>/` (view + configuration file), `Windows/ConfirmationWindow/` |
 | ViewModels | `MainViewModel`, `CoreInformationViewModel`, `MeasurementViewModel`, `StatusAnnouncements` | `ViewModels/`, `Pages/*/` |
 | Domain (pure logic) | `Depth`, `MeasurementOrder`, `CaptureWindow`, `SampleAveraging`, `DeviceTime`, `DrillholeCatalog`, `MeasurementCellFormat`, `CaptureDurationSettings` (rules) | `Calculation/Measurement/`, `Pages/…` |
 | Services | `DeviceCaptureService`, `GammaGuardCaptureDevices`, `DeviceStatusMonitor`, `Ct007BluetoothCheck`, `CsvExportService`, `ToastService`, `BackendConnection`, `DialogService` | `Calculation/**`, `Pages/Measurement/`, `Shared/Infrastructure/`, `Api/` |

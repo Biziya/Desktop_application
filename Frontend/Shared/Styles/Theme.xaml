@@ -159,17 +159,9 @@
         <Setter Property="Padding" Value="9,7"/>
         <Setter Property="Margin" Value="0,6,0,0"/>
     </Style>
-    <!-- Existing error strings drive appearance; validation remains in the ViewModel. -->
-    <Style x:Key="ValidatedInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-        <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
-        <Style.Triggers>
-            <Trigger Property="Tag" Value=""><Setter Property="BorderBrush" Value="{StaticResource InputBorder}"/></Trigger>
-        </Style.Triggers>
-    </Style>
-    <Style x:Key="ErrorText" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+    <!-- Loading / empty / error line under a field or status label; hidden when empty. -->
+    <Style x:Key="StatusMessage" TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
         <Setter Property="FontSize" Value="12"/>
-        <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="Margin" Value="0,5,0,0"/>
         <Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers>
     </Style>

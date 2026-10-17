@@ -66,7 +66,6 @@ public static class CapturePipelineTests
         }
         public Task<DepthProgress?> LoadProgressAsync(Guid sessionId) => inner.LoadProgressAsync(sessionId);
         public Task DeleteAsync(Guid sessionId, int captureNumber) => inner.DeleteAsync(sessionId, captureNumber);
-        public Task<MeasurementSession?> LoadLatestSessionAsync() => inner.LoadLatestSessionAsync();
         public Task<MeasurementSession?> FindSessionAsync(string drillholeId) => inner.FindSessionAsync(drillholeId);
         public Task<IReadOnlyList<MeasurementResult>> LoadAsync(Guid sessionId) => inner.LoadAsync(sessionId);
         public Task<IReadOnlyList<MeasuredDrillhole>> LoadMeasuredDrillholesAsync() => inner.LoadMeasuredDrillholesAsync();

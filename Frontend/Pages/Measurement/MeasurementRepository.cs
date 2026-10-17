@@ -55,9 +55,6 @@ public interface IMeasurementRepository
 
     Task DeleteAsync(Guid sessionId, int captureNumber);
 
-    /// <summary>The session that received the most recent stored row, or null when nothing is stored.</summary>
-    Task<MeasurementSession?> LoadLatestSessionAsync();
-
     /// <summary>The stored session of a Drillhole ID, or null when that drillhole has none. Never creates one.</summary>
     Task<MeasurementSession?> FindSessionAsync(string drillholeId);
 
@@ -73,7 +70,7 @@ public interface IMeasurementRepository
 
 /// <summary>
 /// SQLite storage for measurement rows. All work runs off the UI thread. Database column names are stable and
-/// independent of the table labels and CSV headers in MeasurementColumns.cs.
+/// independent of the table headers and CSV headers in Table/MeasurementTableColumns.cs.
 /// </summary>
 public sealed class SqliteMeasurementRepository : IMeasurementRepository
 {
@@ -370,21 +367,6 @@ public sealed class SqliteMeasurementRepository : IMeasurementRepository
         using var command = connection.CreateCommand();
         command.CommandText = $"SELECT {SessionColumns} FROM MeasurementSessions WHERE DrillholeID = $drillholeId";
         command.Parameters.AddWithValue("$drillholeId", drillholeId);
-        using var reader = command.ExecuteReader();
-
-        return reader.Read() ? ReadSession(reader) : null;
-    });
-
-    public Task<MeasurementSession?> LoadLatestSessionAsync() => Run(connection =>
-    {
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT s.id, s.CreatedAt, s.DrillholeID, s.DrillholeName, s.Project, s."operator", s.comment
-            FROM MeasurementRecords r
-            JOIN MeasurementSessions s ON s.id = r.session_id
-            ORDER BY r.id DESC
-            LIMIT 1
-            """;
         using var reader = command.ExecuteReader();
 
         return reader.Read() ? ReadSession(reader) : null;

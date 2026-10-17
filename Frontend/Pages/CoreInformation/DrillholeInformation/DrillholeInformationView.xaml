@@ -1,0 +1,181 @@
+<UserControl x:Class="Frontend.Pages.CoreInformation.DrillholeInformation.DrillholeInformationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infra="clr-namespace:Frontend.Shared.Infrastructure">
+    <!-- Drillhole Information form. Labels, widths and spacing: DrillholeInformationConstants.xaml. -->
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="DrillholeInformationConstants.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <infra:SameItemConverter x:Key="SameItem"/>
+            <!-- Drillhole dropdown entries: a group heading ("Measured drillholes" / "All drillholes") cannot be hovered,
+                 focused or selected, so the mouse and the arrow keys only land on drillholes. -->
+            <Style x:Key="DrillholeItem" TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsHeader}" Value="True">
+                        <Setter Property="IsEnabled" Value="False"/>
+                        <Setter Property="Focusable" Value="False"/>
+                        <Setter Property="Cursor" Value="Arrow"/>
+                        <Setter Property="Padding" Value="10,6,10,3"/>
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Header}"/>
+                    </DataTrigger>
+                    <!-- Closest match to the typed text (exact, then prefix, then partial): light fill and blue outline.
+                         Only highlighted — Enter or a click picks it. -->
+                    <DataTrigger Value="True">
+                        <DataTrigger.Binding>
+                            <MultiBinding Converter="{StaticResource SameItem}">
+                                <Binding/>
+                                <Binding Path="DataContext.ClosestOption" RelativeSource="{RelativeSource AncestorType=ComboBox}"/>
+                            </MultiBinding>
+                        </DataTrigger.Binding>
+                        <Setter Property="Background" Value="{StaticResource HoverSurface}"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource Blue}"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <!-- Drillhole box: red border after Save & Continue without a drillhole (the message is a toast); disabled while
+                 measuring, because the drillhole cannot change until Stop. -->
+            <Style x:Key="DrillholeBox" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                <Setter Property="ToolTip" Value="{Binding DrillholeSearch}"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasDrillholeError}" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsSelectionLocked}" Value="True">
+                        <Setter Property="IsEnabled" Value="False"/>
+                        <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
+                        <Setter Property="ToolTip" Value="{StaticResource DrillholeLockedToolTip}"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <DataTemplate x:Key="DrillholeEntry">
+                <Grid>
+                    <!-- Heading: small muted caps; a thin line separates it from the group above. -->
+                    <StackPanel x:Name="HeaderPart" Visibility="Collapsed">
+                        <Border x:Name="Separator" Height="1" Background="{StaticResource Line}" Margin="-10,0,-10,8" Visibility="Collapsed"/>
+                        <TextBlock Text="{Binding Header}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}"/>
+                    </StackPanel>
+                    <StackPanel x:Name="ItemPart" Orientation="Horizontal">
+                        <TextBlock Text="{Binding HoleId}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Details}" Foreground="{StaticResource Muted}" Margin="10,0,0,0"/>
+                    </StackPanel>
+                </Grid>
+                <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding IsHeader}" Value="True">
+                        <Setter TargetName="HeaderPart" Property="Visibility" Value="Visible"/>
+                        <Setter TargetName="ItemPart" Property="Visibility" Value="Collapsed"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding ShowSeparator}" Value="True">
+                        <Setter TargetName="Separator" Property="Visibility" Value="Visible"/>
+                    </DataTrigger>
+                </DataTemplate.Triggers>
+            </DataTemplate>
+            <Style x:Key="FieldPanel" TargetType="StackPanel">
+                <Setter Property="Margin" Value="{StaticResource FieldMargin}"/>
+            </Style>
+            <Style x:Key="AutofilledField" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="IsReadOnly" Value="True"/>
+                <Setter Property="IsTabStop" Value="False"/>
+                <Setter Property="ToolTip" Value="{StaticResource AutofilledToolTip}"/>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Border Style="{StaticResource Card}">
+        <StackPanel>
+            <TextBlock Text="{StaticResource DrillholeSectionTitle}" Style="{StaticResource SectionTitle}"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="{StaticResource DrillholeColumnWidth}" MinWidth="{StaticResource DrillholeColumnMinWidth}"/>
+                    <ColumnDefinition Width="{StaticResource ProjectColumnWidth}" MinWidth="{StaticResource ProjectColumnMinWidth}"/>
+                    <ColumnDefinition Width="{StaticResource CampaignColumnWidth}"/>
+                    <ColumnDefinition Width="{StaticResource OperatorColumnWidth}" MinWidth="{StaticResource OperatorColumnMinWidth}"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <!-- Searchable dropdown (cached backend list): type part of a Hole ID to filter; the closest match is
+                     highlighted and Enter picks it; arrows + Enter or the mouse pick any entry; Escape closes the list.
+                     Two groups: Measured drillholes (newest first), then All drillholes (A–Z); while searching, exact
+                     matches first, then prefix, then partial. Picking fills Project and Campaign; typing never picks
+                     or rewrites the text. The × clears the drillhole (not Operator, Notes or stored data). -->
+                <StackPanel Style="{StaticResource FieldPanel}">
+                    <TextBlock Style="{StaticResource FieldLabel}"><Run Text="{StaticResource DrillholeLabel}"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
+                    <!-- Text and SelectedItem are bound BEFORE ItemsSource on purpose: when the page is replaced
+                         (navigation), WPF detaches bindings in this order. With ItemsSource first, the emptied list
+                         cleared the selection and the dropdown wrote "" back into the still-attached Text binding,
+                         erasing the picked drillhole (and its Project/Campaign) in the ViewModel. -->
+                    <Grid>
+                        <ComboBox x:Name="DrillholeBox"
+                                  Style="{StaticResource DrillholeBox}"
+                                  IsEditable="True"
+                                  IsTextSearchEnabled="False"
+                                  StaysOpenOnEdit="True"
+                                  Text="{Binding DrillholeSearch, UpdateSourceTrigger=PropertyChanged}"
+                                  SelectedItem="{Binding PickedDrillhole, Mode=TwoWay}"
+                                  ItemsSource="{Binding DrillholeOptions}"
+                                  TextSearch.TextPath="HoleId"
+                                  TextBoxBase.TextChanged="DrillholeTyped"
+                                  PreviewKeyDown="DrillholeKeyDown"
+                                  Padding="{StaticResource DrillholeBoxPadding}"
+                                  ItemContainerStyle="{StaticResource DrillholeItem}"
+                                  ItemTemplate="{StaticResource DrillholeEntry}"
+                                  AutomationProperties.Name="{StaticResource DrillholeLabel}"/>
+                        <!-- Inside the box, left of the chevron; only shown when there is something to clear. -->
+                        <Button Style="{StaticResource ClearButton}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="{StaticResource ClearDrillholeMargin}"
+                                Command="{Binding ClearDrillholeCommand}"
+                                Visibility="{Binding CanClearDrillhole, Converter={StaticResource BoolVisibility}}"
+                                ToolTip="{StaticResource ClearDrillholeToolTip}"
+                                AutomationProperties.Name="{StaticResource ClearDrillholeToolTip}"/>
+                    </Grid>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right"
+                                Content="{StaticResource RetryDrillholesLabel}"
+                                Style="{StaticResource SmallButton}"
+                                Margin="{StaticResource RetryDrillholesMargin}"
+                                Command="{Binding RefreshDrillholesCommand}"
+                                Visibility="{Binding CanRetryDrillholes, Converter={StaticResource BoolVisibility}}"/>
+                        <TextBlock Style="{StaticResource StatusMessage}" Text="{Binding DrillholesMessage}"/>
+                    </DockPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Style="{StaticResource FieldPanel}">
+                    <TextBlock Text="{StaticResource ProjectLabel}" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Style="{StaticResource AutofilledField}" Text="{Binding DrillholeName, Mode=OneWay}"
+                             AutomationProperties.Name="{StaticResource ProjectLabel}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Style="{StaticResource FieldPanel}">
+                    <TextBlock Text="{StaticResource CampaignLabel}" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Style="{StaticResource AutofilledField}" Text="{Binding ProjectArea, Mode=OneWay}"
+                             AutomationProperties.Name="{StaticResource CampaignLabel}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="3" Style="{StaticResource FieldPanel}">
+                    <TextBlock Text="{StaticResource OperatorLabel}" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Text="{Binding Operator, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="{StaticResource OperatorLabel}"/>
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.ColumnSpan="4" Style="{StaticResource FieldPanel}">
+                    <TextBlock Text="{StaticResource NotesLabel}" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="{StaticResource NotesLabel}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Height="{StaticResource NotesHeight}"
+                             Padding="{StaticResource NotesPadding}"
+                             VerticalContentAlignment="Stretch"
+                             VerticalScrollBarVisibility="Auto"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Saving belongs to this form, so the action sits at its end. A missing drillhole is reported (red border and
+                 toast) only after Save & Continue. -->
+            <Button HorizontalAlignment="Right" Margin="{StaticResource SaveAndContinueMargin}"
+                    Content="{StaticResource SaveAndContinueLabel}" Command="{Binding SaveCommand}"/>
+        </StackPanel>
+    </Border>
+</UserControl>

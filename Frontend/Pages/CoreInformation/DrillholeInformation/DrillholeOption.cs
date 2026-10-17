@@ -1,6 +1,6 @@
 using Frontend.Api.CoreInformation.Drillholes;
 
-namespace Frontend.Pages.CoreInformation;
+namespace Frontend.Pages.CoreInformation.DrillholeInformation;
 
 /// <summary>
 /// One entry of the Drillhole dropdown: either a group heading ("Measured drillholes" / "All drillholes"), which is
@@ -38,7 +38,7 @@ public sealed record DrillholeOption
 
     public static DrillholeOption AllHeaderAfterMeasured { get; } = Group("All drillholes", showSeparator: true);
 
-    public static DrillholeOption Group(string header, bool showSeparator) => new(header, null, showSeparator);
+    private static DrillholeOption Group(string header, bool showSeparator) => new(header, null, showSeparator);
 
     public static DrillholeOption Item(DrillholeResponse drillhole) => new("", drillhole, false);
 }

@@ -1,6 +1,7 @@
 using Frontend.Api;
 using Frontend.Api.CoreInformation.Drillholes;
 using Frontend.Calculation.CoreInformation;
+using Frontend.Pages.CoreInformation.DrillholeInformation;
 using Frontend.Pages.Measurement;
 using Frontend.Shared.Infrastructure;
 using Frontend.Shared.Models;
@@ -48,7 +49,6 @@ public sealed class CoreInformationViewModel : ObservableObject
     /// <param name="searchDelay">Pause after the last keystroke before the list is filtered (default 150 ms).</param>
     public CoreInformationViewModel(
         Action<CoreSnapshot> saved,
-        string databasePath,
         DrillholesClient drillholesApi,
         BackendConnection backend,
         DrillholeCache cache,
@@ -63,12 +63,10 @@ public sealed class CoreInformationViewModel : ObservableObject
         this.history = history;
         this.searchDelay = searchDelay ?? TimeSpan.FromMilliseconds(150);
         Devices = devices;
-        DatabasePath = databasePath;
         operatorName = CurrentWindowsAccount();
         SaveCommand = new RelayCommand(_ => Save(saved));
         RefreshDrillholesCommand = new RelayCommand(_ => _ = LoadDrillholesAsync());
         ClearDrillholeCommand = new RelayCommand(_ => ClearDrillhole(), _ => CanClearDrillhole);
-        RefreshBluetoothDevicesCommand = new RelayCommand(_ => _ = devices.RefreshBluetoothDevicesAsync());
         RefreshMeasurementDatabaseCommand = new RelayCommand(_ => _ = devices.CheckMeasurementDatabaseAsync());
         RefreshGammaGuardDatabaseCommand = new RelayCommand(_ => _ = devices.CheckGammaGuardDatabaseAsync(rediscover: true));
 
@@ -130,15 +128,9 @@ public sealed class CoreInformationViewModel : ObservableObject
 
     public RelayCommand RefreshDrillholesCommand { get; }
 
-    /// <summary>Reads the CT007-M device list again (the dropdown was opened). Never selects or connects a device.</summary>
-    public RelayCommand RefreshBluetoothDevicesCommand { get; }
-
     public RelayCommand RefreshMeasurementDatabaseCommand { get; }
 
     public RelayCommand RefreshGammaGuardDatabaseCommand { get; }
-
-    /// <summary>Path of the application's own measurement SQLite database (from the persistence service).</summary>
-    public string DatabasePath { get; }
 
     /// <summary>Local Device Status of this laptop: CT-007 Bluetooth, measurement database, Gamma Guard database.</summary>
     public DeviceStatusMonitor Devices { get; }
@@ -250,20 +242,37 @@ public sealed class CoreInformationViewModel : ObservableObject
     }
 
     /// <summary>Loading, empty, error or "not in the latest list" message under the Drillhole box.</summary>
-    public string DrillholesMessage =>
-        drillholesStatus is null && catalog.Count == 0 ? "Loading drillholes…" :
-        drillholesStatus is not null and not ApiStatus.Ok && catalog.Count == 0
-            ? $"No drillholes available: the list could not be loaded and no saved copy exists yet. {drillholesError}" :
-        drillholesStatus is not null and not ApiStatus.Ok ? $"Showing the saved drillhole list. Could not refresh: {drillholesError}" :
-        drillholesStatus is ApiStatus.Ok && catalog.Count == 0 ? "The backend returned no drillholes." :
-        emptyResponse ? "The backend returned no drillholes; showing the saved list." :
-        DrillholeId.Length > 0 && Find(DrillholeId) is null ? $"{DrillholeId} is not in the latest drillhole list; its saved details are kept." :
-        "";
+    public string DrillholesMessage
+    {
+        get
+        {
+            if (catalog.Count == 0)
+            {
+                return drillholesStatus is null ? "Loading drillholes…" :
+                    DrillholesFailed ? $"No drillholes available: the list could not be loaded and no saved copy exists yet. {drillholesError}" :
+                    "The backend returned no drillholes.";
+            }
 
-    public bool CanRetryDrillholes =>
-        drillholesStatus is not null and not ApiStatus.Ok || (drillholesStatus is ApiStatus.Ok && (catalog.Count == 0 || emptyResponse));
+            if (DrillholesFailed)
+            {
+                return $"Showing the saved drillhole list. Could not refresh: {drillholesError}";
+            }
 
-    public bool IsValid => HasRequiredText;
+            if (emptyResponse)
+            {
+                return "The backend returned no drillholes; showing the saved list.";
+            }
+
+            return DrillholeId.Length > 0 && catalog.Find(DrillholeId) is null
+                ? $"{DrillholeId} is not in the latest drillhole list; its saved details are kept."
+                : "";
+        }
+    }
+
+    public bool CanRetryDrillholes => DrillholesFailed || (drillholesStatus is ApiStatus.Ok && (catalog.Count == 0 || emptyResponse));
+
+    // The latest load got no usable answer (offline, HTTP error, unexpected data).
+    private bool DrillholesFailed => drillholesStatus is not null and not ApiStatus.Ok;
 
     /// <summary>
     /// The Windows account running the app: DOMAIN\Username for a domain account, otherwise the user name
@@ -280,10 +289,7 @@ public sealed class CoreInformationViewModel : ObservableObject
     }
 
     /// <summary>Red border on the Drillhole box after Save &amp; Continue without a drillhole (the message is a toast).</summary>
-    public string DrillholeIdError =>
-        showErrors && string.IsNullOrWhiteSpace(DrillholeId) ? "Select a drillhole from the list." : "";
-
-    public bool HasDrillholeError => DrillholeIdError.Length > 0;
+    public bool HasDrillholeError => showErrors && !HasDrillhole;
 
     // ---------- Loading ----------
 
@@ -404,8 +410,6 @@ public sealed class CoreInformationViewModel : ObservableObject
     }
 
     // ---------- Selection ----------
-
-    private DrillholeResponse? Find(string holeId) => catalog.Find(holeId);
 
     private void Choose(DrillholeResponse entry)
     {
@@ -564,14 +568,14 @@ public sealed class CoreInformationViewModel : ObservableObject
 
     // ---------- Saving ----------
 
-    private bool HasRequiredText => !string.IsNullOrWhiteSpace(DrillholeId);
+    private bool HasDrillhole => !string.IsNullOrWhiteSpace(DrillholeId);
 
     private void Save(Action<CoreSnapshot> saved)
     {
         showErrors = true;
-        RefreshValidation();
+        Changed(nameof(HasDrillholeError));
 
-        if (!HasRequiredText)
+        if (!HasDrillhole)
         {
             Toasts.Error("Select a drillhole from the list.");
             return;
@@ -593,13 +597,7 @@ public sealed class CoreInformationViewModel : ObservableObject
 
     private void Update()
     {
-        RefreshValidation();
-        Edited?.Invoke();
-    }
-
-    private void RefreshValidation()
-    {
-        Changed(nameof(DrillholeIdError));
         Changed(nameof(HasDrillholeError));
+        Edited?.Invoke();
     }
 }

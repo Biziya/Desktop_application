@@ -108,9 +108,6 @@ public sealed class DeviceStatusMonitor : ObservableObject, IDisposable
         }
     }
 
-    public Task CheckAllAsync() =>
-        Task.WhenAll(RefreshBluetoothDevicesAsync(), CheckBluetoothAsync(), CheckMeasurementDatabaseAsync(), CheckGammaGuardDatabaseAsync());
-
     /// <summary>
     /// Starts monitoring <paramref name="device"/> instead of the previous one: the status shows Checking at once and a
     /// check of the new device follows; a result still arriving for the previous device is discarded. Monitoring only:

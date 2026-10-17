@@ -1,12 +1,15 @@
 <UserControl x:Class="Frontend.Pages.Measurement.MeasurementPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:Frontend.Pages.Measurement"
-             xmlns:calc="clr-namespace:Frontend.Calculation.Measurement">
+             xmlns:capture="clr-namespace:Frontend.Pages.Measurement.CapturePanel"
+             xmlns:table="clr-namespace:Frontend.Pages.Measurement.Table">
+    <!-- Page composition only. The sections share this page's DataContext (MeasurementViewModel). Results, errors and
+         status changes are shown as toasts (MainWindow), not as text here. -->
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="MeasurementStyles.xaml"/>
+                <!-- Drillhole warning text and size. -->
+                <ResourceDictionary Source="/Frontend;component/Pages/CoreInformation/DrillholeInformation/DrillholeInformationConstants.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -15,245 +18,23 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Control area, one row: control column (Starting Depth, Step, Start / Stop toggle — all the same width) | countdown |
-             bar chart (remaining width). "to" is calculated (from + step), so there is no To input. Depth edits, also during acquisition,
-             apply from the next capture. The chart takes the remaining width (about 205 px at the smallest window). -->
         <Border Style="{StaticResource Card}">
             <StackPanel>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Width="{local:Scale StartStopButtonWidth}" VerticalAlignment="Center">
-                        <TextBlock Text="Starting Depth (m)" Style="{StaticResource FieldLabel}" FontSize="{local:Scale LabelFontSize}"/>
-                        <!-- Invalid text gets a red border while typing; leaving the box (or Start) reports it in a toast. -->
-                        <TextBox Text="{Binding NextFrom, UpdateSourceTrigger=PropertyChanged}"
-                                 LostFocus="DepthCommitted"
-                                 AutomationProperties.Name="Starting depth in metres">
-                            <TextBox.Style>
-                                <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsNextFromInvalid}" Value="True">
-                                            <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBox.Style>
-                        </TextBox>
-                        <TextBlock Text="Step (cm)" Style="{StaticResource FieldLabel}" FontSize="{local:Scale LabelFontSize}" Margin="0,14,0,0"/>
-                        <TextBox Text="{Binding Step, UpdateSourceTrigger=PropertyChanged}"
-                                 LostFocus="DepthCommitted"
-                                 AutomationProperties.Name="Depth step in centimetres">
-                            <TextBox.Style>
-                                <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsStepInvalid}" Value="True">
-                                            <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBox.Style>
-                        </TextBox>
-                        <!-- One toggle: green "Start" while stopped, red "Stop" while measuring. -->
-                        <Button Margin="0,18,0,0" Command="{Binding ToggleMeasurementCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource StartStopButtonStyle}">
-                                    <Setter Property="Background" Value="{StaticResource Success}"/>
-                                    <Setter Property="AutomationProperties.Name" Value="Start measurement"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsMeasurementModeActive}" Value="True">
-                                            <Setter Property="Background" Value="{StaticResource Danger}"/>
-                                            <Setter Property="AutomationProperties.Name" Value="Stop measurement"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <!-- Runs stay on one line: whitespace between them would show as a space. -->
-                            <TextBlock><Run Style="{StaticResource StartStopIconRun}"/><Run Style="{StaticResource StartStopLabelRun}"/></TextBlock>
-                        </Button>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="24,0">
-                        <TextBlock Text="Capture Countdown"
-                                   FontSize="{local:Scale CountdownLabelFontSize}"
-                                   Foreground="{StaticResource Muted}"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,0,0,10"/>
-                        <!-- Click (or Tab + Enter/Space) to edit the capture duration — only while no capture is running.
-                             Left click only opens the editor: it never starts measuring or captures (captures are
-                             right-click while armed, and are refused while the editor is open). -->
-                        <Button x:Name="CountdownButton"
-                                Style="{StaticResource CountdownButton}"
-                                Command="{Binding EditDurationCommand}"
-                                ToolTip="Click to change the capture duration"
-                                AutomationProperties.Name="Capture countdown. Click to change the capture duration">
-                            <Grid Width="{local:Scale CountdownRingSize}" Height="{local:Scale CountdownRingSize}">
-                                <local:CountdownRing Progress="{Binding CaptureProgress}"
-                                                     RingThickness="{local:Scale CountdownRingThickness}"
-                                                     TrackBrush="{StaticResource Line}"
-                                                     ProgressBrush="{StaticResource Blue}"
-                                                     IsHitTestVisible="False"/>
-                                <TextBlock Text="{Binding Countdown}"
-                                           FontSize="{local:Scale CountdownFontSize}"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource Blue}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                            </Grid>
-                        </Button>
-                        <!-- Compact duration editor below the countdown (a popup, so the layout never moves).
-                             Enter saves, Escape cancels; invalid input shows a 5 s error toast and keeps the editor open. -->
-                        <Popup IsOpen="{Binding IsEditingDuration, Mode=OneWay}"
-                               PlacementTarget="{Binding ElementName=CountdownButton}"
-                               Placement="Bottom"
-                               HorizontalOffset="-60"
-                               StaysOpen="True"
-                               AllowsTransparency="True"
-                               Opened="DurationEditorOpened">
-                            <Border Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="1"
-                                    CornerRadius="{StaticResource ControlRadius}" Padding="14" Margin="0,6,12,12">
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="16" ShadowDepth="3" Direction="270" Opacity="0.14"/>
-                                </Border.Effect>
-                                <Border.InputBindings>
-                                    <KeyBinding Key="Enter" Command="{Binding SaveDurationCommand}"/>
-                                    <KeyBinding Key="Escape" Command="{Binding CancelDurationCommand}"/>
-                                </Border.InputBindings>
-                                <StackPanel Width="230">
-                                    <TextBlock Text="Capture duration (seconds)" Style="{StaticResource FieldLabel}"/>
-                                    <TextBox x:Name="DurationBox"
-                                             Text="{Binding DurationText, UpdateSourceTrigger=PropertyChanged}"
-                                             AutomationProperties.Name="Capture duration in seconds"/>
-                                    <TextBlock Style="{StaticResource MutedText}" FontSize="12" Margin="0,6,0,0"><Run Text="Whole seconds, "/><Run Text="{Binding Source={x:Static calc:CaptureDurationSettings.MinSeconds}, Mode=OneWay}"/><Run Text="–"/><Run Text="{Binding Source={x:Static calc:CaptureDurationSettings.MaxSeconds}, Mode=OneWay}"/><Run Text=". Used from the next capture."/></TextBlock>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-                                        <Button Content="Cancel" Style="{StaticResource SecondaryButton}" Padding="14,7" Margin="0,0,8,0"
-                                                Command="{Binding CancelDurationCommand}"/>
-                                        <Button Content="Save" Padding="14,7" Command="{Binding SaveDurationCommand}"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-                        </Popup>
-                    </StackPanel>
-                    <local:DepthBarChart Grid.Column="2"
-                                         Margin="0,0,0,0"
-                                         MinHeight="200"
-                                         ItemsSource="{Binding Results}"
-                                         BarBrush="{StaticResource Blue}"
-                                         BarSeparatorBrush="{StaticResource Surface}"
-                                         GridBrush="{StaticResource Line}"
-                                         AxisBrush="{StaticResource Muted}"
-                                         Foreground="{StaticResource LabelText}"
-                                         AutomationProperties.Name="Bar chart of ts_ms by depth"/>
-
-                </Grid>
+                <capture:CapturePanelView/>
 
                 <!-- The drillhole warning: shown while no drillhole is saved for measuring (also when none is selected,
                      which leaves the table and chart empty). -->
-                <TextBlock Text="Complete Core Information and click Save &amp; Continue to enable Start."
-                           FontSize="{local:Scale LabelFontSize}"
+                <TextBlock Text="{StaticResource DrillholeWarningText}"
+                           FontSize="{StaticResource DrillholeWarningFontSize}"
                            Foreground="{StaticResource Warning}"
                            TextWrapping="Wrap"
-                           Margin="0,12,0,0"
+                           Margin="{StaticResource DrillholeWarningMargin}"
                            Visibility="{Binding NeedsCore, Converter={StaticResource BoolVisibility}}"/>
             </StackPanel>
         </Border>
 
-        <!-- Results table -->
-        <Border Grid.Row="1" Style="{StaticResource Card}" Padding="0" Margin="0">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <Grid Margin="18,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="Averaged Measurements"
-                               FontSize="{local:Scale SectionHeadingFontSize}"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"/>
-                    <!-- Starts a new measurement session (only while stopped). Start/Stop keeps the current one. -->
-                    <Button Grid.Column="1"
-                            Content="+   New Measurement"
-                            Style="{StaticResource SecondaryButton}"
-                            FontSize="{local:Scale ExportButtonFontSize}"
-                            MinHeight="{local:Scale ExportButtonHeight}"
-                            Margin="0,0,10,0"
-                            ToolTip="Finish this drillhole. Its measurements stay stored; enter the next drillhole in Core Information."
-                            Command="{Binding NewMeasurementCommand}"/>
-                    <Button Grid.Column="2"
-                            Content="↓   Export CSV"
-                            Style="{StaticResource SecondaryButton}"
-                            FontSize="{local:Scale ExportButtonFontSize}"
-                            MinWidth="{local:Scale ExportButtonWidth}"
-                            MinHeight="{local:Scale ExportButtonHeight}"
-                            Command="{Binding ExportCommand}"/>
-                </Grid>
-
-                <DataGrid x:Name="ResultsGrid"
-                          Grid.Row="1"
-                          Margin="1,0,1,9"
-                          ItemsSource="{Binding Results}"
-                          AutoGenerateColumns="False"
-                          SelectionMode="Single"
-                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                          ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    <DataGrid.Columns>
-                        <!-- Measurement value columns are inserted here from MeasurementColumns.cs (see MeasurementPage.xaml.cs).
-                             Rows are always in From order (the ViewModel sorts them); column sorting and manual
-                             reordering are off, so nothing can override that order. -->
-
-                        <DataGridTemplateColumn Header="Delete"
-                                                Width="{local:Scale DeleteColumnWidth, DeleteIconSizeMultiplier}"
-                                                HeaderStyle="{StaticResource CenteredTableHeader}">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Button Content="✕"
-                                            FontSize="{local:Scale DeleteIconFontSize, DeleteIconSizeMultiplier}"
-                                            Width="{local:Scale DeleteButtonSize, DeleteIconSizeMultiplier}"
-                                            Height="{local:Scale DeleteButtonSize, DeleteIconSizeMultiplier}"
-                                            ToolTip="Delete measurement"
-                                            AutomationProperties.Name="Delete measurement"
-                                            Style="{StaticResource DeleteButton}"
-                                            Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            CommandParameter="{Binding}"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-
-                <TextBlock Grid.Row="1"
-                           Text="Your averaged measurements will appear here."
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           FontSize="{local:Scale LabelFontSize}"
-                           Foreground="{StaticResource Muted}"
-                           IsHitTestVisible="False">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Results.Count}" Value="0">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </Grid>
-        </Border>
-
-        <!-- Results, errors and status changes are shown as toasts (MainWindow), not as text here. -->
+        <table:MeasurementTableView Grid.Row="1"/>
     </Grid>
 </UserControl>

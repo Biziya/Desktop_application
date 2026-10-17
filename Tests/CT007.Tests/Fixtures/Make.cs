@@ -56,7 +56,7 @@ public static class Make
     {
         var api = new ApiClient(new ApiSettings(baseUrl, TimeSpan.FromSeconds(timeoutSeconds), TimeSpan.FromMinutes(5)), handler);
         connection = new BackendConnection(api, TimeSpan.FromMinutes(5));
-        return new CoreInformationViewModel(_ => { }, databasePath, new DrillholesClient(api), connection, new DrillholeCache(databasePath),
+        return new CoreInformationViewModel(_ => { }, new DrillholesClient(api), connection, new DrillholeCache(databasePath),
             history, Monitor(databasePath, databasePath + ".gg"), searchDelay ?? TimeSpan.Zero);
     }
 

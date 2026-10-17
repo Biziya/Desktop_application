@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using System.Text;
+using Frontend.Pages.Measurement.Table;
 using Microsoft.Win32;
 
 namespace Frontend.Pages.Measurement;
@@ -61,7 +62,7 @@ public sealed class CsvExportService : ICsvExportService
     ];
 
     /// <summary>
-    /// Measurement columns, order and headers come from MeasurementColumns.cs, followed by the metadata of
+    /// Measurement columns, order and headers come from MeasurementTableColumns.cs, followed by the metadata of
     /// <paramref name="session"/> and session_id. Rows are written in the given (displayed, From-sorted) order and must all belong to
     /// <paramref name="session"/>. ts_ms is the device value only — demo values are never exported.
     /// </summary>
@@ -72,19 +73,19 @@ public sealed class CsvExportService : ICsvExportService
             throw new ArgumentException("A CSV export must contain only rows of the exported measurement session.", nameof(rows));
         }
 
-        var columns = MeasurementColumns.All.Where(c => c.IncludeInCsv && c != MeasurementColumns.SessionId).ToArray();
+        var columns = MeasurementTableColumns.All.Where(c => c.IncludeInCsv && c != MeasurementTableColumns.SessionId).ToArray();
         var metadata = SessionColumns.Select(c => Text(c.Value(session) ?? "")).ToArray();
         var csv = new StringBuilder();
         var headers = columns.Select(c => c.CsvHeader)
             .Concat(SessionColumns.Select(c => c.Header))
-            .Append(MeasurementColumns.SessionId.CsvHeader);
+            .Append(MeasurementTableColumns.SessionId.CsvHeader);
         csv.Append(string.Join(",", headers.Select(Quote))).Append("\r\n");
 
         foreach (var row in rows)
         {
-            var cells = columns.Select(c => Quote(Format(c.Value(row))))
+            var cells = columns.Select(c => Quote(Format(c.CsvValue(row))))
                 .Concat(metadata)
-                .Append(Quote(Format(MeasurementColumns.SessionId.Value(row))));
+                .Append(Quote(Format(MeasurementTableColumns.SessionId.CsvValue(row))));
             csv.Append(string.Join(",", cells)).Append("\r\n");
         }
 

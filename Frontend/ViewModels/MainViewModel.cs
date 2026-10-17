@@ -20,7 +20,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private ObservableObject currentPage;
     private bool isSidebarExpanded = true;
 
-
     public MainViewModel()
         : this(new SqliteMeasurementRepository(SqliteMeasurementRepository.DefaultPath), ApiSettings.Load(ApiSettings.DefaultPath),
             DeviceSettings.Load(DeviceSettings.DefaultPath))
@@ -66,9 +65,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             core =>
             {
                 Measurement.SetCore(core);
-                Navigate(Measurement);
+                CurrentPage = Measurement;
             },
-            repository.DatabasePath,
             new DrillholesClient(api),
             Backend,
             new DrillholeCache(repository.DatabasePath),
@@ -92,8 +90,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         currentPage = Core;
 
         ToggleSidebarCommand = new RelayCommand(_ => IsSidebarExpanded = !IsSidebarExpanded);
-        ShowCoreCommand = new RelayCommand(_ => Navigate(Core));
-        ShowMeasurementCommand = new RelayCommand(_ => Navigate(Measurement));
+        ShowCoreCommand = new RelayCommand(_ => CurrentPage = Core);
+        ShowMeasurementCommand = new RelayCommand(_ => CurrentPage = Measurement);
         Backend.Start();
         Devices.Start();
     }
@@ -149,8 +147,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool IsCoreSelected => CurrentPage == Core;
 
     public bool IsMeasurementSelected => CurrentPage == Measurement;
-
-    private void Navigate(ObservableObject page) => CurrentPage = page;
 
     public void Dispose()
     {

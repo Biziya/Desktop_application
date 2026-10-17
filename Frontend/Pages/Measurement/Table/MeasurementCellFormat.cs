@@ -1,25 +1,23 @@
 using System.Globalization;
 
-namespace Frontend.Pages.Measurement;
-
-/// <summary>How a table body cell is aligned, from what the column means (not from the type of its displayed text).</summary>
-public enum MeasurementCellKind
-{
-    /// <summary>Numbers (counts, identifiers, depths, device values): left-aligned.</summary>
-    Number,
-
-    /// <summary>Text and formatted timestamps: right-aligned.</summary>
-    Text
-}
+namespace Frontend.Pages.Measurement.Table;
 
 /// <summary>
-/// Table display formatting of measurement cells — the one place for it (used through
-/// <see cref="MeasurementColumn.Formatter"/>). Display only: models, calculations, SQLite and CSV keep the original
-/// values. A missing value is an empty cell, never 0; a value that cannot be formatted is shown as it is.
+/// Table display formatting of measurement cells (used through <see cref="MeasurementTableColumn.Format"/>). Display
+/// only: models, calculations, SQLite and CSV keep the original values. A missing value is an empty cell, never 0; a
+/// value that cannot be formatted is shown as it is.
 /// </summary>
 public static class MeasurementCellFormat
 {
     public const string TimestampFormat = "yyyy-MM-dd HH:mm:ss";
+
+    /// <summary>A .NET format pattern such as "0.00#" or <see cref="TimestampFormat"/>, applied with the invariant culture.</summary>
+    public static Func<object?, string?> Pattern(string format) => value => value switch
+    {
+        null => null,
+        IFormattable formattable => formattable.ToString(format, CultureInfo.InvariantCulture),
+        var other => other.ToString()
+    };
 
     /// <summary>A decimal device value with at most two decimals: 1.777777 → 1.78, 2.3456 → 2.35, 5 → 5, 1.5 → 1.5.</summary>
     public static string? Decimal(object? value) => value switch

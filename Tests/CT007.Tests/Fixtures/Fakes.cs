@@ -148,7 +148,6 @@ public sealed class MemoryRepository(string databasePath) : IMeasurementReposito
         return Task.CompletedTask;
     }
 
-    public Task<MeasurementSession?> LoadLatestSessionAsync() => Task.FromResult<MeasurementSession?>(null);
 
     public Task<IReadOnlyList<MeasurementResult>> LoadAsync(Guid sessionId) => Task.FromResult(Rows(sessionId));
 

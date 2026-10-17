@@ -1,23 +1,20 @@
-using System.Reflection;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Markup;
 
-namespace Frontend.Pages.Measurement;
+namespace Frontend.Pages.Measurement.CapturePanel;
 
 /// <summary>
-/// Final size = default x multiplier, read from MeasurementUiConstants.xaml.
+/// Final size = default x multiplier, read from CapturePanelConstants.xaml.
 /// <c>{local:Scale Name}</c> uses "Name" and "NameMultiplier" (multiplier 1 if there is none).
 /// <c>{local:Scale Name, OtherMultiplier}</c> names the multiplier explicitly.
-/// Works for double and Thickness defaults, and returns a DataGridLength when the target property needs one.
-/// The constants dictionary is loaded once and is used only by Measurement page XAML.
+/// Works for double and Thickness defaults. The constants dictionary is loaded once.
 /// </summary>
 public sealed class ScaleExtension : MarkupExtension
 {
     private static readonly Lazy<ResourceDictionary> Constants = new(() => new ResourceDictionary
     {
         Source = new Uri(
-            $"/{typeof(ScaleExtension).Assembly.GetName().Name};component/Pages/Measurement/MeasurementUiConstants.xaml",
+            $"/{typeof(ScaleExtension).Assembly.GetName().Name};component/Pages/Measurement/CapturePanel/CapturePanelConstants.xaml",
             UriKind.Relative)
     });
 
@@ -36,14 +33,12 @@ public sealed class ScaleExtension : MarkupExtension
     {
         var multiplier = Multiplier();
 
-        object scaled = Constants.Value[name] switch
+        return Constants.Value[name] switch
         {
             double size => size * multiplier,
             Thickness t => new Thickness(t.Left * multiplier, t.Top * multiplier, t.Right * multiplier, t.Bottom * multiplier),
-            _ => throw new InvalidOperationException($"MeasurementUiConstants.xaml: '{name}' is missing or is not a double/Thickness.")
+            _ => throw new InvalidOperationException($"CapturePanelConstants.xaml: '{name}' is missing or is not a double/Thickness.")
         };
-
-        return scaled is double length && NeedsGridLength(serviceProvider) ? new DataGridLength(length) : scaled;
     }
 
     private double Multiplier()
@@ -60,15 +55,6 @@ public sealed class ScaleExtension : MarkupExtension
             return value;
         }
 
-        throw new InvalidOperationException($"MeasurementUiConstants.xaml: '{key}' is missing or is not a non-negative number.");
+        throw new InvalidOperationException($"CapturePanelConstants.xaml: '{key}' is missing or is not a non-negative number.");
     }
-
-    private static bool NeedsGridLength(IServiceProvider serviceProvider) =>
-        serviceProvider.GetService(typeof(IProvideValueTarget)) is IProvideValueTarget { TargetProperty: { } property } &&
-        property switch
-        {
-            DependencyProperty dependencyProperty => dependencyProperty.PropertyType == typeof(DataGridLength),
-            PropertyInfo propertyInfo => propertyInfo.PropertyType == typeof(DataGridLength),
-            _ => false
-        };
 }

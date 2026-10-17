@@ -9,13 +9,14 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Frontend.Calculation.Measurement;
 
-namespace Frontend.Pages.Measurement;
+namespace Frontend.Pages.Measurement.CapturePanel;
 
 /// <summary>
 /// Bar chart of the measurement rows: x = depth (m), y = ts_ms. Each row is one vertical bar from its saved
 /// <c>from</c> to <c>to</c> (so widths follow the actual interval, including step changes) and from 0 up to the same
 /// ts_ms the table shows. Bars are placed by depth (rows are also listed by From). Rows without depths or
-/// ts_ms are not drawn. Hover a bar for its values. Rendering only — the data stays in the ViewModel.
+/// ts_ms are not drawn. Hover a bar for its values. Rendering only — the data stays in the ViewModel. Axis labels,
+/// empty text and font sizes are set from CapturePanelConstants.xaml.
 /// </summary>
 public sealed class DepthBarChart : FrameworkElement
 {
@@ -28,11 +29,16 @@ public sealed class DepthBarChart : FrameworkElement
         nameof(ItemsSource), typeof(IEnumerable), typeof(DepthBarChart),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnItemsSourceChanged));
 
-    public static readonly DependencyProperty BarBrushProperty = Register(nameof(BarBrush), Brushes.RoyalBlue);
-    public static readonly DependencyProperty BarSeparatorBrushProperty = Register(nameof(BarSeparatorBrush), Brushes.White);
-    public static readonly DependencyProperty GridBrushProperty = Register(nameof(GridBrush), Brushes.LightGray);
-    public static readonly DependencyProperty AxisBrushProperty = Register(nameof(AxisBrush), Brushes.Gray);
-    public static readonly DependencyProperty ForegroundProperty = Register(nameof(Foreground), Brushes.Black);
+    public static readonly DependencyProperty BarBrushProperty = Register<Brush>(nameof(BarBrush), Brushes.RoyalBlue);
+    public static readonly DependencyProperty BarSeparatorBrushProperty = Register<Brush>(nameof(BarSeparatorBrush), Brushes.White);
+    public static readonly DependencyProperty GridBrushProperty = Register<Brush>(nameof(GridBrush), Brushes.LightGray);
+    public static readonly DependencyProperty AxisBrushProperty = Register<Brush>(nameof(AxisBrush), Brushes.Gray);
+    public static readonly DependencyProperty ForegroundProperty = Register<Brush>(nameof(Foreground), Brushes.Black);
+    public static readonly DependencyProperty XAxisLabelProperty = Register(nameof(XAxisLabel), "");
+    public static readonly DependencyProperty YAxisLabelProperty = Register(nameof(YAxisLabel), "");
+    public static readonly DependencyProperty EmptyTextProperty = Register(nameof(EmptyText), "");
+    public static readonly DependencyProperty AxisLabelFontSizeProperty = Register(nameof(AxisLabelFontSize), 12d);
+    public static readonly DependencyProperty TickFontSizeProperty = Register(nameof(TickFontSize), 11d);
 
     private readonly List<(Rect Area, MeasurementResult Row)> bars = [];
     private readonly ToolTip tip = new() { Placement = PlacementMode.Relative };
@@ -59,8 +65,18 @@ public sealed class DepthBarChart : FrameworkElement
 
     public Brush Foreground { get => (Brush)GetValue(ForegroundProperty); set => SetValue(ForegroundProperty, value); }
 
-    private static DependencyProperty Register(string name, Brush fallback) => DependencyProperty.Register(
-        name, typeof(Brush), typeof(DepthBarChart), new FrameworkPropertyMetadata(fallback, FrameworkPropertyMetadataOptions.AffectsRender));
+    public string XAxisLabel { get => (string)GetValue(XAxisLabelProperty); set => SetValue(XAxisLabelProperty, value); }
+
+    public string YAxisLabel { get => (string)GetValue(YAxisLabelProperty); set => SetValue(YAxisLabelProperty, value); }
+
+    public string EmptyText { get => (string)GetValue(EmptyTextProperty); set => SetValue(EmptyTextProperty, value); }
+
+    public double AxisLabelFontSize { get => (double)GetValue(AxisLabelFontSizeProperty); set => SetValue(AxisLabelFontSizeProperty, value); }
+
+    public double TickFontSize { get => (double)GetValue(TickFontSizeProperty); set => SetValue(TickFontSizeProperty, value); }
+
+    private static DependencyProperty Register<T>(string name, T fallback) => DependencyProperty.Register(
+        name, typeof(T), typeof(DepthBarChart), new FrameworkPropertyMetadata(fallback, FrameworkPropertyMetadataOptions.AffectsRender));
 
     // Redraw when rows are added, removed, moved or reloaded.
     private static void OnItemsSourceChanged(DependencyObject owner, DependencyPropertyChangedEventArgs e)
@@ -100,9 +116,9 @@ public sealed class DepthBarChart : FrameworkElement
         var gridPen = new Pen(GridBrush, 1);
 
         // Axis titles.
-        var xTitle = Text("Depth (m)", 12);
+        var xTitle = Text(XAxisLabel, AxisLabelFontSize);
         drawing.DrawText(xTitle, new Point(plot.Left + (plot.Width - xTitle.Width) / 2, plot.Bottom + 22));
-        var yTitle = Text("ts_ms", 12);
+        var yTitle = Text(YAxisLabel, AxisLabelFontSize);
         drawing.PushTransform(new RotateTransform(-90, 0, 0));
         drawing.DrawText(yTitle, new Point(-(plot.Top + (plot.Height + yTitle.Width) / 2), 0));
         drawing.Pop();
@@ -111,7 +127,7 @@ public sealed class DepthBarChart : FrameworkElement
         {
             drawing.DrawLine(axisPen, plot.BottomLeft, plot.BottomRight);
             drawing.DrawLine(axisPen, plot.TopLeft, plot.BottomLeft);
-            var empty = Text("Captured intervals appear here as bars.", 12);
+            var empty = Text(EmptyText, AxisLabelFontSize);
             drawing.DrawText(empty, new Point(plot.Left + (plot.Width - empty.Width) / 2, plot.Top + (plot.Height - empty.Height) / 2));
             return;
         }
@@ -129,7 +145,7 @@ public sealed class DepthBarChart : FrameworkElement
         {
             var y = Math.Round(Y(value)) + 0.5;
             drawing.DrawLine(gridPen, new Point(plot.Left, y), new Point(plot.Right, y));
-            var label = Text(Compact(value), 11);
+            var label = Text(Compact(value), TickFontSize);
             drawing.DrawText(label, new Point(plot.Left - label.Width - 6, y - label.Height / 2));
         }
 
@@ -137,7 +153,7 @@ public sealed class DepthBarChart : FrameworkElement
         {
             var x = Math.Round(X(metres)) + 0.5;
             drawing.DrawLine(axisPen, new Point(x, plot.Bottom), new Point(x, plot.Bottom + 4));
-            var label = Text(metres.ToString("0.0##", CultureInfo.CurrentCulture), 11);
+            var label = Text(metres.ToString("0.0##", CultureInfo.CurrentCulture), TickFontSize);
             drawing.DrawText(label, new Point(x - label.Width / 2, plot.Bottom + 5));
         }
 

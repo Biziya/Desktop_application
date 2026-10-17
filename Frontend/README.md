@@ -49,12 +49,9 @@ Start Time and End Time are stored and exported but hidden in the table. Complet
 
 ## Columns
 
-Two files in `Pages/Measurement`, each with one job:
+One file, `Pages/Measurement/Table/MeasurementTableColumns.cs`, defines every column once (`MeasurementTableColumn`): stable identifier and binding path, table header, visibility, width (star share, Auto or pixels), minimum and maximum width, display format and body-cell alignment — plus, kept separate, the CSV header, CSV inclusion and the value CSV export writes. List order is the column order for table and CSV. Changing a header or hiding a column changes only the table: it never renames a model or SQLite field and never removes a value from the CSV.
 
-- `MeasurementColumns.cs` — what a column is: stable identifier (binding path), table label, CSV header, CSV inclusion and the value CSV export writes. List order is the column order for table and CSV. Changing a label changes only the table header.
-- `MeasurementColumnLayout.cs` — how the table shows it: visibility, width (pixels, star share or Auto), minimum and maximum width. It is the only place table visibility is set. Hiding a column never removes it from SQLite or CSV.
-
-Fonts, row heights, paddings and the Delete column stay in `MeasurementUiConstants.xaml`.
+The table's fonts, row and header heights, paddings, the Delete column and the heading/button sizes are in `MeasurementTableSizes` in the same file (default × multiplier).
 
 | Column | Table | CSV | Model field | SQLite column |
 |---|---|---|---|---|
@@ -73,9 +70,9 @@ Fonts, row heights, paddings and the Delete column stay in `MeasurementUiConstan
 
 **Device values.** ts_ms, count0, count0_raw, hdm, hdm_raw and dose_rate come from the accepted Gamma Guard samples (`DeviceReading` on `CaptureData`); raw and processed values stay separate fields. **Sample** shows "accepted of expected" (e.g. "3 of 5") for an incomplete capture; CSV keeps the accepted count. Rows stored before this version keep blank device values — nothing is invented.
 
-The table builds these columns in `MeasurementPage.xaml.cs` before the Delete column. All visible columns use star widths (`MeasurementColumnLayout.cs`, in the proportions of the earlier compact layout), so they always share the table width — no horizontal scrolling with the sidebar expanded or collapsed, and at every window size down to the 960 px minimum (minimum widths 576 px + 64 px Delete fit the ~650 px available there). Headers wrap onto two lines when a column is narrow; a value wider than its column ends in "…" and the full value is its tooltip, so nothing is cut off silently. The horizontal scrollbar stays enabled only as a safety net and is not needed in any supported layout; vertical scrolling is unchanged. Vertical grid lines separate every column and continue through the header, in the same `Line` brush as the row lines.
+The table builds these columns in `Table/MeasurementTableView.xaml.cs` before the Delete column. All visible columns use star widths (`MeasurementTableColumns.cs`, in the proportions of the earlier compact layout), so they always share the table width — no horizontal scrolling with the sidebar expanded or collapsed, and at every window size down to the 960 px minimum (minimum widths 576 px + 64 px Delete fit the ~650 px available there). Headers wrap onto two lines when a column is narrow; a value wider than its column ends in "…" and the full value is its tooltip, so nothing is cut off silently. The horizontal scrollbar stays enabled only as a safety net and is not needed in any supported layout; vertical scrolling is unchanged. Vertical grid lines separate every column and continue through the header, in the same `Line` brush as the row lines.
 
-**Cell display** (`MeasurementCellFormat.cs`, set per column in `MeasurementColumns.cs`; table only): ts_ms (Unix milliseconds, UTC) is shown as this computer's local time `yyyy-MM-dd HH:mm:ss` (empty when missing, the raw number if out of range); count0, count0_raw, hdm, hdm_raw and dose_rate show at most two decimals (1.777777 → 1.78, 5 → 5, 1.5 → 1.5; empty when null). Body cells are aligned by column meaning (`MeasurementCellKind`): numbers — No, depths, Sample, device values — left; text and timestamps — ts_ms, times, session — right. Headers are unchanged. Models, calculations, SQLite and CSV keep the full-precision values and Unix milliseconds. From/To keep their millimetre precision (up to three decimals in metres), since rounding would misstate the interval. ts_ms has the widest share of the table; at the narrowest window it may end in "…" with the full value as tooltip.
+**Cell display** (`Table/MeasurementCellFormat.cs`, set per column with `Format` in `MeasurementTableColumns.cs`; table only): ts_ms (Unix milliseconds, UTC) is shown as this computer's local time `yyyy-MM-dd HH:mm:ss` (empty when missing, the raw number if out of range); count0, count0_raw, hdm, hdm_raw and dose_rate show at most two decimals (1.777777 → 1.78, 5 → 5, 1.5 → 1.5; empty when null). Body cells are right-aligned (set per column with `Alignment`); headers stay centred. Models, calculations, SQLite and CSV keep the full-precision values and Unix milliseconds. From/To keep their millimetre precision (up to three decimals in metres), since rounding would misstate the interval. ts_ms has the widest share of the table; at the narrowest window it may end in "…" with the full value as tooltip.
 
 ## Measurement sessions and SQLite
 
@@ -97,7 +94,7 @@ The table builds these columns in `MeasurementPage.xaml.cs` before the Delete co
 - **Inputs.** The Measurement page control area is one row: a control column (**Starting Depth (m)**, **Step (cm)** and the **Start / Stop** toggle — same width, top to bottom), the bar chart in the middle (remaining width, about 205 px at the smallest window) and the capture countdown on the right. The single toggle shows a green Start while stopped and a red Stop while measuring; it is exactly as tall as the two input boxes. There is no To input: `to = from + step`. Both inputs start from the session's saved progress; a session without progress starts empty. Start is enabled once a drillhole is saved for measuring; if a depth is missing or invalid, clicking it shows a 5 s error toast instead of arming. Invalid text gets a red border while typing and an error toast when the box is left. Depth entry is only on this page.
 - **Per capture.** When a capture begins, its interval is fixed: `from` = Starting Depth, `to = from + step`, `step` = Step. The completed row stores all three; Starting Depth then becomes that `to` — once per completed capture (one row per capture). The next depth always comes from this capture state, never from the last displayed row (the table is sorted by From, so re-measuring a shallower interval puts that row first and continues from its `to`). Changing Step or Starting Depth during a capture applies to the next capture; a starting depth typed during the capture is not overwritten by the advance. Cancelled, stopped or failed captures do not advance.
 - **Progress.** Starting Depth and Step are saved per session in `MeasurementProgress (session_id, next_from_cm, step_cm)` (centimetres, REAL; converted from the earlier millimetre columns once by migration 5) — in the same transaction as the rows, so a capture and its depth advance commit together and a retried save cannot advance twice. They are restored after Stop → Start, when reopening the drillhole and after a restart. (There was no earlier settings storage to reuse.)
-- Sorting never changes depths. Rows stored before depths existed keep null `from`/`to`/`step` and sessions null metadata — nothing is invented. The table shows each row's saved depths as read-only **From (m)**, **To (m)** and **Step (cm)** columns (fields `FromMetres`/`ToMetres` = mm ÷ 1000 and `StepCentimetres` = mm ÷ 10, exact; layout in `MeasurementColumnLayout.cs`). The chart tooltip shows the step in cm too. They are not exported, so the CSV columns are unchanged (one `IncludeInCsv` flag each to change that).
+- Sorting never changes depths. Rows stored before depths existed keep null `from`/`to`/`step` and sessions null metadata — nothing is invented. The table shows each row's saved depths as read-only **From (m)**, **To (m)** and **Step (cm)** columns (fields `FromMetres`/`ToMetres` = mm ÷ 1000 and `StepCentimetres` = mm ÷ 10, exact; layout in `Table/MeasurementTableColumns.cs`). The chart tooltip shows the step in cm too. They are not exported, so the CSV columns are unchanged (one `IncludeInCsv` flag each to change that).
 
 ## Export
 
@@ -171,22 +168,35 @@ Calculation/
 ## Device Status and shared styling
 
 - Device Status rows: CT007-M Device — Bluetooth, Measurement SQLite Database, Gamma Guard SQLite Database — all checked locally (see "Device Status (local checks)"). Paths are selectable read-only boxes that wrap long paths.
-- Shared styles in `Shared/Styles/Theme.xaml`: palette brushes (including `LabelText`, `WarningSurface`), `FieldLabel` (every input label on both pages), `RequiredStar`, `CopyableValue`, cards, section titles, inputs and the button states below. Core Information has two sections — Drillhole Information (row 1: Drillhole, Project, Campaign, Operator; row 2: Notes; Save & Continue at the end) and Device Status (three rows: CT-007 Bluetooth, Measurement SQLite Database, Gamma Guard SQLite Database).
+- Shared styles in `Shared/Styles/Theme.xaml`: palette brushes (including `LabelText`, `WarningSurface`), `FieldLabel` (every input label on both pages), `RequiredStar`, `CopyableValue`, `StatusMessage`, cards, section titles, inputs and the button states below. Section-only styles live in the section's view (see "Section configuration"). Core Information has two sections — Drillhole Information (row 1: Drillhole, Project, Campaign, Operator; row 2: Notes; Save & Continue at the end) and Device Status (three rows: CT-007 Bluetooth, Measurement SQLite Database, Gamma Guard SQLite Database).
 
 - The Bluetooth Trigger indicator is no longer shown. The trigger itself (right-click in the main window while armed) is unchanged.
 - All buttons share the base button template in `Shared/Styles/Theme.xaml`: hovering an enabled button draws a 2 px navy outer ring as an overlay, so size and content never move. Pressed (darker fill), keyboard focus (inner ring) and disabled (faded, no ring) remain distinct.
 - **Look (after the Shopeers reference).** White sidebar with a hairline divider on a light grey page (`Canvas`); white section cards with hairline borders and 12 px corners; 40 px inputs and dropdowns with light borders, 8 px corners, a darker border on hover and blue on focus. The sidebar has the brand (icon + name) top-left. The blue SPP CT-007 icon is the collapse/expand control for the sidebar (not the window), and there is no separate toggle button. It stays in the 40 px icon column, so it is visible and clickable in both states. It has a grey hover tint, a blue keyboard-focus ring (Tab, then Enter/Space) and a "Collapse sidebar" / "Expand sidebar" tooltip and accessible name; navigation items are rounded, grey on hover, and the page currently shown has a soft blue fill, blue icon and semibold text and a blue accent bar at the sidebar edge. **Current page highlight:** the selection is derived from `MainViewModel.CurrentPage` (`IsCoreSelected` / `IsMeasurementSelected`, raised whenever the page changes, so exactly one item is selected — at start-up Core Information, and after any navigation including Save & Continue). It reaches the button template through a typed attached property (`Shared/Infrastructure/SidebarItem.IsSelected`) and a plain property trigger declared after the hover trigger, so it stays on regardless of the pointer or focus and stays distinct from hover; collapsed, the fill and accent bar stay around the icon. (Before, the template compared an untyped `Tag` through a relative-source binding inside the template, which did not reliably match, so no item looked selected.) The Online/Offline indicator stays at the bottom, left-aligned under the navigation icons with the dot and text 8 px apart; collapsed, the dot and tooltip remain. Only the two existing pages are in the navigation. All colours and control styles are in `Shared/Styles/Theme.xaml` (palette at the top).
 - **Autofill and input fixes.** (1) Picking a drillhole no longer gets undone. Replacing the dropdown's items (re-filtering after a pick, a list refresh, a Measured-group refresh) made the WPF ComboBox drop its selection and write "" into its Text binding, which cleared Drillhole, Project and Campaign. The ViewModel now ignores that echo while it rebuilds the list and then re-syncs the selection and text. In XAML, `Text` and `SelectedItem` are bound before `ItemsSource`, so leaving the page cannot push "" into the form either. (2) Text boxes have no vertical padding. The single text line is centred in the 40 px box at its natural height, so Operator, Project, Campaign, Starting Depth and Step text cannot be clipped by the fixed height. Notes keeps its 9 px top padding. (3) Depths accept a decimal point or a comma on any Windows number format and are shown with a point. (4) Depth values typed while a drillhole's session is still loading are kept on screen and stored as its progress, not overwritten by the load.
 - **Field heights.** Text boxes and dropdowns share `ControlHeight` (40 px) in `Theme.xaml`, with the same 11 px left padding, font, 1 px border and 8 px corners. Drillhole, Project, Campaign and Operator are therefore exactly the same height. Notes sets its own height, and the wrapping path boxes size to their text. Width priorities are unchanged. In the dropdown list, hover and arrow-key highlight are grey, and the selected drillhole has a soft blue fill with blue text.
-- **Measurement controls.** The Start / Stop toggle (still one button, below Starting Depth and Step) is `ControlHeight` tall, the same as those two boxes (box only, labels not counted). Its text is 16 px and its glyph 13 px so they fit. The control row is: inputs | countdown | chart (the chart takes the remaining width). The capture countdown ring, ring line and number are enlarged by 25% through the multipliers in `MeasurementUiConstants.xaml` (175 px ring, 10 px line, 40 px number). The ring column is no taller than the input column, so the chart and table keep their space. Timing, trigger and reset logic are unchanged.
+- **Measurement controls.** The Start / Stop toggle (still one button, below Starting Depth and Step) is `ControlHeight` tall, the same as those two boxes (box only, labels not counted). Its text is 16 px and its glyph 13 px so they fit. The control row is: inputs | countdown | chart (the chart takes the remaining width). The capture countdown ring, ring line and number are enlarged by 25% through the multipliers in `CapturePanel/CapturePanelConstants.xaml` (175 px ring, 10 px line, 40 px number). The ring column is no taller than the input column, so the chart and table keep their space. Timing, trigger and reset logic are unchanged.
 - **Drillhole dropdown** uses a themed `ComboBox` template: same frame as the text boxes, chevron on the right (turns blue and flips while open), and a white rounded list with hover/arrow-key highlight. Search, filtering, keyboard selection and Project/Campaign filling are unchanged. Row 1 widths: Drillhole widest (min 200 px), Project (min 120), Campaign 110 px, Operator (min 150); the minimums fit the smallest window with the sidebar open.
+
+## Section configuration
+
+Each page section has one configuration file next to its view. Changing a label, size or column visibility there never renames a model, SQLite or CSV field.
+
+| Section | File | What it holds |
+|---|---|---|
+| Drillhole Information | `Pages/CoreInformation/DrillholeInformation/DrillholeInformationConstants.xaml` | Labels (Drillhole, Project, Campaign, Operator, Notes, Save & Continue), field widths, Notes height, spacing, and the drillhole warning shown on the Measurement page |
+| Device Status | `Pages/CoreInformation/DeviceStatus/DeviceStatusConstants.xaml` | Labels of the Bluetooth and database rows, Bluetooth dropdown width, row padding and spacing |
+| Table | `Pages/Measurement/Table/MeasurementTableColumns.cs` | Every column (binding, header, visibility, widths, format, alignment, CSV settings) and `MeasurementTableSizes` (fonts, heights, paddings, Delete column, multipliers) |
+| Capture Panel | `Pages/Measurement/CapturePanel/CapturePanelConstants.xaml` | Labels of Starting Depth, Step, countdown, Start / Stop and the chart axes; size multipliers and defaults; spacing |
+
+Calculations, capture timing, validation, unit conversion and persistence stay in the ViewModels, `Calculation/` and `MeasurementRepository.cs`.
 
 ## Existing features preserved
 
 - Core Information page: two sections, **Drillhole Information** and **Device Status**. Labels Drillhole, Project and Campaign are display text for `DrillholeId`, `DrillholeName` and `ProjectArea` (SQLite `DrillholeID`, `DrillholeName`, `Project`); Drillhole and Project are required. There is no Core ID field (it was never stored). Required form validation and saved core snapshots. Operator is pre-filled with the signed-in Windows account (`DOMAIN\Username` for a domain account, otherwise the user name — never the computer name alone); it stays editable, an emptied field is filled again on Save & Continue, and a drillhole's stored operator is never overwritten.
 - Blue/white theme, collapsible sidebar, active navigation, icon tooltips and retained sidebar state.
-- Delete column after the configured measurement columns; alternating backgrounds. Compact table sizes (the temporary 2x enlargement was reverted): 36 px rows, 14 px row text, 12 px headers (34 px minimum), 8 px cell padding, 28 px delete button in a 64 px column — all multipliers 1.0 in `MeasurementUiConstants.xaml`.
-- Measurement page sizes are Default x Multiplier values in `Pages/Measurement/MeasurementUiConstants.xaml`; every multiplier is 1.0 by default, which is the original look. They are applied with `{local:Scale ...}` (`ScaleExtension.cs`).
+- Delete column after the configured measurement columns; alternating backgrounds. Compact table sizes (the temporary 2x enlargement was reverted): 36 px rows, 14 px row text, 12 px headers (34 px minimum), 8 px cell padding, 28 px delete button in a 64 px column — all multipliers 1.0 in `MeasurementTableSizes` (`Table/MeasurementTableColumns.cs`).
+- Measurement page sizes are Default x Multiplier values: the capture panel's in `CapturePanel/CapturePanelConstants.xaml` (applied with `{local:Scale ...}`, `ScaleExtension.cs`), the table's in `MeasurementTableSizes`. Every multiplier is 1.0 by default (the countdown's 1.25), which is the current look.
 - Stable capture identifiers and CSV save dialog.
 - **Delete is confirmed** in a compact dialog centred over the window (`Windows/ConfirmationWindow`): "Delete this measurement?" (Delete / Cancel). Nothing changes on Cancel. A confirmed delete is stored right away; if storing fails the row is put back in its place and an error is shown, so the table always matches the database. Selecting, scrolling and viewing never ask.
 - Completed results remain across navigation and, through SQLite, across restarts.
@@ -203,28 +213,34 @@ Frontend/
 │                             time basis), DeviceCaptureService.cs (capture from the device database)
 ├── Pages/
 │   ├── CoreInformation/
-│   │   ├── CoreInformationPage.xaml
-│   │   ├── CoreInformationPage.xaml.cs
-│   │   ├── CoreInformationViewModel.cs
-│   │   ├── DrillholeCatalog.cs  (prepared list: lookups, A–Z order, background filtering)
-│   │   └── DrillholeOption.cs   (dropdown entry: group heading or drillhole)
+│   │   ├── CoreInformationPage.xaml(.cs)   composition: the two sections below
+│   │   ├── CoreInformationViewModel.cs     form, drillhole list and Device Status commands (one ViewModel for the page)
+│   │   ├── DrillholeInformation/
+│   │   │   ├── DrillholeInformationView.xaml(.cs)
+│   │   │   ├── DrillholeInformationConstants.xaml
+│   │   │   ├── DrillholeCatalog.cs  (prepared list: lookups, A–Z order, background filtering)
+│   │   │   └── DrillholeOption.cs   (dropdown entry: group heading or drillhole)
+│   │   └── DeviceStatus/
+│   │       ├── DeviceStatusView.xaml(.cs)
+│   │       └── DeviceStatusConstants.xaml
 │   └── Measurement/
-│       ├── MeasurementPage.xaml
-│       ├── MeasurementPage.xaml.cs
-│       ├── MeasurementViewModel.cs
-│       ├── MeasurementState.cs
-│       ├── CountdownRing.cs
+│       ├── MeasurementPage.xaml(.cs)      composition: capture card (panel + drillhole warning) and table
+│       ├── MeasurementViewModel.cs        (and MeasurementState)
 │       ├── MeasurementResult.cs
-│       ├── MeasurementService.cs   (IMeasurementService, CaptureData, CaptureException)
+│       ├── MeasurementService.cs          (IMeasurementService, CaptureData, CaptureException)
 │       ├── IDialogService.cs
 │       ├── CsvExportService.cs
-│       ├── MeasurementColumns.cs
-│       ├── MeasurementColumnLayout.cs
-│       ├── DepthBarChart.cs
 │       ├── MeasurementRepository.cs
-│       ├── MeasurementStyles.xaml
-│       ├── MeasurementUiConstants.xaml
-│       └── ScaleExtension.cs
+│       ├── Table/
+│       │   ├── MeasurementTableView.xaml(.cs)
+│       │   ├── MeasurementTableColumns.cs (columns + MeasurementTableSizes)
+│       │   └── MeasurementCellFormat.cs
+│       └── CapturePanel/
+│           ├── CapturePanelView.xaml(.cs)
+│           ├── CapturePanelConstants.xaml
+│           ├── ScaleExtension.cs
+│           ├── CountdownRing.cs
+│           └── DepthBarChart.cs
 ├── Windows/ConfirmationWindow/
 │   ├── ConfirmationWindow.xaml
 │   ├── ConfirmationWindow.xaml.cs

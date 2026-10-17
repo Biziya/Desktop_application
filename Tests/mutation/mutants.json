@@ -491,7 +491,7 @@
  },
  {
   "id": "M50",
-  "file": "Frontend/Pages/Measurement/MeasurementCellFormat.cs",
+  "file": "Frontend/Pages/Measurement/Table/MeasurementCellFormat.cs",
   "kind": "rounding",
   "find": "Math.Round(d, 2, MidpointRounding.AwayFromZero)",
   "replace": "Math.Round(d, 2, MidpointRounding.ToEven)",
@@ -501,7 +501,7 @@
  },
  {
   "id": "M51",
-  "file": "Frontend/Pages/Measurement/MeasurementCellFormat.cs",
+  "file": "Frontend/Pages/Measurement/Table/MeasurementCellFormat.cs",
   "kind": "remove clean-up",
   "find": "text == \"-0\" ? \"0\" : text",
   "replace": "text",
@@ -561,7 +561,7 @@
  },
  {
   "id": "M57",
-  "file": "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+  "file": "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeCatalog.cs",
   "kind": "predicate",
   "find": ".Where(d => !string.IsNullOrWhiteSpace(d.HoleId))",
   "replace": ".Where(d => d.HoleId is not null)",
@@ -571,7 +571,7 @@
  },
  {
   "id": "M58",
-  "file": "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+  "file": "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeCatalog.cs",
   "kind": "comparer",
   "find": ".DistinctBy(d => d.HoleId!, StringComparer.OrdinalIgnoreCase)",
   "replace": ".DistinctBy(d => d.HoleId!, StringComparer.Ordinal)",
@@ -581,7 +581,7 @@
  },
  {
   "id": "M59",
-  "file": "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+  "file": "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeCatalog.cs",
   "kind": "constant",
   "find": "StringComparison.OrdinalIgnoreCase) ? 0 :",
   "replace": "StringComparison.OrdinalIgnoreCase) ? 2 :",
@@ -591,7 +591,7 @@
  },
  {
   "id": "M60",
-  "file": "Frontend/Pages/CoreInformation/DrillholeCatalog.cs",
+  "file": "Frontend/Pages/CoreInformation/DrillholeInformation/DrillholeCatalog.cs",
   "kind": "boundary",
   "find": "if (rank < best)",
   "replace": "if (rank <= best)",
@@ -643,7 +643,7 @@
   "id": "M65",
   "file": "Frontend/Pages/CoreInformation/CoreInformationViewModel.cs",
   "kind": "remove validation",
-  "find": "if (!HasRequiredText)",
+  "find": "if (!HasDrillhole)",
   "replace": "if (false)",
   "occurrence": 1,
   "occurrencesInFile": 1,

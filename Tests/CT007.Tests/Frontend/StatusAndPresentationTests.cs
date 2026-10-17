@@ -276,15 +276,23 @@ public static class StatusAndPresentationTests
     {
         Assert.Sequence(new[] { "No", "Capture No", "Start Time", "End Time", "From (m)", "To (m)", "Step (cm)", "Sample", "ts_ms", "count0",
                 "count0_raw", "hdm", "hdm_raw", "dose_rate", "Session" },
-            MeasurementColumns.All.Select(c => c.Label), "column order");
+            MeasurementTableColumns.All.Select(c => c.Header), "column order");
 
-        foreach (var column in MeasurementColumns.All)
+        foreach (var column in MeasurementTableColumns.All)
         {
-            var layout = MeasurementColumnLayout.For(column);
-            Assert.True(layout.MinWidth > 0, $"{column.Label}: minimum width");
+            Assert.True(column.MinWidth > 0, $"{column.Header}: minimum width");
+            Assert.True(column.Alignment == System.Windows.TextAlignment.Right, $"{column.Header}: body cells right-aligned");
         }
 
         Assert.Sequence(new[] { "Capture No", "Start Time", "End Time", "Session" },
-            MeasurementColumns.All.Where(c => !MeasurementColumnLayout.For(c).Visible).Select(c => c.Label), "hidden columns");
+            MeasurementTableColumns.All.Where(c => !c.Visible).Select(c => c.Header), "hidden columns");
+
+        // Table display formats (formerly binding StringFormats); null stays an empty cell.
+        Assert.Equal("10.50", MeasurementTableColumns.From.Format!(10.5m), "From in metres, two to three decimals");
+        Assert.Equal("11.255", MeasurementTableColumns.To.Format!(11.255m), "To keeps millimetre precision");
+        Assert.Equal("2.5", MeasurementTableColumns.Step.Format!(2.5m), "Step in centimetres, at most one decimal");
+        Assert.True(MeasurementTableColumns.From.Format!(null) is null, "missing depth stays empty");
+        Assert.Equal("2026-10-16 09:00:05",
+            MeasurementTableColumns.StartTime.Format!(new DateTimeOffset(2026, 10, 16, 9, 0, 5, TimeSpan.FromHours(8))), "start time");
     }
 }

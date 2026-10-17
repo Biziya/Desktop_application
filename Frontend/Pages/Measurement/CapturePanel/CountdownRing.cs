@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 
-namespace Frontend.Pages.Measurement;
+namespace Frontend.Pages.Measurement.CapturePanel;
 
 /// <summary>Elapsed progress only. Timing and capture completion are owned by the ViewModel/service.</summary>
 public sealed class CountdownRing : FrameworkElement

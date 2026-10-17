@@ -1,7 +1,7 @@
 using Frontend.Api.CoreInformation.Drillholes;
 using Frontend.Pages.Measurement;
 
-namespace Frontend.Pages.CoreInformation;
+namespace Frontend.Pages.CoreInformation.DrillholeInformation;
 
 /// <summary>Filtered dropdown entries and the closest match to highlight (null when nothing is being searched).</summary>
 public sealed record DrillholeOptions(IReadOnlyList<DrillholeOption> Entries, DrillholeOption? Closest);
