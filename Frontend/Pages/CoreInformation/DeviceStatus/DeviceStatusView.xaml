@@ -4,13 +4,9 @@
     <!-- Device Status of THIS laptop (the backend may run on another computer): the CT-007 Bluetooth connection and the
          two SQLite databases, checked locally (Calculation/Core-Information) at start, every few seconds and on Retry —
          also while the backend is offline. Paths are read-only text boxes: long paths wrap and can be selected and
-         copied. Labels, sizes and spacing: DeviceStatusConstants.xaml. -->
+         copied. Labels, sizes and spacing: DeviceStatus.yaml (application resources). -->
     <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="DeviceStatusConstants.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-
             <!-- Each row's DataContext is one LocalStatus (Devices.Bluetooth, Devices.MeasurementDatabase,
                  Devices.GammaGuardDatabase); its State colours the row: green Connected / Available, red Disconnected,
                  grey while checking or before a selection, amber otherwise (a missing, not found, inaccessible or busy
@@ -64,7 +60,7 @@
             <!-- Retry of a database row: shown for every result except a good one or a running check. -->
             <Style x:Key="DeviceRetry" TargetType="Button" BasedOn="{StaticResource SmallButton}">
                 <Setter Property="DockPanel.Dock" Value="Right"/>
-                <Setter Property="Content" Value="{StaticResource RetryLabel}"/>
+                <Setter Property="Content" Value="{StaticResource DeviceRetryLabel}"/>
                 <Setter Property="Margin" Value="{StaticResource DeviceRetryMargin}"/>
                 <Setter Property="Visibility" Value="{Binding CanRetry, Converter={StaticResource BoolVisibility}}"/>
             </Style>
@@ -81,7 +77,7 @@
                          picking only starts monitoring — no pairing or connection. Informational only: it never
                          enables or blocks measuring. -->
                     <TextBlock Style="{StaticResource DeviceStatusValue}"
-                               AutomationProperties.Name="Bluetooth device status"><Run Text="{StaticResource StatusDot}"/><Run Text="{Binding Text, Mode=OneWay}"/></TextBlock>
+                               AutomationProperties.Name="Bluetooth device status"><Run Text="{StaticResource DeviceStatusDot}"/><Run Text="{Binding Text, Mode=OneWay}"/></TextBlock>
                     <StackPanel Margin="{StaticResource DeviceRowLabelMargin}">
                         <TextBlock Text="{StaticResource BluetoothLabel}" Style="{StaticResource FieldLabel}"/>
                         <Grid>
@@ -107,7 +103,7 @@
                     <Button Style="{StaticResource DeviceRetry}"
                             Command="{Binding DataContext.RefreshMeasurementDatabaseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                     <TextBlock Style="{StaticResource DeviceStatusValue}"
-                               AutomationProperties.Name="Measurement database status"><Run Text="{StaticResource StatusDot}"/><Run Text="{Binding Text, Mode=OneWay}"/></TextBlock>
+                               AutomationProperties.Name="Measurement database status"><Run Text="{StaticResource DeviceStatusDot}"/><Run Text="{Binding Text, Mode=OneWay}"/></TextBlock>
                     <StackPanel Margin="{StaticResource DeviceRowLabelMargin}">
                         <TextBlock Text="{StaticResource MeasurementDatabaseLabel}" Style="{StaticResource FieldLabel}"/>
                         <TextBlock Style="{StaticResource StatusMessage}" Text="{Binding Detail}" Margin="{StaticResource DeviceDetailMargin}"/>
@@ -123,7 +119,7 @@
                     <Button Style="{StaticResource DeviceRetry}"
                             Command="{Binding DataContext.RefreshGammaGuardDatabaseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                     <TextBlock Style="{StaticResource DeviceStatusValue}"
-                               AutomationProperties.Name="Gamma Guard database status"><Run Text="{StaticResource StatusDot}"/><Run Text="{Binding Text, Mode=OneWay}"/></TextBlock>
+                               AutomationProperties.Name="Gamma Guard database status"><Run Text="{StaticResource DeviceStatusDot}"/><Run Text="{Binding Text, Mode=OneWay}"/></TextBlock>
                     <StackPanel Margin="{StaticResource DeviceRowLabelMargin}">
                         <TextBlock Text="{StaticResource GammaGuardDatabaseLabel}" Style="{StaticResource FieldLabel}"/>
                         <TextBlock Style="{StaticResource StatusMessage}" Text="{Binding Detail}" Margin="{StaticResource DeviceDetailMargin}"/>

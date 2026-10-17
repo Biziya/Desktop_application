@@ -30,19 +30,20 @@ public partial class MeasurementTableView : UserControl
         Unloaded += (_, _) => StopObservingResults();
     }
 
-    // The visible columns of MeasurementTableColumns.cs, in order, before the Delete column (last) declared in XAML.
+    // The visible columns of MeasurementTable.yaml, in its order, before the Delete column (last) declared in XAML.
     private void AddMeasurementColumns()
     {
+        var columns = (IReadOnlyList<MeasurementTableColumn>)FindResource("MeasurementTableColumns");
         var cellText = (Style)FindResource("CellText");
         var header = (Style)FindResource("CenteredTableHeader");
         var index = 0;
 
-        foreach (var column in MeasurementTableColumns.All.Where(c => c.Visible))
+        foreach (var column in columns.Where(c => c.Visible))
         {
             ResultsGrid.Columns.Insert(index++, new DataGridTextColumn
             {
                 Header = column.Header,
-                Binding = new Binding(column.Binding)
+                Binding = new Binding(column.Column.Binding)
                 {
                     Mode = BindingMode.OneWay,
                     Converter = column.Format is { } format ? new CellFormatter(format) : null

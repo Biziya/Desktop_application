@@ -274,25 +274,108 @@ public static class StatusAndPresentationTests
     [Test("FE-047", "Every measurement column has a layout; column order is stable")]
     public static void ColumnLayouts()
     {
+        // The shipped MeasurementTable.yaml (copied to the output folder with the frontend).
+        var columns = YamlSettings.Load<MeasurementTableSettings>(AppContext.BaseDirectory, MeasurementTableSettings.File).TableColumns();
+        MeasurementTableColumn Of(MeasurementColumn column) => columns.Single(c => c.Column == column);
+
         Assert.Sequence(new[] { "No", "Capture No", "Start Time", "End Time", "From (m)", "To (m)", "Step (cm)", "Sample", "ts_ms", "count0",
                 "count0_raw", "hdm", "hdm_raw", "dose_rate", "Session" },
-            MeasurementTableColumns.All.Select(c => c.Header), "column order");
+            columns.Select(c => c.Header), "column order");
 
-        foreach (var column in MeasurementTableColumns.All)
+        foreach (var column in columns)
         {
             Assert.True(column.MinWidth > 0, $"{column.Header}: minimum width");
             Assert.True(column.Alignment == System.Windows.TextAlignment.Right, $"{column.Header}: body cells right-aligned");
         }
 
         Assert.Sequence(new[] { "Capture No", "Start Time", "End Time", "Session" },
-            MeasurementTableColumns.All.Where(c => !c.Visible).Select(c => c.Header), "hidden columns");
+            columns.Where(c => !c.Visible).Select(c => c.Header), "hidden columns");
 
-        // Table display formats (formerly binding StringFormats); null stays an empty cell.
-        Assert.Equal("10.50", MeasurementTableColumns.From.Format!(10.5m), "From in metres, two to three decimals");
-        Assert.Equal("11.255", MeasurementTableColumns.To.Format!(11.255m), "To keeps millimetre precision");
-        Assert.Equal("2.5", MeasurementTableColumns.Step.Format!(2.5m), "Step in centimetres, at most one decimal");
-        Assert.True(MeasurementTableColumns.From.Format!(null) is null, "missing depth stays empty");
+        // Table display formats; null stays an empty cell.
+        Assert.Equal("10.50", Of(MeasurementTableColumns.From).Format!(10.5m), "From in metres, two to three decimals");
+        Assert.Equal("11.255", Of(MeasurementTableColumns.To).Format!(11.255m), "To keeps millimetre precision");
+        Assert.Equal("2.5", Of(MeasurementTableColumns.Step).Format!(2.5m), "Step in centimetres, at most one decimal");
+        Assert.True(Of(MeasurementTableColumns.From).Format!(null) is null, "missing depth stays empty");
         Assert.Equal("2026-10-16 09:00:05",
-            MeasurementTableColumns.StartTime.Format!(new DateTimeOffset(2026, 10, 16, 9, 0, 5, TimeSpan.FromHours(8))), "start time");
+            Of(MeasurementTableColumns.StartTime).Format!(new DateTimeOffset(2026, 10, 16, 9, 0, 5, TimeSpan.FromHours(8))), "start time");
+        Assert.Equal("1.78", Of(MeasurementTableColumns.Count0).Format!(1.777777), "device values: two decimals");
     }
+
+    [Test("FE-052", "Section YAML files: shipped values load, edits apply on the next load, invalid values name file and key")]
+    public static void SectionYamlFiles()
+    {
+        var shipped = Load(AppContext.BaseDirectory);
+        Assert.Equal("Save & Continue   ›", shipped["SaveAndContinueLabel"], "label with its spaces");
+        Assert.Equal(175.0, shipped["CountdownRingSize"], "countdown ring: 140 × 1.25");
+        Assert.Equal(40.0, shipped["CountdownFontSize"], "countdown number: 32 × 1.25");
+        Assert.Equal("Depth (m)", shipped["ChartXAxisLabel"], "chart x-axis label");
+        Assert.Equal("ts_ms", shipped["ChartYAxisLabel"], "chart y-axis label");
+        Assert.Equal(new System.Windows.Thickness(0, 0, 14, 16), shipped["DrillholeFieldMargin"], "field spacing");
+        Assert.Equal(new System.Windows.Controls.DataGridLength(64), shipped["TableDeleteColumnWidth"], "Delete column");
+
+        // Edits take effect when the files are read again (at the next start-up).
+        var edited = Load(Copy(("CapturePanel.yaml", "  start: Start", "  start: Go"), ("CapturePanel.yaml", "  countdownRingSize: 1.25", "  countdownRingSize: 2")));
+        Assert.Equal("Go", edited["StartLabel"], "edited label");
+        Assert.Equal(280.0, edited["CountdownRingSize"], "edited multiplier");
+
+        // A column hidden in the YAML is hidden in the table only: CSV export still writes it.
+        var hidden = (IReadOnlyList<MeasurementTableColumn>)Load(Copy(("MeasurementTable.yaml",
+            "{ id: count0,        header: \"count0\",     visible: true,", "{ id: count0,        header: \"count0\",     visible: false,")))["MeasurementTableColumns"];
+        Assert.False(hidden.Single(c => c.Column == MeasurementTableColumns.Count0).Visible, "count0 hidden in the table");
+        Assert.Contains("\"count0\"", CsvExportService.Serialize([], Make.Session()), "count0 still in the CSV header");
+
+        Problem("DeviceStatus.yaml: configuration file not found", Copy(("DeviceStatus.yaml", null, null)), "missing file");
+        Problem("DrillholeInformation.yaml, line ", Copy(("DrillholeInformation.yaml", "  notesHeight: 76\n", "")), "missing key: file and line");
+        Problem("notesHeight", Copy(("DrillholeInformation.yaml", "  notesHeight: 76\n", "")), "missing key: key name");
+        Problem("\"rowHight: 36\"", Copy(("MeasurementTable.yaml", "  rowHeight: 36", "  rowHight: 36")), "misspelled key: its line");
+        Problem("\"field: 0,x,14,16", Copy(("DrillholeInformation.yaml", "field: 0,0,14,16", "field: 0,x,14,16")), "malformed margin");
+        Problem("MeasurementTable.yaml: columns[0].alignment: 'middle' is not supported",
+            Copy(("MeasurementTable.yaml", "minWidth: 32,  alignment: right", "minWidth: 32,  alignment: middle")), "alignment");
+        Problem("MeasurementTable.yaml: columns[1].id: column 'number' is listed more than once",
+            Copy(("MeasurementTable.yaml", "id: captureNumber,", "id: number,")), "duplicate column");
+        Problem("MeasurementTable.yaml: columns[6].format: 'cm' is not supported",
+            Copy(("MeasurementTable.yaml", "format: centimetres", "format: cm")), "format");
+        Problem("CapturePanel.yaml: chart.minHeight: must be a number greater than 0",
+            Copy(("CapturePanel.yaml", "minHeight: 200", "minHeight: 0")), "dimension");
+    }
+
+    private static System.Windows.ResourceDictionary Load(string baseDirectory)
+    {
+        var resources = new System.Windows.ResourceDictionary();
+        Frontend.Pages.PageSettings.AddTo(resources, baseDirectory);
+        return resources.MergedDictionaries[0];
+    }
+
+    // The shipped YAML files copied to a new folder, with text replacements (a null replacement deletes the file).
+    private static string Copy(params (string File, string? Find, string? Replace)[] edits)
+    {
+        var folder = new TestFolder().Root;
+
+        foreach (var file in Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Pages"), "*.yaml", SearchOption.AllDirectories))
+        {
+            var fileEdits = edits.Where(e => e.File == Path.GetFileName(file)).ToList();
+
+            if (fileEdits.Any(e => e.Find is null))
+            {
+                continue;
+            }
+
+            var text = File.ReadAllText(file).ReplaceLineEndings("\n");
+
+            foreach (var (name, find, replace) in fileEdits)
+            {
+                Assert.True(text.Contains(find!), $"{name} contains <{find}>");
+                text = text.Replace(find!, replace);
+            }
+
+            var target = Path.Combine(folder, Path.GetRelativePath(AppContext.BaseDirectory, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.WriteAllText(target, text);
+        }
+
+        return folder;
+    }
+
+    private static void Problem(string expected, string baseDirectory, string what) =>
+        Assert.Contains(expected, Assert.Throws<InvalidDataException>(() => Load(baseDirectory), what).Message, what);
 }

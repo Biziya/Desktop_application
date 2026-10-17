@@ -49,6 +49,10 @@
             "Microsoft.Data.Sqlite": {
               "target": "Package",
               "version": "[10.0.0, )"
+            },
+            "YamlDotNet": {
+              "target": "Package",
+              "version": "[18.1.0, )"
             }
           },
           "imports": [

@@ -5,15 +5,6 @@
              xmlns:table="clr-namespace:Frontend.Pages.Measurement.Table">
     <!-- Page composition only. The sections share this page's DataContext (MeasurementViewModel). Results, errors and
          status changes are shown as toasts (MainWindow), not as text here. -->
-    <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <!-- Drillhole warning text and size. -->
-                <ResourceDictionary Source="/Frontend;component/Pages/CoreInformation/DrillholeInformation/DrillholeInformationConstants.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </UserControl.Resources>
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -25,7 +16,7 @@
                 <capture:CapturePanelView/>
 
                 <!-- The drillhole warning: shown while no drillhole is saved for measuring (also when none is selected,
-                     which leaves the table and chart empty). -->
+                     which leaves the table and chart empty). Text and size: DrillholeInformation.yaml. -->
                 <TextBlock Text="{StaticResource DrillholeWarningText}"
                            FontSize="{StaticResource DrillholeWarningFontSize}"
                            Foreground="{StaticResource Warning}"

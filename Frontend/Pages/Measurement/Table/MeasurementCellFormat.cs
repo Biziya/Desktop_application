@@ -11,6 +11,20 @@ public static class MeasurementCellFormat
 {
     public const string TimestampFormat = "yyyy-MM-dd HH:mm:ss";
 
+    /// <summary>The format names MeasurementTable.yaml accepts.</summary>
+    public static IReadOnlyList<string> Names { get; } = ["dateTime", "metres", "centimetres", "localTime", "decimal2"];
+
+    /// <summary>The formatter of a name from <see cref="Names"/>, or null for an unknown name.</summary>
+    public static Func<object?, string?>? Named(string name) => name switch
+    {
+        "dateTime" => Pattern(TimestampFormat),   // 2026-10-16 09:56:09 (the value's own time zone)
+        "metres" => Pattern("0.00#"),             // 10.50, 11.255
+        "centimetres" => Pattern("0.#"),          // 25, 2.5
+        "localTime" => UnixMillisecondsLocal,     // Unix milliseconds as this computer's local time
+        "decimal2" => Decimal,                    // at most two decimals
+        _ => null
+    };
+
     /// <summary>A .NET format pattern such as "0.00#" or <see cref="TimestampFormat"/>, applied with the invariant culture.</summary>
     public static Func<object?, string?> Pattern(string format) => value => value switch
     {

@@ -1,0 +1,48 @@
+columns:
+  - { id: number,        header: "No",         visible: true,  width: 0.6*, minWidth: 32,  alignment: right }
+  - { id: captureNumber, header: "Capture No", visible: false, width: Auto, minWidth: 90,  alignment: right }
+  - { id: startTime,     header: "Start Time", visible: false, width: Auto, minWidth: 160, alignment: right, format: dateTime }
+  - { id: endTime,       header: "End Time",   visible: false, width: Auto, minWidth: 160, alignment: right, format: dateTime }
+  - { id: from,          header: "From (m)",   visible: true,  width: 1*,   minWidth: 56,  alignment: right, format: metres }
+  - { id: to,            header: "To (m)",     visible: true,  width: 1*,   minWidth: 56,  alignment: right, format: metres }
+  - { id: step,          header: "Step (cm)",  visible: true,  width: 1*,   minWidth: 52,  alignment: right, format: centimetres }
+  - { id: sample,        header: "Sample",     visible: true,  width: 0.9*, minWidth: 52,  alignment: right }
+  - { id: tsMs,          header: "Date",      visible: true,  width: 2.2*, minWidth: 64,  alignment: right, format: localTime }
+  - { id: count0,        header: "count0",     visible: true,  width: 1*,   minWidth: 52,  alignment: right, format: decimal2 }
+  - { id: count0Raw,     header: "count0_raw", visible: true,  width: 1.1*, minWidth: 56,  alignment: right, format: decimal2 }
+  - { id: hdm,           header: "hdm",        visible: true,  width: 1*,   minWidth: 48,  alignment: right, format: decimal2 }
+  - { id: hdmRaw,        header: "hdm_raw",    visible: true,  width: 1*,   minWidth: 52,  alignment: right, format: decimal2 }
+  - { id: doseRate,      header: "dose_rate",  visible: true,  width: 1*,   minWidth: 56,  alignment: right, format: decimal2 }
+  - { id: sessionId,     header: "Session",    visible: false, width: Auto, minWidth: 280, alignment: right }
+
+# Final size = size (below) × multiplier. Edit the multipliers: 1.0 = the original compact look, 1.5 = +50 %.
+# Column widths fit the table, so larger text shortens with "…" sooner.
+multipliers:
+  headerFontSize: 1.0
+  rowFontSize: 1.0
+  headerHeight: 1.0
+  rowHeight: 1.0
+  cellPadding: 1.0                              # also the header padding
+  deleteIcon: 1.0                               # the delete glyph, its button and the Delete column
+  headingFontSize: 1.0                          # "Averaged Measurements"
+  actionButtonFontSize: 1.0                     # New Measurement and Export CSV
+  actionButtonWidth: 1.0
+  actionButtonHeight: 1.0
+  emptyTextFontSize: 1.0                        # "Your averaged measurements will appear here."
+
+# Original sizes in pixels; leave these as they are and change the multipliers instead.
+sizes:
+  headerFontSize: 12
+  rowFontSize: 14
+  headerMinHeight: 34                           # a header wrapped onto two lines may be taller
+  rowHeight: 36
+  headerPadding: 8,4
+  cellPadding: 8,0
+  deleteIconFontSize: 14
+  deleteButtonSize: 28
+  deleteColumnWidth: 64
+  headingFontSize: 18
+  actionButtonFontSize: 14
+  actionButtonMinWidth: 130                     # Export CSV only: about its natural width
+  actionButtonMinHeight: 42.62                  # natural height: 14 px line + 2 × 11 padding + border
+  emptyTextFontSize: 14

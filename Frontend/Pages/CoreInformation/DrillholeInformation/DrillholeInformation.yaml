@@ -1,0 +1,39 @@
+labels:
+  sectionTitle: Drillhole Information
+  drillhole: Drillhole
+  project: Project
+  campaign: Campaign
+  operator: Operator
+  notes: Notes
+  saveAndContinue: "Save & Continue   ›"
+  retry: Retry                                  # reloads the drillhole list after a failed load
+  autofilledToolTip: Filled from the selected drillhole.
+  clearDrillholeToolTip: Clear drillhole
+  drillholeLockedToolTip: Stop the measurement to change the drillhole.
+
+# Row 1: Drillhole (widest, for long Hole IDs), Project, Campaign (compact: a year), Operator (fits DOMAIN\username).
+# Row 2: Notes, full width. The minimum widths add up to the space available at the smallest window with the
+# sidebar open.
+fields:
+  drillholeWidth: 2.3*
+  drillholeMinWidth: 200
+  projectWidth: 1.3*
+  projectMinWidth: 120
+  campaignWidth: 110
+  operatorWidth: 1.6*
+  operatorMinWidth: 150
+  notesHeight: 76
+
+spacing:
+  field: 0,0,14,16                              # right of and below every field
+  notesPadding: 11,9
+  drillholeBoxPadding: 11,0,62,0                # the right padding keeps the text clear of the × and the chevron
+  clearButton: 0,7,32,0                         # the ×, left of the chevron
+  retryButton: 8,5,0,0
+  saveAndContinueButton: 0,4,14,0
+
+# Shown on the Measurement page, below the capture panel, while no drillhole is saved for measuring.
+drillholeWarning:
+  text: Complete Core Information and click Save & Continue to enable Start.
+  fontSize: 14
+  margin: 0,12,0,0

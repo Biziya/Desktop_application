@@ -16,7 +16,7 @@ namespace Frontend.Pages.Measurement.CapturePanel;
 /// <c>from</c> to <c>to</c> (so widths follow the actual interval, including step changes) and from 0 up to the same
 /// ts_ms the table shows. Bars are placed by depth (rows are also listed by From). Rows without depths or
 /// ts_ms are not drawn. Hover a bar for its values. Rendering only — the data stays in the ViewModel. Axis labels,
-/// empty text and font sizes are set from CapturePanelConstants.xaml.
+/// empty text and font sizes are set from CapturePanel.yaml.
 /// </summary>
 public sealed class DepthBarChart : FrameworkElement
 {

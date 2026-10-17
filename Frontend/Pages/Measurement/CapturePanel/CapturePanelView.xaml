@@ -6,13 +6,9 @@
     <!-- Control row: control column (Starting Depth, Step, Start / Stop toggle — all the same width) | countdown | bar chart
          (remaining width). "to" is calculated (from + step), so there is no To input. Depth edits, also during acquisition,
          apply from the next capture. The chart takes the remaining width (about 205 px at the smallest window).
-         Labels and sizes: CapturePanelConstants.xaml. -->
+         Labels and sizes: CapturePanel.yaml (application resources). -->
     <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="CapturePanelConstants.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-
             <!-- Countdown (a button: click to edit the capture duration). No fill or frame; hover tints the ring area,
                  keyboard focus draws a blue circle. When disabled (a capture is running) the countdown looks exactly the
                  same — it just cannot be clicked. -->
@@ -48,12 +44,12 @@
             <!-- One toggle: green "Start" while stopped, red "Stop" while measuring. Exactly as tall as the Starting Depth
                  and Step boxes (the box, not their labels). -->
             <Style x:Key="StartStopButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                <Setter Property="FontSize" Value="{local:Scale StartStopButtonFontSize}"/>
-                <Setter Property="MinWidth" Value="{local:Scale StartStopButtonWidth}"/>
+                <Setter Property="FontSize" Value="{StaticResource StartStopButtonFontSize}"/>
+                <Setter Property="MinWidth" Value="{StaticResource StartStopButtonWidth}"/>
                 <Setter Property="Height" Value="{StaticResource ControlHeight}"/>
                 <Setter Property="MinHeight" Value="0"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
-                <Setter Property="Padding" Value="{local:Scale StartStopButtonPadding}"/>
+                <Setter Property="Padding" Value="{StaticResource StartStopButtonPadding}"/>
                 <Setter Property="HorizontalAlignment" Value="Stretch"/>
                 <Setter Property="Background" Value="{StaticResource Success}"/>
                 <Setter Property="AutomationProperties.Name" Value="Start measurement"/>
@@ -67,7 +63,7 @@
 
             <!-- Glyph and label of the Start / Stop toggle; they switch with IsMeasurementModeActive. -->
             <Style x:Key="StartStopGlyph" TargetType="Run">
-                <Setter Property="FontSize" Value="{local:Scale StartStopButtonIconFontSize}"/>
+                <Setter Property="FontSize" Value="{StaticResource StartStopButtonIconFontSize}"/>
                 <Setter Property="Text" Value="{StaticResource StartGlyph}"/>
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding IsMeasurementModeActive}" Value="True">
@@ -94,8 +90,8 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <StackPanel Width="{local:Scale StartStopButtonWidth}" VerticalAlignment="Center">
-            <TextBlock Text="{StaticResource StartingDepthLabel}" Style="{StaticResource FieldLabel}" FontSize="{local:Scale LabelFontSize}"/>
+        <StackPanel Width="{StaticResource StartStopButtonWidth}" VerticalAlignment="Center">
+            <TextBlock Text="{StaticResource StartingDepthLabel}" Style="{StaticResource FieldLabel}" FontSize="{StaticResource CaptureLabelFontSize}"/>
             <!-- Invalid text gets a red border while typing; leaving the box (or Start) reports it in a toast. -->
             <TextBox Text="{Binding NextFrom, UpdateSourceTrigger=PropertyChanged}"
                      LostFocus="DepthCommitted"
@@ -110,7 +106,7 @@
                     </Style>
                 </TextBox.Style>
             </TextBox>
-            <TextBlock Text="{StaticResource StepLabel}" Style="{StaticResource FieldLabel}" FontSize="{local:Scale LabelFontSize}"
+            <TextBlock Text="{StaticResource StepLabel}" Style="{StaticResource FieldLabel}" FontSize="{StaticResource CaptureLabelFontSize}"
                        Margin="{StaticResource StepLabelMargin}"/>
             <TextBox Text="{Binding Step, UpdateSourceTrigger=PropertyChanged}"
                      LostFocus="DepthCommitted"
@@ -134,7 +130,7 @@
 
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="{StaticResource CountdownColumnMargin}">
             <TextBlock Text="{StaticResource CountdownLabel}"
-                       FontSize="{local:Scale CountdownLabelFontSize}"
+                       FontSize="{StaticResource CountdownLabelFontSize}"
                        Foreground="{StaticResource Muted}"
                        HorizontalAlignment="Center"
                        Margin="{StaticResource CountdownLabelMargin}"/>
@@ -146,14 +142,14 @@
                     Command="{Binding EditDurationCommand}"
                     ToolTip="Click to change the capture duration"
                     AutomationProperties.Name="Capture countdown. Click to change the capture duration">
-                <Grid Width="{local:Scale CountdownRingSize}" Height="{local:Scale CountdownRingSize}">
+                <Grid Width="{StaticResource CountdownRingSize}" Height="{StaticResource CountdownRingSize}">
                     <local:CountdownRing Progress="{Binding CaptureProgress}"
-                                         RingThickness="{local:Scale CountdownRingThickness}"
+                                         RingThickness="{StaticResource CountdownRingThickness}"
                                          TrackBrush="{StaticResource Line}"
                                          ProgressBrush="{StaticResource Blue}"
                                          IsHitTestVisible="False"/>
                     <TextBlock Text="{Binding Countdown}"
-                               FontSize="{local:Scale CountdownFontSize}"
+                               FontSize="{StaticResource CountdownFontSize}"
                                FontWeight="SemiBold"
                                Foreground="{StaticResource Blue}"
                                HorizontalAlignment="Center"

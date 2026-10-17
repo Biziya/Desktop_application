@@ -2,13 +2,9 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:infra="clr-namespace:Frontend.Shared.Infrastructure">
-    <!-- Drillhole Information form. Labels, widths and spacing: DrillholeInformationConstants.xaml. -->
+    <!-- Drillhole Information form. Labels, widths and spacing: DrillholeInformation.yaml (application resources). -->
     <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="DrillholeInformationConstants.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-
             <infra:SameItemConverter x:Key="SameItem"/>
             <!-- Drillhole dropdown entries: a group heading ("Measured drillholes" / "All drillholes") cannot be hovered,
                  focused or selected, so the mouse and the arrow keys only land on drillholes. -->
@@ -73,7 +69,7 @@
                 </DataTemplate.Triggers>
             </DataTemplate>
             <Style x:Key="FieldPanel" TargetType="StackPanel">
-                <Setter Property="Margin" Value="{StaticResource FieldMargin}"/>
+                <Setter Property="Margin" Value="{StaticResource DrillholeFieldMargin}"/>
             </Style>
             <Style x:Key="AutofilledField" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
                 <Setter Property="IsReadOnly" Value="True"/>

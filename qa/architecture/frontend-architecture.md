@@ -6,7 +6,7 @@
 
 | Entry | File | Notes |
 |---|---|---|
-| Application | [`App.xaml`](../../Frontend/App.xaml) | `StartupUri="MainWindow.xaml"`; no custom start-up code |
+| Application | [`App.xaml`](../../Frontend/App.xaml) | `App.OnStartup` loads the section YAML files (`Pages/PageSettings.cs`), then opens `MainWindow`; a configuration error is shown and the app exits |
 | Shell | [`MainWindow.xaml(.cs)`](../../Frontend/MainWindow.xaml.cs) | Creates `MainViewModel()`; sidebar, page host, toast overlay; **window-wide right-click capture trigger** (`PreviewMouseDown`, handled events too); context menu suppressed while armed |
 | Composition root | [`ViewModels/MainViewModel.cs`](../../Frontend/ViewModels/MainViewModel.cs) | Builds every service once, wires the page events, starts the polling loops. A second constructor accepts test doubles |
 

@@ -20,6 +20,7 @@
     { "pattern": "^Frontend/Pages/Measurement/MeasurementRepository\\.cs$", "direct": ["BE-031..BE-040", "BE-046"], "dependents": ["INT-007", "INT-010..INT-017", "FE-009"] },
     { "pattern": "^Frontend/Pages/Measurement/(CsvExportService|Table/MeasurementTableColumns)\\.cs$", "direct": ["BE-042", "BE-043", "FE-047"], "dependents": ["FE-039", "FE-049", "INT-001", "INT-013", "INT-014"] },
     { "pattern": "^Frontend/Pages/Measurement/Table/MeasurementCellFormat\\.cs$", "direct": ["FE-046", "FE-047"], "dependents": ["INT-014"] },
+    { "pattern": "^Frontend/Pages/(.+\\.yaml|PageSettings\\.cs|.+/[A-Za-z]+Settings\\.cs)$|^Frontend/Shared/Infrastructure/YamlSettings\\.cs$", "direct": ["FE-047", "FE-052"], "dependents": ["E2E-001"], "manual": "section labels and sizes: MAN-008 (both pages look as before)" },
     { "pattern": "^Frontend/Pages/Measurement/IDialogService\\.cs$", "direct": ["FE-034"], "dependents": ["INT-013", "E2E-004"] },
     { "pattern": "^Frontend/Calculation/Measurement/(Depth|MeasurementOrder)\\.cs$", "direct": ["BE-015..BE-019"], "dependents": ["FE-024", "FE-029", "FE-033", "INT-011", "INT-017"] },
     { "pattern": "^Frontend/Calculation/Measurement/(DeviceSamples|DeviceCaptureService)\\.cs$", "direct": ["BE-020..BE-026"], "dependents": ["INT-007..INT-009", "INT-015", "FE-030"] },

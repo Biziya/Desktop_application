@@ -1,0 +1,19 @@
+labels:
+  sectionTitle: Device Status
+  bluetooth: CT007-M Device — Bluetooth
+  bluetoothDeviceToolTip: CT007-M device to monitor
+  measurementDatabase: Measurement SQLite Database
+  gammaGuardDatabase: Gamma Guard SQLite Database
+  retry: Retry                                  # shown on a database row that is not available
+  statusDot: "●  "                              # in front of the status text ("●  Connected"); keep the quotes
+
+sizes:
+  bluetoothDropdownMaxWidth: 360                # left-aligned, narrower when the window is
+
+spacing:
+  title: 0,0,0,8                                # below "Device Status"
+  rowPadding: 14,12
+  row: 0,8,0,0                                  # between rows
+  labelColumn: 0,0,12,0                         # between the label column and the status text
+  detail: 0,3,0,0                               # above the detail line under each label
+  retryButton: 12,0,0,0

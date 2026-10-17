@@ -1,0 +1,50 @@
+labels:
+  startingDepth: Starting Depth (m)
+  step: Step (cm)
+  countdown: Capture Countdown
+  durationEditor: Capture duration (seconds)    # editor opened by clicking the countdown
+  start: Start                                  # one toggle: green glyph + Start while stopped,
+  stop: Stop                                    # red glyph + Stop while measuring
+  startGlyph: ▶
+  stopGlyph: ■
+
+# Final size = size (below) × multiplier. Edit the multipliers: 1.0 = original look, 1.5 = +50 %, 0.8 = −20 %.
+# The countdown ring, its line and its number are enlarged together by 25 % (175 px ring, 10 px line, 40 px number);
+# the ring column stays as tall as the Starting Depth / Step / Start-Stop column, so the card does not grow.
+multipliers:
+  countdownFontSize: 1.25
+  countdownRingSize: 1.25
+  countdownRingThickness: 1.25
+  countdownLabelFontSize: 1.0
+  startStopButtonWidth: 1.0
+  startStopButtonFontSize: 1.0
+  startStopButtonIconFontSize: 1.0
+  labelFontSize: 1.0                            # Starting Depth and Step labels
+
+# Original sizes; leave these as they are and change the multipliers instead.
+sizes:
+  countdownFontSize: 32
+  countdownRingSize: 140
+  countdownRingThickness: 8
+  countdownLabelFontSize: 14
+  startStopButtonWidth: 200                     # also the width of the Starting Depth and Step boxes
+  startStopButtonFontSize: 16                   # the button is as tall as the boxes (ControlHeight, 40 px, in the theme)
+  startStopButtonIconFontSize: 13               # the play / stop glyph
+  labelFontSize: 14
+  startStopButtonPadding: 16,0                  # no multiplier: used as is
+  durationEditorWidth: 230                      # no multiplier
+
+spacing:
+  stepLabel: 0,14,0,0                           # between Starting Depth and Step
+  startStopButton: 0,18,0,0                     # between Step and Start / Stop
+  countdownColumn: 24,0                         # left and right of the countdown
+  countdownLabel: 0,0,0,10                      # below "Capture Countdown"
+
+# Bar chart (x = depth, y = ts_ms). It takes the remaining width of the panel.
+chart:
+  xAxisLabel: Depth (m)
+  yAxisLabel: ts_ms
+  emptyText: Captured intervals appear here as bars.
+  minHeight: 200
+  axisLabelFontSize: 12
+  tickFontSize: 11

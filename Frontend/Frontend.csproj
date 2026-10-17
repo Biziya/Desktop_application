@@ -19,10 +19,14 @@
     <None Update="Api\api-settings.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- CT-007 identification, Gamma Guard database location and local check interval; editable next to the executable. -->
     <None Update="Calculation\Core-Information\device-settings.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Section labels, sizes and table columns (Pages/<page>/<section>/<section>.yaml); editable next to the
+         executable, read once at start-up. -->
+    <None Update="Pages\**\*.yaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
 </Project>
