@@ -92,7 +92,7 @@ The **Build and run** step can show a warning icon even when the check passed. I
 ### Download test reports
 
 1. Open a run and scroll to **Artifacts** at the bottom of its summary page.
-2. Download `test-results-ci-<run_id>-<attempt>`. It contains `junit.xml`, `results.csv`, `summary.md`, `selection.json`, `console.log` and `build.log`. It is kept for 14 days.
+2. Download `test-results-ci-<run_id>-<attempt>`. It contains `junit.xml`, `results.csv`, `summary.md`, `selection.json`, `console.log`, `build.log`, `run-info.json` and the Excel reports `Test Results.xlsx` and `Bug List.xlsx` generated at the end of that run. It is kept for 14 days.
 3. If the optional triage ran, also download `ai-analysis-ci-<run_id>-<attempt>` (`ai-analysis.md`).
 4. Unzip it and read the files as described in [testing-results-guide.md](testing-results-guide.md#3-result-files).
 

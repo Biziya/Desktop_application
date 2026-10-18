@@ -1,0 +1,33 @@
+{
+  "_help": [
+    "Bug registry for Bug List.xlsx. generate_reports.py reads it, adds a SUSPECTED bug for every failing test that is neither linked to a bug nor listed in not_bugs, and writes it back.",
+    "Triage a suspected bug: confirm it (edit description, set suspected to false, link more tests to group failures), or delete it and add its test to not_bugs with the cause.",
+    "found = date first identified (kept). git = fix commit, branch and push evidence, e.g. 'a1b2c3d - development - pushed'; write 'pushed' only when the remote branch is confirmed to contain the commit.",
+    "Status is computed: FIXED only when every linked test is OK in its latest execution."
+  ],
+  "bugs": [
+    {
+      "id": "BUG-001",
+      "tests": [
+        "FE-005"
+      ],
+      "found": "2026-10-16",
+      "suspected": false,
+      "git": "",
+      "description": "Backend connection settings (Frontend/Api/ApiSettings.cs, api-settings.json beside the exe). Actual: a non-numeric value, e.g. {\"requestTimeoutSeconds\":\"abc\"} (same for statusIntervalSeconds), throws InvalidOperationException: \"The requested operation requires an element of type 'Number', but the target element has type 'String'.\" Expected: invalid values fall back to the defaults (http://localhost:5002, 5 s, 5 s), as the class documents. Probable impact: the app does not start (inferred; not launched). Reproduction: ApiSettings.Load(path) with that file. Test: FE-005. QA defect report: DEF-001 (qa/reports/run-20261016-final/defect-report.md)."
+    },
+    {
+      "id": "BUG-002",
+      "tests": [
+        "BE-030"
+      ],
+      "found": "2026-10-16",
+      "suspected": false,
+      "git": "",
+      "description": "Capture duration setting (Frontend/Calculation/Measurement/CaptureDurationSettings.cs, %LocalAppData%\\CT007_Measurement_Studio\\capture-settings.json). Actual: a non-numeric value, e.g. {\"captureDurationSeconds\":\"7\"}, throws the same InvalidOperationException as BUG-001. Expected: fall back to 5 s, as the class documents. Probable impact: the Measurement page cannot be created (inferred). Reproduction: new CaptureDurationSettings(path).Load() with that file. Test: BE-030. Same root-cause pattern as BUG-001. QA defect report: DEF-002."
+    }
+  ],
+  "not_bugs": {
+    "FE-047": "Cause: test-implementation defect, not an application bug. The tsMs column header in Frontend/Pages/Measurement/Table/MeasurementTable.yaml was changed to \"Date\" (commit 3f7ec0f); the header is meant to be editable, but FE-047 still pins the original text \"ts_ms\". The test needs to be updated (team decision); see qa/guides/testing-troubleshooting.md."
+  }
+}

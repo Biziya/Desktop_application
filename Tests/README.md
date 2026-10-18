@@ -26,7 +26,7 @@ The exit code is 1 when any test fails.
 ## Regression runs
 
 ```powershell
-powershell -File Tests/regression/Invoke-Regression.ps1 -RunId reg-YYYYMMDD-NN [-Full] [-Include Timing,Sql,E2E] [-SelectOnly]
+powershell -File Tests/regression/Invoke-Regression.ps1 -RunId reg-YYYYMMDD-NN [-Full] [-Include Timing,Sql,E2E] [-Tests FE-047,BE-030] [-SelectOnly]
 ```
 
 The script does four things:
@@ -34,6 +34,9 @@ The script does four things:
 2. It picks the direct and dependent tests from `Tests/regression/impact-map.json` and adds the critical set.
 3. It builds and runs them in a copy under `%TEMP%`, so the tracked `obj/` folders are not changed.
 4. It writes the artifacts to `qa/regression/<RunId>/artifacts/`.
+5. It always updates `qa/excel-reports/Test Results.xlsx` and `Bug List.xlsx` (`qa/excel-reports/generate_reports.py`, Python 3), even when the build or tests fail, and copies both into the artifacts. The exit code stays the test runner's; a reporting problem is only a warning.
+
+`-Tests` runs exactly the given IDs or ID prefixes through the same path, so single tests are reported too. Running `CT007.Tests.exe` or `dotnet run` directly does **not** update the Excel reports.
 
 A production file that the map does not cover selects the full suite. `-PackageSource` defaults to `%USERPROFILE%\.nuget\packages`.
 

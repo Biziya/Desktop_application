@@ -1,0 +1,3 @@
+﻿PASS FE-001 ApiClientTests.OkResponse (53 ms)
+FAIL FE-047 StatusAndPresentationTests.ColumnLayouts (324 ms) — AssertionException: column order: expected [No, Capture No, Start Time, End Time, From (m), To (m), Step (cm), Sample, ts_ms, count0, count0_raw, hdm, hdm_raw, dose_rate, Session], actual [No, Capture No, Start Time, End Time, From (m), To (m), Step (cm), Sample, Date, count0, count0_raw, hdm, hdm_raw, dose_rate, Session]
+2 tests: 1 passed, 1 failed, 0 skipped.

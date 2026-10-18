@@ -1,0 +1,4 @@
+# Excel's lock file while a workbook is open, and the generator's temporary file.
+~$*
+*.tmp.xlsx
+__pycache__/

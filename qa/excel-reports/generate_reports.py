@@ -1,28 +1,37 @@
 """
-Generates qa/excel-reports/Test Results.xlsx and Bug List.xlsx from QA evidence. Python 3 standard library only.
+Generates qa/excel-reports/Test Results.xlsx and Bug List.xlsx from the recorded test runs. Python 3 standard library
+only. Runs automatically at the end of every Tests/regression/Invoke-Regression.ps1 run (locally and in CI); it can
+also be run by hand:
 
-    python qa/excel-reports/generate_reports.py                  # newest qa/regression/<run>/artifacts/results.csv
-    python qa/excel-reports/generate_reports.py --run reg-20261017-01
+    python qa/excel-reports/generate_reports.py
+    python qa/excel-reports/generate_reports.py --run reg-20261018-01 --copy-to qa/regression/reg-20261018-01/artifacts
 
-Sources (read only):
-  qa/planning/test-inventory.md              test IDs and order (the central list)
+Sources (read only, except bugs.json):
+  qa/regression/<run>/artifacts/results.csv  execution evidence, one row per test method (all recorded runs)
+  qa/regression/<run>/artifacts/run-info.json   when the run finished and at which commit (selection.json for older runs)
+  qa/planning/test-inventory.md              test IDs and order
   qa/planning/*-test-cases.md                test titles and expected results
-  qa/regression/<run>/artifacts/results.csv  the execution evidence (one row per test method)
   Tests/CT007.Tests/**/*.cs                  titles of executed tests that are not in the inventory yet
-  BUGS / FAIL_CAUSES below                   the reviewed classification of failures (edit these when triaging)
+  qa/excel-reports/bugs.json                 bug registry and "not a bug" classifications (edited by people)
 
 Rules:
-  OK      every test method of the ID passed in the run       (Date = run date)
-  FAIL    at least one test method of the ID failed in the run (Date = run date; error in the last column)
-  NOT OK  skipped, not implemented, manual or not in the run   (Date blank; the reason in the last column)
-  A bug is FIXED only when every linked test is OK in the run. Existing workbooks are read first: bug dates and Git
-  references are kept, bugs are never removed, and a result someone entered for a test the run did not execute
-  (for example a manual test) is kept instead of being replaced by NOT OK.
+  Each test shows its latest execution across all recorded runs, so a change-based run (a subset of the tests) does not
+  hide the others; the Date column is the date of that execution.
+  OK      every test method of the ID passed in its latest execution
+  FAIL    at least one test method failed in its latest execution (error and cause in the last column)
+  NOT OK  never executed: skipped (category or environment missing), not implemented, or manual (Date blank)
+  A failing test that is neither linked to a bug nor listed in not_bugs gets a new SUSPECTED bug in bugs.json.
+  A bug is FIXED only when every linked test is OK in its latest execution. Dates and Git references are kept, bugs
+  are never removed, and a result someone entered in the workbook for a never-executed test (e.g. manual) is kept.
 """
 import argparse
 import csv
 import datetime as dt
+import json
+import os
 import re
+import shutil
+import sys
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
@@ -31,40 +40,9 @@ from xml.sax.saxutils import escape
 REPO = Path(__file__).resolve().parents[2]
 QA = REPO / "qa"
 OUT = QA / "excel-reports"
+REGISTRY = OUT / "bugs.json"
 CASE_FILES = ["frontend-test-cases.md", "backend-test-cases.md", "integration-test-cases.md", "manual-test-cases.md"]
-
-# ---- Reviewed classification (update when a failure is triaged or a bug is fixed) -------------------------------
-# A FAIL that is not a bug is explained here; a FAIL that is a bug is linked through BUGS[...]["tests"].
-FAIL_CAUSES = {
-    "FE-047": "Cause: test-implementation defect, not an application bug. The tsMs column header in "
-              "Frontend/Pages/Measurement/Table/MeasurementTable.yaml was changed to \"Date\" (commit 3f7ec0f); the "
-              "header is meant to be editable, but FE-047 still pins the original text \"ts_ms\". The test needs to be "
-              "updated (team decision); see qa/guides/testing-troubleshooting.md.",
-}
-
-BUGS = [
-    {
-        "id": "BUG-001", "qa_ref": "DEF-001", "tests": ["FE-005"], "found": "2026-10-16", "git": "",
-        "description": "Backend connection settings (Frontend/Api/ApiSettings.cs, api-settings.json beside the exe). "
-                       "Actual: a non-numeric value, e.g. {\"requestTimeoutSeconds\":\"abc\"} (same for "
-                       "statusIntervalSeconds), throws InvalidOperationException: \"The requested operation requires an "
-                       "element of type 'Number', but the target element has type 'String'.\" Expected: invalid values "
-                       "fall back to the defaults (http://localhost:5002, 5 s, 5 s), as the class documents. Probable "
-                       "impact: the app does not start (inferred; not launched). Reproduction: ApiSettings.Load(path) "
-                       "with that file. Test: FE-005. QA defect report: DEF-001 "
-                       "(qa/reports/run-20261016-final/defect-report.md).",
-    },
-    {
-        "id": "BUG-002", "qa_ref": "DEF-002", "tests": ["BE-030"], "found": "2026-10-16", "git": "",
-        "description": "Capture duration setting (Frontend/Calculation/Measurement/CaptureDurationSettings.cs, "
-                       "%LocalAppData%\\CT007_Measurement_Studio\\capture-settings.json). Actual: a non-numeric value, "
-                       "e.g. {\"captureDurationSeconds\":\"7\"}, throws the same InvalidOperationException as BUG-001. "
-                       "Expected: fall back to 5 s, as the class documents. Probable impact: the Measurement page cannot "
-                       "be created (inferred). Reproduction: new CaptureDurationSettings(path).Load() with that file. "
-                       "Test: BE-030. Same root-cause pattern as BUG-001. QA defect report: DEF-002.",
-    },
-]
-NO_FIX_FOUND = "No fix commit found"
+TEST_ID = r"\b(?:FE|BE|INT|E2E|MAN)-\d{3}\b"
 
 # ---- Collecting ---------------------------------------------------------------------------------------------------
 
@@ -72,6 +50,10 @@ NO_FIX_FOUND = "No fix commit found"
 def clean(text):
     text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
     return re.sub(r"\s+", " ", text.replace("**", "").replace("`", "")).strip()
+
+
+def read_json(path):
+    return json.loads(path.read_text(encoding="utf-8-sig")) if path.exists() else {}
 
 
 def inventory():
@@ -86,8 +68,8 @@ def inventory():
 
 def test_cases():
     """Title and expected result per ID. Tables become "input → expected" pairs; long text points to the document."""
-    skip = ("preconditions", "actions", "note", "data", "environment", "source", "priority", "steps", "equipment", "objective",
-            "input", "evidence", "existing")
+    skip = ("preconditions", "actions", "note", "data", "environment", "source", "priority", "steps", "equipment",
+            "objective", "input", "evidence", "existing")
     cases = {}
     for name in CASE_FILES:
         lines = (QA / "planning" / name).read_text(encoding="utf-8").splitlines()
@@ -134,44 +116,30 @@ def source_titles():
     return titles
 
 
-def latest_run(run_id):
-    runs = sorted(p.parent.parent.name for p in (QA / "regression").glob("*/artifacts/results.csv"))
-    run_id = run_id or runs[-1]
-    stamp = re.search(r"(\d{8})", run_id)
-    date = dt.datetime.strptime(stamp.group(1), "%Y%m%d").date() if stamp else None
-    results = {}
-    with (QA / "regression" / run_id / "artifacts" / "results.csv").open(encoding="utf-8-sig", newline="") as f:
-        for r in csv.DictReader(f):
-            results.setdefault(r["id"], []).append(r)
-    return run_id, date, results
-
-def head_commit():
-    """Short hash of HEAD, read from .git without running git (read-only)."""
-    head = (REPO / ".git" / "HEAD").read_text().strip()
-    if head.startswith("ref: "):
-        ref = REPO / ".git" / head[5:]
-        if ref.exists():
-            return ref.read_text().strip()[:7]
-        packed = (REPO / ".git" / "packed-refs").read_text().splitlines()
-        return next(line.split()[0][:7] for line in packed if line.endswith(head[5:]))
-    return head[:7]
+def load_runs():
+    """Every recorded run with results, oldest first. Each: id, date, head (commit), results {test ID: [rows]}."""
+    runs = []
+    for path in (QA / "regression").glob("*/artifacts/results.csv"):
+        folder, run_id = path.parent, path.parent.parent.name
+        info, selection = read_json(folder / "run-info.json"), read_json(folder / "selection.json")
+        stamp = re.search(r"(\d{8})", run_id)
+        if info.get("finished"):
+            when = dt.datetime.fromisoformat(info["finished"])
+        elif stamp:
+            when = dt.datetime.strptime(stamp.group(1), "%Y%m%d")
+        else:
+            when = dt.datetime.fromtimestamp(path.stat().st_mtime)
+        results = {}
+        with path.open(encoding="utf-8-sig", newline="") as f:
+            for r in csv.DictReader(f):
+                results.setdefault(r["id"], []).append(r)
+        runs.append(dict(id=run_id, when=when, date=when.date(), results=results,
+                         head=(info.get("head") or selection.get("head") or "")[:7]))
+    return sorted(runs, key=lambda r: (r["when"], r["id"]))
 
 
 def ur_list(text):
     return ", ".join("UR-" + part.strip() for part in text.split(",") if part.strip())
-
-
-def executed_before(test_id, run_id):
-    """The newest other results.csv under qa/ in which the test passed or failed (not skipped), or None."""
-    found = []
-    for path in QA.rglob("results.csv"):
-        if run_id in path.parts:
-            continue
-        with path.open(encoding="utf-8-sig", newline="") as f:
-            if any(r.get("id") == test_id and r.get("outcome") in ("PASS", "FAIL") for r in csv.DictReader(f)):
-                found.append(path.relative_to(REPO).as_posix())
-    return sorted(found)[-1] if found else None
-
 
 # ---- Reading an existing workbook (shared or inline strings) -------------------------------------------------------
 
@@ -180,7 +148,7 @@ NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
 
 def read_rows(path):
-    """Rows of the first sheet as lists of strings (dates as YYYY-MM-DD in date columns is handled by the caller)."""
+    """Data rows of the first sheet as lists of strings (a date cell gives its serial number)."""
     if not path.exists():
         return []
     with zipfile.ZipFile(path) as z:
@@ -213,23 +181,33 @@ def as_date(text):
         return dt.date(1899, 12, 30) + dt.timedelta(days=int(float(text)))
     return None
 
-# ---- Building the rows ---------------------------------------------------------------------------------------------
+# ---- Results per test ----------------------------------------------------------------------------------------------
 
 
-def test_rows(run_id, run_date, results):
+def test_status(runs):
+    """Per test ID: the latest run that executed it (PASS/FAIL), and the latest run that only skipped it."""
+    executed, skipped = {}, {}
+    for run in runs:
+        for test_id, rows in run["results"].items():
+            target = executed if any(r["outcome"] in ("PASS", "FAIL") for r in rows) else skipped
+            target[test_id] = (run, rows)
+    return executed, skipped
+
+
+def collect_tests(runs):
+    """One record per test: id, description, expectation, result, date, detail (bug link added later), run."""
     inv, cases, titles = inventory(), test_cases(), source_titles()
-    bug_of = {t: b["id"] for b in BUGS for t in b["tests"]}
+    executed, skipped = test_status(runs)
     ids = [r["id"] for r in inv]
-    # Executed tests that the inventory does not list yet go after the last ID of their group.
-    for extra in sorted(set(results) - set(ids)):
+    for extra in sorted((set(executed) | set(skipped)) - set(ids)):   # executed but not in the inventory yet
         group = [i for i in ids if i.split("-")[0] == extra.split("-")[0]]
         ids.insert(ids.index(group[-1]) + 1 if group else len(ids), extra)
     meta = {r["id"]: r for r in inv}
     previous = {r[1]: r for r in read_rows(OUT / "Test Results.xlsx") if len(r) > 1 and r[1]}
 
-    rows = []
+    tests = []
     for test_id in ids:
-        case, item, runs = cases.get(test_id), meta.get(test_id), results.get(test_id, [])
+        case, item = cases.get(test_id), meta.get(test_id)
         if case:
             description, expectation = case["title"], case["expected"]
         else:
@@ -243,62 +221,101 @@ def test_rows(run_id, run_date, results):
         elif not expectation:
             expectation = "Not defined in the test case."
 
-        outcomes = [r["outcome"] for r in runs]
-        date, detail = "", ""
-        if runs and all(o == "PASS" for o in outcomes):
-            result, date = "OK", run_date
-        elif "FAIL" in outcomes:
-            result, date = "FAIL", run_date
-            failed = [r for r in runs if r["outcome"] == "FAIL"]
-            detail = " | ".join(f"{r['test']}: {r['message']}" for r in failed)
-            if len(runs) > len(failed):
-                detail += f" ({len(runs) - len(failed)} other test method(s) of this ID passed.)"
-            if test_id in bug_of:
-                detail += f" Linked bug: {bug_of[test_id]}."
-            elif test_id in FAIL_CAUSES:
-                detail += " " + FAIL_CAUSES[test_id]
+        record = dict(id=test_id, description=description, expectation=expectation, result="NOT OK", date="",
+                      detail="", run=None, failed=[])
+        if test_id in executed:
+            run, rows = executed[test_id]
+            outcomes = [r["outcome"] for r in rows]
+            record.update(run=run, date=run["date"])
+            if "FAIL" in outcomes:
+                failed = [r for r in rows if r["outcome"] == "FAIL"]
+                detail = " | ".join(f"{r['test']}: {r['message']}" for r in failed) + f" (run {run['id']})"
+                if len(rows) > len(failed):
+                    detail += f"; {len(rows) - len(failed)} other test method(s) of this ID passed"
+                record.update(result="FAIL", detail=detail + ".", failed=failed)
+            elif all(o == "PASS" for o in outcomes):
+                record.update(result="OK")
             else:
-                detail += " Cause: not yet classified (application, test or environment)."
-        elif runs:
-            result = "NOT OK"
-            reasons = sorted({r["message"].rstrip(".") + "." for r in runs if r["outcome"] == "SKIP"})
-            earlier = executed_before(test_id, run_id)
-            detail = (f"Skipped in {run_id} ({run_date}): " + "; ".join(reasons) + " " +
-                      (f"Last executed in {earlier}." if earlier else "No recorded run in qa/ has executed it."))
+                record.update(detail=f"Only partly executed in run {run['id']}: "
+                                     + "; ".join(f"{r['test']} {r['outcome']} {r['message']}".strip() for r in rows))
+        elif test_id in skipped:
+            run, rows = skipped[test_id]
+            reasons = sorted({r["message"].rstrip(".") + "." for r in rows})
+            record["detail"] = (f"Never executed: skipped in every recorded run, most recently {run['id']} "
+                                f"({run['date']}): " + " ".join(reasons))
+        elif test_id.startswith("MAN-"):
+            record["detail"] = ("Manual test (bench with a CT007-M detector and Gamma Guard); no recorded execution: "
+                                "enter the result and date in this row after running it (kept on regeneration).")
         else:
-            result = "NOT OK"
             automation = item["automation"] if item else "unknown"
-            if test_id.startswith("MAN-"):
-                detail = ("Manual test (bench with a CT007-M detector and Gamma Guard); no recorded execution: the "
-                          "Result column of qa/reports/run-20261016-final/manual-testing-checklist.md is empty.")
-            else:
-                detail = (f"Not implemented as an automated test (inventory automation: {automation}"
-                          f"{'; ' + ur_list(item['ur']) if item and item['ur'] else ''}), so there is no execution evidence. "
-                          "See qa/generation/test-implementation-status.md.")
-            # Keep a result a person recorded earlier for a test this run did not execute (e.g. a manual test).
-            old = previous.get(test_id)
-            if old and len(old) > 6 and old[4] in ("OK", "FAIL") and as_date(old[5]):
-                result, date, detail = old[4], as_date(old[5]), old[6]
-        rows.append([test_id, description, expectation, result, date, detail])
-    return rows
+            record["detail"] = (f"Not implemented as an automated test (inventory automation: {automation}"
+                                f"{'; ' + ur_list(item['ur']) if item and item['ur'] else ''}), so there is no "
+                                "execution evidence. See qa/generation/test-implementation-status.md.")
+        # Keep a result a person entered for a test that no recorded run executed (e.g. a manual test).
+        old = previous.get(test_id)
+        if record["run"] is None and old and len(old) > 6 and old[4] in ("OK", "FAIL") and as_date(old[5]):
+            record.update(result=old[4], date=as_date(old[5]), detail=old[6], manual=True)
+        tests.append(record)
+    return tests
+
+# ---- Bugs ------------------------------------------------------------------------------------------------------------
 
 
-def bug_rows(results):
-    """Curated bugs, merged with the existing workbook: dates and Git references are kept, no bug is removed."""
-    previous = {r[1]: r for r in read_rows(OUT / "Bug List.xlsx") if len(r) > 1 and r[1]}
+AUTO_GIT = ("No fix commit", "Fix verified by")
+
+
+def update_registry(tests):
+    """Adds bugs found only in the old workbook, then a SUSPECTED bug per unclassified failing test."""
+    registry = read_json(REGISTRY) or {"bugs": [], "not_bugs": {}}
+    registry.setdefault("bugs", [])
+    registry.setdefault("not_bugs", {})
+    known = {b["id"]: b for b in registry["bugs"]}
+    for old in read_rows(OUT / "Bug List.xlsx"):           # never lose a bug or a Git reference someone entered
+        if len(old) < 6 or not old[1]:
+            continue
+        git = old[5] if old[5] and not old[5].startswith(AUTO_GIT) else ""
+        if old[1] not in known:
+            found = as_date(old[3])
+            registry["bugs"].append(dict(id=old[1], tests=sorted(set(re.findall(TEST_ID, old[2]))),
+                                         found=found.isoformat() if found else "", suspected=False, git=git,
+                                         description=old[2]))
+        elif git and not known[old[1]].get("git"):
+            known[old[1]]["git"] = git
+
+    linked = {t for b in registry["bugs"] for t in b.get("tests", [])}
+    numbers = [int(m.group(1)) for b in registry["bugs"] if (m := re.fullmatch(r"BUG-(\d+)", b["id"]))]
+    for test in tests:
+        if test["result"] != "FAIL" or test["id"] in linked or test["id"] in registry["not_bugs"] or test.get("manual"):
+            continue
+        numbers.append(max(numbers, default=0) + 1)
+        failure = test["failed"][0]
+        registry["bugs"].append(dict(
+            id=f"BUG-{numbers[-1]:03d}", tests=[test["id"]], found=test["date"].isoformat(), suspected=True, git="",
+            description=f"SUSPECTED, confirmation pending (created automatically from a failing test). {test['id']} "
+                        f"({test['description']}) failed in run {test['run']['id']} on {test['date']}: "
+                        f"{failure['test']}: {failure['message']} Expected: {test['expectation']} Triage in "
+                        "qa/excel-reports/bugs.json: confirm and describe the defect (set suspected to false, link "
+                        "related tests), or move the test to not_bugs if the test or the environment is at fault."))
+        linked.add(test["id"])
+    return registry
+
+
+def bug_rows(registry, tests):
+    by_id = {t["id"]: t for t in tests}
     rows = []
-    for bug in BUGS:
-        linked = [r for t in bug["tests"] for r in results.get(t, [])]
-        fixed = bool(linked) and all(r["outcome"] == "PASS" for r in linked)
-        old = previous.pop(bug["id"], None)
-        found = as_date(old[3]) if old and as_date(old[3]) else dt.date.fromisoformat(bug["found"])
-        git = (old[5] if old and len(old) > 5 and old[5] and old[5] != NO_FIX_FOUND else bug["git"]) or NO_FIX_FOUND
-        description = bug["description"]
-        if not fixed and git != NO_FIX_FOUND:
-            description += " Fix committed; verification pending: the linked test does not pass yet."
-        rows.append([bug["id"], description, found, "FIXED" if fixed else "NOT FIXED", git])
-    for old in previous.values():   # bugs only in the old workbook are kept unchanged
-        rows.append([old[1], old[2], as_date(old[3]) or "", old[4] if old[4] in ("FIXED", "NOT FIXED") else "NOT FIXED", old[5]])
+    for bug in registry["bugs"]:
+        linked = [by_id[t] for t in bug.get("tests", []) if t in by_id]
+        fixed = bool(linked) and all(t["result"] == "OK" and t["run"] for t in linked)
+        git, description = bug.get("git", ""), bug["description"]
+        if fixed and not git:
+            last = max(linked, key=lambda t: t["run"]["when"])["run"]
+            git = (f"Fix verified by {', '.join(t['id'] for t in linked)} OK in run {last['id']} ({last['date']}"
+                   f"{', commit ' + last['head'] if last['head'] else ''}); fix commit not recorded in bugs.json; "
+                   "push not verified")
+        elif not fixed and git:
+            description += " Fix committed; verification pending: a linked test does not pass yet."
+        rows.append([bug["id"], description, as_date(bug.get("found", "")) or "", "FIXED" if fixed else "NOT FIXED",
+                     git or "No fix commit recorded"])
     return rows
 
 # ---- Minimal .xlsx writer (styles, frozen header, filter, dropdown, conditional colours) -------------------------
@@ -394,8 +411,9 @@ def row_height(values, widths):
     return min(409, round(13.2 * lines + 3, 1))
 
 
-def write_book(path, title, sheets):
-    """sheets: list of (name, sheet xml, filter range or None)."""
+def write_book(path, title, sheets, copies=()):
+    """sheets: list of (name, sheet xml, filter range or None); copies: extra folders that get the same workbook.
+    Returns False when the file is locked (open in Excel); the copies are written regardless."""
     defined = "".join(
         f'<definedName name="_xlnm._FilterDatabase" localSheetId="{i}" hidden="1">\'{name}\'!{rng}</definedName>'
         for i, (name, _, rng) in enumerate(sheets) if rng)
@@ -438,7 +456,8 @@ def write_book(path, title, sheets):
     app = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
            '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">'
            "<Application>Microsoft Excel</Application></Properties>")
-    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+    temporary = path.with_name(path.stem + ".tmp.xlsx")
+    with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("[Content_Types].xml", types)
         z.writestr("_rels/.rels", root_rels)
         z.writestr("docProps/core.xml", core)
@@ -448,6 +467,17 @@ def write_book(path, title, sheets):
         z.writestr("xl/styles.xml", STYLES)
         for i, (_, xml, _) in enumerate(sheets):
             z.writestr(f"xl/worksheets/sheet{i + 1}.xml", xml)
+    for folder in copies:
+        folder.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(temporary, folder / path.name)
+    try:
+        os.replace(temporary, path)
+        return True
+    except PermissionError:
+        temporary.unlink(missing_ok=True)
+        print(f"WARNING: {path.relative_to(REPO)} is open in another program and was not updated. Close it and run "
+              f"python {Path(__file__).relative_to(REPO).as_posix()} again.", file=sys.stderr)
+        return False
 
 
 def notes_sheet(lines):
@@ -460,39 +490,61 @@ def notes_sheet(lines):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run", help="regression run ID under qa/regression (default: the newest with results.csv)")
-    run_id, run_date, results = latest_run(parser.parse_args().run)
+    parser.add_argument("--run", help="the run that just finished (for the notes); default: the newest recorded run")
+    parser.add_argument("--copy-to", help="also copy both workbooks into this folder (e.g. the run's artifacts)")
+    args = parser.parse_args()
+    runs = load_runs()
+    if not runs:
+        print("No recorded runs with results.csv under qa/regression; nothing to report.")
+        return 0
+    current = next((r for r in runs if r["id"] == args.run), runs[-1])
     OUT.mkdir(exist_ok=True)
     generated = dt.date.today().isoformat()
 
-    tests = test_rows(run_id, run_date, results)
-    counts = {k: sum(r[3] == k for r in tests) for k in ("OK", "NOT OK", "FAIL")}
+    tests = collect_tests(runs)
+    registry = update_registry(tests)
+    linked = {t: b["id"] for b in registry["bugs"] for t in b.get("tests", [])}
+    for test in tests:
+        if test["result"] == "FAIL" and not test.get("manual"):
+            if test["id"] in linked:
+                test["detail"] += f" Linked bug: {linked[test['id']]}."
+            elif test["id"] in registry["not_bugs"]:
+                test["detail"] += " " + registry["not_bugs"][test["id"]]
+    REGISTRY.write_text(json.dumps(registry, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    counts = {k: sum(t["result"] == k for t in tests) for k in ("OK", "NOT OK", "FAIL")}
     headers = ["Number", "Test Code Name", "Test Description", "Expectation", "Result", "Date", "Fail Description (Include Error)"]
     widths = [11, 17, 34, 60, 11, 12, 60]
     kinds = [CENTER, CENTER, TEXT, TEXT, CENTER, DATE, TEXT]
-    rows = [[n] + r for n, r in enumerate(tests, start=1)]
+    rows = [[n, t["id"], t["description"], t["expectation"], t["result"], t["date"], t["detail"]]
+            for n, t in enumerate(tests, start=1)]
     results_sheet = sheet_xml(headers, widths, kinds, rows, choice_col=4, choices=("OK", "NOT OK", "FAIL"),
                               colours={"OK": 0, "NOT OK": 1, "FAIL": 2}, heights=[row_height(r, widths) for r in rows])
     notes = notes_sheet([
-        ("Generated", f"{generated} by qa/excel-reports/generate_reports.py (re-run it after each test run)."),
-        ("Execution evidence", f"qa/regression/{run_id}/artifacts/results.csv — run {run_id}, {run_date}: "
-                               f"{sum(len(v) for v in results.values())} test methods in {len(results)} test IDs."),
+        ("Generated", f"{generated} by qa/excel-reports/generate_reports.py, automatically at the end of every "
+                      "Tests/regression/Invoke-Regression.ps1 run (also in CI)."),
+        ("Latest run", f"{current['id']} ({current['date']}{', commit ' + current['head'] if current['head'] else ''}): "
+                       f"{sum(len(v) for v in current['results'].values())} test methods in {len(current['results'])} IDs."),
+        ("Runs included", f"{len(runs)} recorded runs under qa/regression/*/artifacts/results.csv. Each test shows its "
+                          "latest execution; the Date column is the date of that execution."),
         ("Test list", "qa/planning/test-inventory.md (IDs and order) and qa/planning/*-test-cases.md (descriptions and "
                       "expectations). Executed tests missing from the inventory are added after their group."),
         ("Totals", f"{len(tests)} tests: {counts['OK']} OK, {counts['NOT OK']} NOT OK, {counts['FAIL']} FAIL."),
-        ("OK", "Executed in the run and every test method of the ID passed."),
-        ("FAIL", "Executed in the run and at least one test method failed; the error and its cause (linked bug, test "
-                 "defect, or not yet classified) are in the last column."),
-        ("NOT OK", "Not verified: skipped in the run (category or environment missing), not implemented, or manual "
-                   "without a recorded result. Date is blank because the test was not executed."),
+        ("OK", "Every test method of the ID passed in its latest execution."),
+        ("FAIL", "At least one test method failed in its latest execution; the error, the run and the cause (linked "
+                 "bug, suspected bug, or a reason it is not a bug) are in the last column."),
+        ("NOT OK", "Never executed: skipped in every recorded run (category or environment missing), not implemented, "
+                   "or manual without a recorded result. Date is blank."),
+        ("Manual tests", "Enter OK or FAIL, the date and notes in the row of a manual test after running it; "
+                         "regeneration keeps them."),
         ("UNRESOLVED", "Expectation marked UNRESOLVED (UR-xx): the expected result is not approved yet; see "
                        "qa/planning/unresolved-requirements.md. All other expectations are inferred from the code (UR-01)."),
-        ("History", "One row per test with its latest status. Earlier runs stay in qa/execution, qa/regression and qa/reports."),
     ])
-    write_book(OUT / "Test Results.xlsx", "CT007 Test Results",
-               [("Test Results", results_sheet, f"$A$1:$G${len(rows) + 1}"), ("Notes", notes, None)])
+    copies = [Path(args.copy_to)] if args.copy_to else []
+    written = [write_book(OUT / "Test Results.xlsx", "CT007 Test Results",
+                          [("Test Results", results_sheet, f"$A$1:$G${len(rows) + 1}"), ("Notes", notes, None)], copies)]
 
-    bugs = bug_rows(results)
+    bugs = bug_rows(registry, tests)
     if bugs:
         headers = ["Number", "Bug Code Name", "Bug Description", "Date", "Status", "Git Commit / Push"]
         widths = [11, 17, 95, 12, 13, 34]
@@ -501,24 +553,32 @@ def main():
         bug_sheet = sheet_xml(headers, widths, kinds, rows, choice_col=4, choices=("FIXED", "NOT FIXED"),
                               colours={"FIXED": 0, "NOT FIXED": 2}, heights=[row_height(r, widths) for r in rows])
         fixed = sum(b[3] == "FIXED" for b in bugs)
+        suspected = sum(b.get("suspected", False) for b in registry["bugs"])
         notes = notes_sheet([
-            ("Generated", f"{generated} by qa/excel-reports/generate_reports.py, against run {run_id} ({run_date})."),
-            ("Totals", f"{len(bugs)} bugs: {fixed} FIXED, {len(bugs) - fixed} NOT FIXED."),
-            ("Scope", "Application defects confirmed by a failing test. Failures caused by test code or the environment "
-                      "are explained in Test Results.xlsx instead. Suspected issues without a failing test (SUS-01…08) "
-                      "stay in qa/reports/run-20261016-final/defect-report.md."),
-            ("Status", "FIXED only when every linked test passes in the latest run. A committed fix without a passing "
-                       "test stays NOT FIXED with \"verification pending\" in the description."),
-            ("Git Commit / Push", "Commit hash and branch of the fix, and \"pushed\" only when the remote branch is "
-                                  "confirmed to contain it; otherwise \"push not verified\". "
-                                  f"\"{NO_FIX_FOUND}\": git log of the bug's source file shows no change after the bug "
-                                  f"was found (checked {generated} at {head_commit()})."),
-            ("Date", "The date the bug was first identified; kept when the report is regenerated."),
+            ("Generated", f"{generated} by qa/excel-reports/generate_reports.py after run {current['id']}."),
+            ("Totals", f"{len(bugs)} bugs: {fixed} FIXED, {len(bugs) - fixed} NOT FIXED, {suspected} suspected "
+                       "(confirmation pending)."),
+            ("Source", "qa/excel-reports/bugs.json is the bug registry: edit descriptions, links, Git references and "
+                       "classifications there (changes made only in this workbook are overwritten, except new bugs and "
+                       "Git references, which are imported)."),
+            ("Automatic bugs", "A failing test that is neither linked to a bug nor listed in not_bugs gets a SUSPECTED "
+                               "bug automatically. Triage it in bugs.json: confirm it, group related tests, or move the "
+                               "test to not_bugs when the test or the environment is at fault."),
+            ("Status", "FIXED only when every linked test is OK in its latest execution. A recorded fix commit without "
+                       "a passing test stays NOT FIXED with \"verification pending\" in the description."),
+            ("Git Commit / Push", "From bugs.json: commit hash, branch, and \"pushed\" only when the remote branch is "
+                                  "confirmed to contain the commit. For a fix verified without a recorded commit, the "
+                                  "run and commit at which the linked tests passed are shown, with \"push not verified\"."),
+            ("Date", "The date the bug was first identified; never changed by regeneration."),
+            ("Scope", "Application defects confirmed or suspected from failing tests. Suspected issues without a failing "
+                      "test (SUS-01…08) stay in qa/reports/run-20261016-final/defect-report.md."),
         ])
-        write_book(OUT / "Bug List.xlsx", "CT007 Bug List",
-                   [("Bug List", bug_sheet, f"$A$1:$F${len(rows) + 1}"), ("Notes", notes, None)])
-    print(f"Test Results.xlsx: {len(tests)} tests, {counts}. Bug List.xlsx: {len(bugs)} bugs.")
+        written.append(write_book(OUT / "Bug List.xlsx", "CT007 Bug List",
+                                  [("Bug List", bug_sheet, f"$A$1:$F${len(rows) + 1}"), ("Notes", notes, None)], copies))
+    print(f"Excel reports: {len(tests)} tests ({counts['OK']} OK, {counts['NOT OK']} NOT OK, {counts['FAIL']} FAIL), "
+          f"{len(bugs)} bugs ({sum(b[3] == 'FIXED' for b in bugs)} FIXED) -> {OUT.relative_to(REPO).as_posix()}/")
+    return 0 if all(written) else 3
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

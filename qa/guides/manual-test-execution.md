@@ -165,6 +165,9 @@ powershell -File Tests\regression\Invoke-Regression.ps1 -RunId reg-20261017-01
 ```
 
 - Use a new `-RunId` each time; it becomes the folder `qa\regression\<RunId>\artifacts\`.
+- At the end it **updates the Excel reports** `qa\excel-reports\Test Results.xlsx` and `Bug List.xlsx`, also when tests fail, and copies them into the artifacts. Close the workbooks in Excel first; an open workbook is skipped with a warning.
+- To run and report only some tests: `powershell -File Tests\regression\Invoke-Regression.ps1 -RunId reg-20261018-02 -Tests FE-047,BE-030`.
+- The direct runs above (`& $tests …`) are for quick checks only: they do **not** update the Excel reports.
 - This script builds under `%TEMP%`, so a running app or `dotnet watch` does not block it.
 - Verified result: the full suite (110 tests), 102 passed, 3 failed, 5 skipped.
 

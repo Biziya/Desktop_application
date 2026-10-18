@@ -54,9 +54,26 @@ SKIP BE-006 DrillholeApiTests.SqlProjection (0 ms) — category Sql not included
 | | `…\build.log` | `dotnet restore` and `dotnet build` output (compiler errors are here) |
 | | `…\console.log` | The runner's full terminal output |
 | | `…\results.csv` | As above |
+| | `…\run-info.json` | When the run finished, the commit, and the test runner's exit code |
+| | `…\Test Results.xlsx`, `…\Bug List.xlsx` | Copies of the Excel reports as generated at the end of this run |
 | `Publish-TestResults.ps1 -Artifacts <folder>` | `<folder>\junit.xml` | JUnit XML (IDs, status, duration, messages) for tools that read JUnit |
 | | `<folder>\summary.md` | Totals, new failures, known defects, skips |
 | GitHub Actions | artifact `test-results-ci-<run_id>-<attempt>` | All of the above; see [ci-cd-testing-guide.md](ci-cd-testing-guide.md) |
+
+### Excel reports
+
+`Invoke-Regression.ps1` (locally and in CI) updates two workbooks at the end of every run, whether tests pass or fail:
+
+| File | Content |
+|---|---|
+| `qa\excel-reports\Test Results.xlsx` | One row per test case (inventory plus executed tests): Number, Test Code Name, Test Description, Expectation, Result (`OK` / `NOT OK` / `FAIL`), Date, Fail Description. Each test shows its latest execution across all recorded runs, so change-based runs do not hide the other tests |
+| `qa\excel-reports\Bug List.xlsx` | One row per bug: Number, Bug Code Name, Bug Description, Date, Status (`FIXED` / `NOT FIXED`), Git Commit / Push |
+
+- **Bug registry:** `qa\excel-reports\bugs.json`. A failing test that is not linked to a bug and not listed under `not_bugs` gets a **SUSPECTED** bug automatically. Triage it there: confirm and describe it, group related tests, or move the test to `not_bugs` with the cause (a test or environment problem).
+- **Status:** a bug becomes `FIXED` only when all its linked tests pass. Record a fix commit in its `git` field, for example `a1b2c3d - development - pushed`; write "pushed" only when confirmed.
+- **Manual tests:** enter `OK` or `FAIL`, the date and notes in the manual test's row; regeneration keeps them.
+- **Regenerate by hand** (for example after editing `bugs.json`): `python qa\excel-reports\generate_reports.py`.
+- Each workbook has a **Notes** sheet with its sources and rules.
 
 Useful PowerShell one-liners for a results file:
 

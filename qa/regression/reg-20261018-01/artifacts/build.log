@@ -1,0 +1,10 @@
+﻿  Determining projects to restore...
+  Restored C:\Users\user\AppData\Local\Temp\ct007-regression\reg-20261018-01\Backend\Backend.csproj (in 256 ms).
+  Restored C:\Users\user\AppData\Local\Temp\ct007-regression\reg-20261018-01\Frontend\Frontend.csproj (in 256 ms).
+  Restored C:\Users\user\AppData\Local\Temp\ct007-regression\reg-20261018-01\Tests\CT007.Tests\CT007.Tests.csproj (in 256 ms).
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:07.71
