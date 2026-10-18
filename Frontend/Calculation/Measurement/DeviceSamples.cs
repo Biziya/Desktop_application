@@ -5,6 +5,7 @@ namespace Frontend.Calculation.Measurement;
 /// (the row's identity in the device database); <see cref="DeviceSessionId"/> is the DEVICE's <c>session_id</c>
 /// (a Gamma Guard recording session) and has nothing to do with this app's measurement session.
 /// <see cref="TsMs"/> is Unix epoch milliseconds (UTC) — checked by <see cref="DeviceTime"/> before each capture.
+/// <see cref="Count0"/> and <see cref="Count0Raw"/> are shocks per minute, as the device reports them.
 /// </summary>
 public sealed record DeviceSample(
     long SourceId,
@@ -26,6 +27,7 @@ public sealed record DetectorIdentity(string Serial, string? Name, string? Mac, 
 /// <summary>
 /// Result of one capture: arithmetic means of the accepted samples, per field, over that field's valid (non-null,
 /// finite) values only — a missing value is never counted as zero, and a field without any valid value stays null.
+/// <see cref="Count0"/> and <see cref="Count0Raw"/> are in shocks per second (the device reports shocks per minute).
 /// Identifiers, sequence numbers and timestamps are not averaged: <see cref="FirstTsMs"/> is the ts_ms of the first
 /// accepted sample (in time order) and <see cref="DeviceSessionId"/> is the device session when every accepted sample
 /// has the same one (null when they differ; each raw sample keeps its own).
@@ -44,6 +46,9 @@ public sealed record CaptureSummary(
 
 public static class SampleAveraging
 {
+    /// <summary>The device reports Count0 and Count0Raw as shocks per minute; the summary uses shocks per second.</summary>
+    private const double SecondsPerMinute = 60.0;
+
     public static CaptureSummary Summarize(IReadOnlyList<DeviceSample> samples)
     {
         double? Mean(Func<DeviceSample, double?> field)
@@ -57,8 +62,8 @@ public static class SampleAveraging
         return new CaptureSummary(
             samples.Count,
             samples.Where(s => s.TsMs is not null).OrderBy(s => s.TsMs).ThenBy(s => s.SourceId).FirstOrDefault()?.TsMs,
-            Mean(s => s.Count0),
-            Mean(s => s.Count0Raw),
+            Mean(s => s.Count0 / SecondsPerMinute),        // shocks/min -> shocks/s
+            Mean(s => s.Count0Raw / SecondsPerMinute),     // shocks/min -> shocks/s
             Mean(s => s.Hdm),
             Mean(s => s.HdmRaw),
             Mean(s => s.DoseRate),
