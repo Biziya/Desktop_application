@@ -1,13 +1,27 @@
+
+using System;
 using System.IO;
 using System.Windows;
 using Frontend.Pages;
+using Velopack;
 
 namespace Frontend;
 
 public partial class App : Application
 {
-    // The section settings (Pages/**/*.yaml) are read before the main window exists; a configuration error is shown
-    // and the app closes instead of opening with missing labels or sizes.
+    [STAThread]
+    private static void Main(string[] args)
+    {
+        // Initialize Velopack before WPF starts.
+        VelopackApp.Build().Run();
+
+        // Start the WPF application normally.
+        App app = new();
+        app.InitializeComponent();
+        app.Run();
+    }
+
+    // Load YAML configuration before opening MainWindow.
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -18,7 +32,13 @@ public partial class App : Application
         }
         catch (InvalidDataException error)
         {
-            MessageBox.Show(error.Message, "SPP CT-007 Measurement Studio — configuration error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(
+                error.Message,
+                "SPP CT-007 Measurement Studio — configuration error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error
+            );
+
             Shutdown(1);
             return;
         }
