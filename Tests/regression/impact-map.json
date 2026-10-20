@@ -14,6 +14,7 @@
     { "pattern": "^Frontend/Shared/Models/", "direct": ["FE-019", "FE-020"], "dependents": ["FE-024..FE-039", "INT-001", "INT-011"] },
     { "pattern": "^Frontend/Api/(ApiClient|ApiResult|ApiSettings|BackendConnection)\\.cs$", "direct": ["FE-001..FE-008"], "dependents": ["FE-009..FE-012", "INT-001..INT-006", "BE-011"] },
     { "pattern": "^Frontend/Api/api-settings\\.json$", "direct": ["FE-005"], "dependents": ["E2E-001..E2E-004"] },
+    { "pattern": "^Frontend/Config/|^Frontend/\\.env\\.example$|^Frontend/App\\.xaml\\.cs$", "direct": ["FE-005", "FE-053"], "dependents": ["E2E-001..E2E-004"] },
     { "pattern": "^Frontend/Api/Core-information/drillholes/", "direct": ["FE-009..FE-013", "BE-040"], "dependents": ["FE-014..FE-016", "FE-018", "INT-001..INT-006"] },
     { "pattern": "^Frontend/Pages/CoreInformation/", "direct": ["FE-007", "FE-009..FE-023", "FE-040"], "dependents": ["INT-001..INT-006", "INT-011", "INT-017"] },
     { "pattern": "^Frontend/Pages/Measurement/(MeasurementViewModel|MeasurementResult|MeasurementService)\\.cs$", "direct": ["FE-024..FE-039", "FE-048", "FE-049"], "dependents": ["FE-021", "FE-022", "FE-040", "FE-046", "INT-007..INT-017"] },

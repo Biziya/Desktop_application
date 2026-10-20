@@ -109,7 +109,9 @@ CSV contains the measurement columns above in order (including the hidden Captur
 
 ## Backend API (Core Information)
 
-Base URL and timings are in `Api/api-settings.json` (copied next to the executable; edit it there, no rebuild): `baseUrl` (default `http://localhost:5002`), `requestTimeoutSeconds` (5) and `statusIntervalSeconds` (5).
+Base URL and timings are in `Api/api-settings.json` (copied next to the executable; edit it there, no rebuild): `baseUrl` (default `http://localhost:5002`), `requestTimeoutSeconds` (5) and `statusIntervalSeconds` (5). An installed copy is configured per user instead: `%LocalAppData%\CT007_Measurement_Studio\.env` (`API_BASE_URL`, `API_TIMEOUT_SECONDS`, `API_RETRY_INTERVAL_SECONDS`, see `.env.example`), and `API_*` environment variables override both; invalid values there stop the app with a message. Details: `docs/INSTALLER_GUIDE.md`.
+
+The application id, name and version are in `Config/application.yaml` (the window title, compiled version and installer all use it).
 
 ```text
 Api/

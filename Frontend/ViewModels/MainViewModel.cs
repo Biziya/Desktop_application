@@ -21,7 +21,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private bool isSidebarExpanded = true;
 
     public MainViewModel()
-        : this(new SqliteMeasurementRepository(SqliteMeasurementRepository.DefaultPath), ApiSettings.Load(ApiSettings.DefaultPath),
+        : this(new SqliteMeasurementRepository(SqliteMeasurementRepository.DefaultPath), ApiSettings.LoadConfigured(),
             DeviceSettings.Load(DeviceSettings.DefaultPath))
     {
     }

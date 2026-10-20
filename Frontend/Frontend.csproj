@@ -16,11 +16,26 @@
     <StartupObject>Frontend.App</StartupObject>
   </PropertyGroup>
 
+  <!-- Application metadata comes from Config\application.yaml (the single source of truth), so every build -
+       Visual Studio, dotnet build or build-installer.ps1 - compiles the same version and product name. -->
+  <PropertyGroup>
+    <ApplicationYaml>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)Config\application.yaml'))</ApplicationYaml>
+    <Version>$([System.Text.RegularExpressions.Regex]::Match($(ApplicationYaml), '(?m)^\s+version:\s*"?([^"\r\n]+?)"?\s*$').Result('$1'))</Version>
+    <Product>$([System.Text.RegularExpressions.Regex]::Match($(ApplicationYaml), '(?m)^\s+name:\s*"?([^"\r\n]+?)"?\s*$').Result('$1'))</Product>
+    <Description>$([System.Text.RegularExpressions.Regex]::Match($(ApplicationYaml), '(?m)^\s+description:\s*"?([^"\r\n]+?)"?\s*$').Result('$1'))</Description>
+    <AssemblyTitle>$(Product)</AssemblyTitle>
+  </PropertyGroup>
+
   <ItemGroup>
     <Resource Include="Icons\icon.ico" />
     <None Include="Icons\icon.svg" />
 
-    <!-- Backend API configuration -->
+    <!-- Application metadata (name, version); read at start-up -->
+    <None Update="Config\application.yaml"
+          CopyToOutputDirectory="PreserveNewest" />
+
+    <!-- Backend API configuration (defaults; per-user .env overrides them, see ApiSettings).
+         .env / .env.example are never copied to the output, so no .env reaches the installer. -->
     <None Update="Api\api-settings.json"
           CopyToOutputDirectory="PreserveNewest" />
 

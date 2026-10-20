@@ -128,6 +128,44 @@ public static class ApiClientTests
         Assert.Equal(new ApiSettings("http://host:6000", TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(2)), ApiSettings.Load(valid), "valid file");
     }
 
+    [Test("FE-005", "The .env file and API_* variables override api-settings.json; invalid values are errors")]
+    public static void SettingsEnvOverrides()
+    {
+        using var folder = new TestFolder();
+        var defaults = ApiSettings.Default;
+        var none = folder.Path("missing.env");
+        Func<string, string?> noVariables = _ => null;
+
+        Assert.Equal(defaults, defaults.WithOverrides(none, noVariables), "no .env, no variables");
+
+        var env = folder.Path(".env");
+        File.WriteAllText(env, "# comment\n\nAPI_BASE_URL=\"https://api.test\"\nAPI_TIMEOUT_SECONDS=30\nOTHER=x\n");
+        Assert.Equal(defaults with { BaseUrl = "https://api.test", RequestTimeout = TimeSpan.FromSeconds(30) },
+            defaults.WithOverrides(env, noVariables), ".env values; missing key keeps its value");
+
+        var variables = new Dictionary<string, string> { ["API_BASE_URL"] = "http://override:7000", ["API_RETRY_INTERVAL_SECONDS"] = "10" };
+        Assert.Equal(new ApiSettings("http://override:7000", TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(10)),
+            defaults.WithOverrides(env, variables.GetValueOrDefault), "environment variables win");
+
+        var cases = new (string Name, string Content, string Message)[]
+        {
+            ("relative URL", "API_BASE_URL=api/backend", "API_BASE_URL"),
+            ("ftp URL", "API_BASE_URL=ftp://host", "API_BASE_URL"),
+            ("URL with credentials", "API_BASE_URL=https://user:secret@host", "API_BASE_URL"),
+            ("zero timeout", "API_TIMEOUT_SECONDS=0", "API_TIMEOUT_SECONDS"),
+            ("text interval", "API_RETRY_INTERVAL_SECONDS=abc", "API_RETRY_INTERVAL_SECONDS"),
+            ("line without =", "API_BASE_URL", "line 1")
+        };
+
+        foreach (var (name, content, message) in cases)
+        {
+            File.WriteAllText(env, content);
+            var error = Assert.Throws<InvalidDataException>(() => defaults.WithOverrides(env, noVariables), name);
+            Assert.Contains(message, error.Message, name);
+            Assert.False(error.Message.Contains("secret"), $"{name}: no credentials in the message");
+        }
+    }
+
     [Test("FE-006", "Probe polling runs on the interval with HEAD only; overlapping checks are shared", Category = "Timing")]
     public static async Task ProbePolling()
     {

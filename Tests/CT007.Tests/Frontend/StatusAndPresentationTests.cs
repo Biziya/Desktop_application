@@ -1,6 +1,9 @@
+using System.Reflection;
+using Frontend.Config;
+
 namespace Ct007.Tests.FrontendTests;
 
-/// <summary>FE-041…FE-047: toasts, status announcements, Device Status page, settings, table formatting (F06–F09, F16).</summary>
+/// <summary>FE-041…FE-047, FE-052, FE-053: toasts, status announcements, Device Status page, settings, table formatting (F06–F09, F16).</summary>
 public static class StatusAndPresentationTests
 {
     private const ulong AddressA = 0x0011223344A1;
@@ -374,6 +377,37 @@ public static class StatusAndPresentationTests
         }
 
         return folder;
+    }
+
+    [Test("FE-053", "application.yaml: shipped metadata loads and matches the compiled version; invalid values name the key")]
+    public static void ApplicationMetadata()
+    {
+        var shipped = ApplicationSettings.Load(AppContext.BaseDirectory).Application;
+        Assert.Equal("CT007.MeasurementStudio", shipped.Id, "id");
+        Assert.Equal("SPP CT-007 Measurement Studio", shipped.Name, "name");
+
+        // Frontend.csproj compiles the same file's version into the assembly ("1.0.0+<commit>").
+        var compiled = typeof(ApplicationSettings).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion;
+        Assert.Equal(shipped.Version, compiled.Split('+')[0], "compiled version");
+
+        using var folder = new TestFolder();
+        var text = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, ApplicationSettings.File));
+        var cases = new (string Name, string From, string To, string Expected)[]
+        {
+            ("missing version", "  version: \"1.0.0\"\n", "", "version"),
+            ("not SemVer", "version: \"1.0.0\"", "version: \"1.0\"", "application.version: '1.0' is not a SemVer version"),
+            ("invalid id", "id: \"CT007.MeasurementStudio\"", "id: \"CT007 Measurement\"", "application.id"),
+            ("empty name", "name: \"SPP CT-007 Measurement Studio\"", "name: \" \"", "application.name")
+        };
+
+        foreach (var (name, from, to, expected) in cases)
+        {
+            var baseDirectory = folder.Path(Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(baseDirectory, "Config"));
+            Assert.True(text.Replace("\r\n", "\n").Contains(from), $"{name}: shipped file contains '{from.Trim()}'");
+            File.WriteAllText(Path.Combine(baseDirectory, ApplicationSettings.File), text.Replace("\r\n", "\n").Replace(from, to));
+            Assert.Contains(expected, Assert.Throws<InvalidDataException>(() => ApplicationSettings.Load(baseDirectory), name).Message, name);
+        }
     }
 
     private static void Problem(string expected, string baseDirectory, string what) =>

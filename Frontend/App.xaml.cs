@@ -1,7 +1,9 @@
 
 using System;
 using System.IO;
+using System.Reflection;
 using System.Windows;
+using Frontend.Config;
 using Frontend.Pages;
 using Velopack;
 
@@ -21,20 +23,26 @@ public partial class App : Application
         app.Run();
     }
 
-    // Load YAML configuration before opening MainWindow.
+    // Load YAML configuration (application metadata, page sections) and the backend API settings before showing
+    // MainWindow; a configuration error is shown and the app closes instead of opening half-configured.
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        MainWindow window;
 
         try
         {
+            ApplicationSettings.Load(AppContext.BaseDirectory).AddTo(Resources);
             PageSettings.AddTo(Resources, AppContext.BaseDirectory);
+
+            // MainViewModel reads ApiSettings.LoadConfigured() (api-settings.json, .env, API_* variables).
+            window = new MainWindow();
         }
         catch (InvalidDataException error)
         {
             MessageBox.Show(
                 error.Message,
-                "SPP CT-007 Measurement Studio — configuration error",
+                $"{ApplicationName} — configuration error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error
             );
@@ -43,6 +51,10 @@ public partial class App : Application
             return;
         }
 
-        new MainWindow().Show();
+        window.Show();
     }
+
+    // From application.yaml once loaded; otherwise the product name compiled from the same file.
+    private string? ApplicationName =>
+        TryFindResource("ApplicationName") as string ?? typeof(App).Assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product;
 }

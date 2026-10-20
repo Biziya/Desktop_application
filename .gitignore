@@ -5,3 +5,12 @@ obj/
 
 
 publish/
+
+# Build output of build-installer.ps1 (Velopack installers and packages)
+Releases/
+
+# Real .env files hold machine-specific settings; only .env.example is committed
+.env
+**/.env
+**/bin/
+**/obj/

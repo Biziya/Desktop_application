@@ -1,0 +1,10 @@
+# Application metadata: the single source of truth for the name and version.
+# - Frontend.csproj reads it at build time (assembly version, product name).
+# - build-installer.ps1 reads it for the Velopack package (id, title, version).
+# - The app reads it at start-up (window title).
+# Change the version here only; it must be SemVer (for example 1.0.1 or 1.1.0-beta.1).
+application:
+  id: "CT007.MeasurementStudio"
+  name: "SPP CT-007 Measurement Studio"
+  version: "1.0.0"
+  description: "CT-007 Measurement Desktop Application"
