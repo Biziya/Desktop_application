@@ -109,13 +109,13 @@ CSV contains the measurement columns above in order (including the hidden Captur
 
 ## Backend API (Core Information)
 
-Base URL and timings come from `.env.<APP_ENV>` (`API_BASE_URL` required, `API_TIMEOUT_SECONDS` and `API_RETRY_INTERVAL_SECONDS` default 5; see `.env.example`). `APP_ENV` is the environment variable, otherwise the build (Debug `local`, Release/installer `production`). The file is read from `%LocalAppData%\CT007_Measurement_Studio\Config\`, then (running from source) from this folder, so for development create `Frontend/.env.local`; `API_*` environment variables override the file. A missing or invalid setting stops the app with a message; edit the file and restart, no rebuild. Details: `docs/API_CONFIGURATION.md`.
+Base URL and timings come from one `.env` file (`API_BASE_URL` required, `API_TIMEOUT_SECONDS` and `API_RETRY_INTERVAL_SECONDS` default 5; see `.env.example`), chosen by the build: Debug (`dotnet watch run`) reads `Frontend/.env.local`; the installed Release build reads `%LocalAppData%\CT007_Measurement_Studio\Config\.env.production`, created on first start from `Frontend/.env.production` (shipped as `Config\.env.production.template`) and never overwritten. A missing or invalid setting stops the app with a message; edit the file and restart, no rebuild. Details: `docs/API_CONFIGURATION.md`.
 
 The application id, name and version are in `Config/application.yaml` (the window title, compiled version and installer all use it).
 
 ```text
 Api/
-├── ApiSettings.cs                      configuration (APP_ENV, .env.<APP_ENV>, API_* variables)
+├── ApiSettings.cs                      configuration (.env.local or per-user .env.production)
 ├── ApiClient.cs, ApiResult.cs          the one HttpClient (base URL, timeout, JSON) and typed results
 ├── BackendConnection.cs                Online/Offline monitor (HEAD probe of the base URL)
 └── Core-information/

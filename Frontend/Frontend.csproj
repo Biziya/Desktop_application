@@ -26,9 +26,9 @@
     <AssemblyTitle>$(Product)</AssemblyTitle>
   </PropertyGroup>
 
-  <!-- Backend API environment used when the APP_ENV environment variable is not set: Debug builds read .env.local,
-       every other build .env.production (Api\ApiSettings.cs, docs\API_CONFIGURATION.md). Override with
-       -p:AppEnvironment=local|production. Only the environment name is compiled in, never an address. -->
+  <!-- Backend API environment: Debug builds read Frontend\.env.local, every other build
+       %LocalAppData%\CT007_Measurement_Studio\Config\.env.production (Api\ApiSettings.cs, docs\API_CONFIGURATION.md).
+       Override with -p:AppEnvironment=local|production. Only the environment name is compiled in, never an address. -->
   <PropertyGroup>
     <AppEnvironment Condition="'$(AppEnvironment)' == '' and '$(Configuration)' == 'Debug'">local</AppEnvironment>
     <AppEnvironment Condition="'$(AppEnvironment)' == ''">production</AppEnvironment>
@@ -43,9 +43,20 @@
     <Error Text="AppEnvironment must be 'local' or 'production' (is '$(AppEnvironment)')." />
   </Target>
 
+  <!-- Production builds ship Frontend\.env.production (non-secret settings only; build-installer.ps1 validates it) as
+       Config\.env.production.template. The app copies it to the per-user Config folder on first start. -->
+  <Target Name="CheckProductionTemplate" BeforeTargets="BeforeBuild"
+          Condition="'$(AppEnvironment)' == 'production' and !Exists('$(MSBuildThisFileDirectory).env.production')">
+    <Warning Text="Frontend\.env.production not found: this production build ships no API configuration template, so installed copies need %LocalAppData%\CT007_Measurement_Studio\Config\.env.production created by hand." />
+  </Target>
+
   <ItemGroup>
-    <!-- .env files are this machine's configuration: never copied to the output, so none reaches the installer. -->
+    <!-- Other .env files are this machine's configuration: never copied to the output. -->
     <None Remove=".env*" />
+    <None Include=".env.production"
+          Condition="'$(AppEnvironment)' == 'production' and Exists('.env.production')"
+          Link="Config\.env.production.template"
+          CopyToOutputDirectory="PreserveNewest" />
 
     <Resource Include="Icons\icon.ico" />
     <None Include="Icons\icon.svg" />

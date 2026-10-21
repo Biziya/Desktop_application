@@ -84,91 +84,74 @@ public static class ApiClientTests
         Assert.Equal(ApiStatus.InvalidResponse, nothing.Status, "null: status");
     }
 
-    [Test("FE-005", "APP_ENV comes from the APP_ENV variable, otherwise the build; only local and production are accepted")]
-    public static void SettingsEnvironmentSelection()
+    [Test("FE-005", "The build selects the file: local reads Frontend/.env.local of the source checkout, nothing else")]
+    public static void SettingsLocalFile()
     {
-        Func<string, string?> noVariables = _ => null;
-        Assert.Equal("local", ApiSettings.SelectEnvironment(noVariables, "local"), "build default local");
-        Assert.Equal("production", ApiSettings.SelectEnvironment(noVariables, "production"), "build default production");
-
-        var variables = new Dictionary<string, string> { ["APP_ENV"] = "local" };
-        Assert.Equal("local", ApiSettings.SelectEnvironment(variables.GetValueOrDefault, "production"), "variable wins over the build");
-
-        foreach (var (name, variable, build) in new (string, string?, string?)[]
-                 { ("unknown variable", "staging", "local"), ("wrong case", "Production", "local"), ("no value at all", null, null) })
-        {
-            var values = new Dictionary<string, string?> { ["APP_ENV"] = variable };
-            var error = Assert.Throws<InvalidDataException>(() => ApiSettings.SelectEnvironment(values.GetValueOrDefault, build), name);
-            Assert.Contains("local, production", error.Message, name);
-        }
+        using var folder = new TestFolder();
+        var project = folder.Path("Frontend");
+        var output = Path.Combine(project, "bin", "Debug");
+        Directory.CreateDirectory(output);
+        File.WriteAllText(Path.Combine(project, "Frontend.csproj"), "<Project />");
 
         // Debug builds of this repository compile AppEnvironment=local into the assembly (Frontend.csproj).
-        Assert.True(ApiSettings.BuildEnvironment is "local" or "production", "the build compiles an environment in");
+        Assert.Equal("local", ApiSettings.BuildEnvironment, "Debug build environment");
+        Assert.Equal(Path.Combine(project, ".env.local"), ApiSettings.LocalFile(output), "found above bin");
+        Assert.Contains("dotnet watch run", Assert.Throws<InvalidDataException>(() => ApiSettings.LocalFile(folder.Path("elsewhere")), "no checkout").Message,
+            "no checkout: explains where a Debug build must run");
+
+        var local = Path.Combine(project, ".env.local");
+        Assert.Contains(".env.example", Assert.Throws<InvalidDataException>(() => ApiSettings.Load("local", local), "missing").Message, "missing .env.local");
+
+        File.WriteAllText(local, "APP_ENV=local\nAPI_BASE_URL=http://10.0.0.1:7047\nAPI_TIMEOUT_SECONDS=9\n");
+        Assert.Equal(new ApiSettings("http://10.0.0.1:7047", TimeSpan.FromSeconds(9), TimeSpan.FromSeconds(5)),
+            ApiSettings.Load("local", local), "file values; missing optional key uses its default");
+
+        File.WriteAllText(local, "APP_ENV=production\nAPI_BASE_URL=http://10.0.0.1:7047\n");
+        Assert.Contains("APP_ENV=production", Assert.Throws<InvalidDataException>(() => ApiSettings.Load("local", local), "APP_ENV differs").Message,
+            "APP_ENV line differs");
     }
 
-    [Test("FE-005", "The per-user .env.<APP_ENV> wins over the project's; only the first existing file is read")]
-    public static void SettingsFileSelection()
+    [Test("FE-005", "Production: first start copies the shipped template; an existing .env.production is never overwritten")]
+    public static void SettingsProductionInitialization()
     {
         using var folder = new TestFolder();
-        var config = folder.Path("Config");
-        var project = folder.Path("Frontend");
-        Directory.CreateDirectory(config);
-        Directory.CreateDirectory(Path.Combine(project, "bin", "Debug"));
-        File.WriteAllText(Path.Combine(project, "Frontend.csproj"), "<Project />");
-        Func<string, string?> noVariables = _ => null;
+        var file = Path.Combine(folder.Path("LocalAppData"), "CT007_Measurement_Studio", "Config", ".env.production");
+        var template = folder.Path(".env.production.template");
 
-        Assert.Equal(project, ApiSettings.ProjectDirectory(Path.Combine(project, "bin", "Debug")), "project found above bin");
-        Assert.Equal(null, ApiSettings.ProjectDirectory(config), "installed: no project folder");
+        // Nothing shipped and nothing configured: an error telling the administrator what to do, no file invented.
+        Assert.Equal(file, ApiSettings.InitializeProductionFile(file, template), "returns the per-user path");
+        Assert.False(File.Exists(file), "no template: nothing created");
+        Assert.Contains("administrator", Assert.Throws<InvalidDataException>(() => ApiSettings.Load("production", file), "missing").Message, "missing");
 
-        var candidates = ApiSettings.EnvFileCandidates("production", config, project);
-        Assert.Sequence([Path.Combine(config, ".env.production"), Path.Combine(project, ".env.production")], candidates, "lookup order");
-        Assert.Sequence([Path.Combine(config, ".env.local")], ApiSettings.EnvFileCandidates("local", config, null), "installed: config folder only");
+        // Fresh install: the Config folder does not exist yet.
+        File.WriteAllText(template, "APP_ENV=production\nAPI_BASE_URL=https://ct007-api.test\nAPI_TIMEOUT_SECONDS=30\n");
+        ApiSettings.InitializeProductionFile(file, template);
+        Assert.Equal(File.ReadAllText(template), File.ReadAllText(file), "template copied");
+        Assert.Equal(new ApiSettings("https://ct007-api.test", TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(5)),
+            ApiSettings.Load("production", file), "production values");
 
-        File.WriteAllText(Path.Combine(project, ".env.production"), "API_BASE_URL=https://project.test\nAPI_TIMEOUT_SECONDS=9\n");
-        Assert.Equal(new ApiSettings("https://project.test", TimeSpan.FromSeconds(9), TimeSpan.FromSeconds(5)),
-            ApiSettings.Load("production", candidates, noVariables), "project file; missing optional key uses its default");
-
-        File.WriteAllText(Path.Combine(config, ".env.production"), "APP_ENV=production\nAPI_BASE_URL=https://user.test\n");
-        Assert.Equal(new ApiSettings("https://user.test", TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5)),
-            ApiSettings.Load("production", candidates, noVariables), "per-user file wins; the project file is not merged in");
-
-        // The other environment's file is never a fallback.
-        File.WriteAllText(Path.Combine(config, ".env.local"), "API_BASE_URL=http://localhost:5002\n");
-        var missing = Assert.Throws<InvalidDataException>(
-            () => ApiSettings.Load("production", ApiSettings.EnvFileCandidates("production", folder.Path("empty"), null), noVariables), "no file");
-        Assert.Contains("API_BASE_URL", missing.Message, "no file: names the key");
-        Assert.Contains(".env.production", missing.Message, "no file: names the expected file");
-
-        var mismatch = Path.Combine(config, ".env.production");
-        File.WriteAllText(mismatch, "APP_ENV=local\nAPI_BASE_URL=http://localhost:5002\n");
-        Assert.Contains("APP_ENV=local", Assert.Throws<InvalidDataException>(
-            () => ApiSettings.Load("production", candidates, noVariables), "APP_ENV line differs").Message, "APP_ENV line differs");
-
-        File.WriteAllText(mismatch, "API_TIMEOUT_SECONDS=10\nAPI_BASE_URL=\n");
-        Assert.Contains("does not set API_BASE_URL", Assert.Throws<InvalidDataException>(
-            () => ApiSettings.Load("production", candidates, noVariables), "empty URL").Message, "empty URL");
+        // The administrator edits the file; later starts and a newer template (an update) leave it alone.
+        File.WriteAllText(file, "API_BASE_URL=https://edited.test\n");
+        File.WriteAllText(template, "APP_ENV=production\nAPI_BASE_URL=https://new-release.test\n");
+        ApiSettings.InitializeProductionFile(file, template);
+        Assert.Equal(new ApiSettings("https://edited.test", TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5)),
+            ApiSettings.Load("production", file), "edited file kept");
     }
 
-    [Test("FE-005", "API_* variables override the .env file key by key; invalid values are errors")]
-    public static void SettingsEnvOverrides()
+    [Test("FE-005", "Invalid or incomplete .env values are configuration errors that name the key")]
+    public static void SettingsInvalidValues()
     {
         using var folder = new TestFolder();
-        var env = folder.Path(".env.local");
-        string[] candidates = [env];
-        Func<string, string?> noVariables = _ => null;
+        var env = folder.Path(".env.production");
 
-        File.WriteAllText(env, "# comment\n\nAPI_BASE_URL=\"https://api.test\"\nAPI_TIMEOUT_SECONDS=30\nOTHER=x\n");
-        Assert.Equal(new ApiSettings("https://api.test", TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(5)),
-            ApiSettings.Load("local", candidates, noVariables), ".env values; missing key uses its default");
-
-        var variables = new Dictionary<string, string> { ["API_BASE_URL"] = "http://override:7000", ["API_RETRY_INTERVAL_SECONDS"] = "10" };
-        Assert.Equal(new ApiSettings("http://override:7000", TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(10)),
-            ApiSettings.Load("local", candidates, variables.GetValueOrDefault), "environment variables win");
-        Assert.Equal(new ApiSettings("http://override:7000", TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10)),
-            ApiSettings.Load("local", [folder.Path("missing")], variables.GetValueOrDefault), "variables alone, no file");
+        File.WriteAllText(env, "# comment\n\nAPI_BASE_URL=\"https://api.test\"\nAPI_RETRY_INTERVAL_SECONDS=10\nOTHER=x\n");
+        Assert.Equal(new ApiSettings("https://api.test", TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10)),
+            ApiSettings.Load("production", env), "comments, quotes and unknown keys");
 
         var cases = new (string Name, string Content, string Message)[]
         {
+            ("empty file", "", "does not set API_BASE_URL"),
+            ("empty URL", "API_BASE_URL=", "does not set API_BASE_URL"),
             ("relative URL", "API_BASE_URL=api/backend", "API_BASE_URL"),
             ("ftp URL", "API_BASE_URL=ftp://host", "API_BASE_URL"),
             ("URL with credentials", "API_BASE_URL=https://user:secret@host", "API_BASE_URL"),
@@ -176,13 +159,13 @@ public static class ApiClientTests
             ("negative timeout", "API_BASE_URL=http://host\nAPI_TIMEOUT_SECONDS=-1", "API_TIMEOUT_SECONDS"),
             ("text interval", "API_BASE_URL=http://host\nAPI_RETRY_INTERVAL_SECONDS=abc", "API_RETRY_INTERVAL_SECONDS"),
             ("line without =", "API_BASE_URL", "line 1"),
-            ("no URL", "API_TIMEOUT_SECONDS=5", "does not set API_BASE_URL")
+            ("local file content", "APP_ENV=local\nAPI_BASE_URL=http://host", "APP_ENV=local")
         };
 
         foreach (var (name, content, message) in cases)
         {
             File.WriteAllText(env, content);
-            var error = Assert.Throws<InvalidDataException>(() => ApiSettings.Load("local", candidates, noVariables), name);
+            var error = Assert.Throws<InvalidDataException>(() => ApiSettings.Load("production", env), name);
             Assert.Contains(message, error.Message, name);
             Assert.False(error.Message.Contains("secret"), $"{name}: no credentials in the message");
         }

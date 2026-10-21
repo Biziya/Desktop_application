@@ -9,7 +9,7 @@ deployed separately and is not changed by anything in this guide.
 | What | Where | Used by |
 |---|---|---|
 | Application id, name, version, description | `Frontend/Config/application.yaml` (single source of truth) | `Frontend.csproj` (compiled version), `build-installer.ps1` (Velopack id, title, version), the app (window title) |
-| Frontend → backend API URL, timeout, retry interval | `.env.<APP_ENV>` in `%LocalAppData%\CT007_Measurement_Studio\Config\` (installed) or `Frontend\` (source), `API_*` environment variables | Frontend `ApiSettings` ([API_CONFIGURATION.md](API_CONFIGURATION.md)) |
+| Frontend → backend API URL, timeout, retry interval | Installed: `%LocalAppData%\CT007_Measurement_Studio\Config\.env.production` (created on first start from `Frontend\.env.production`, shipped as a template). Development: `Frontend\.env.local` | Frontend `ApiSettings` ([API_CONFIGURATION.md](API_CONFIGURATION.md)) |
 | Backend → SQL Server connection string | `Backend/appsettings.json`, `ConnectionStrings:DefaultConnection` | Backend `DrillholeRepository` — **out of scope, not changed** |
 
 ### Application metadata (`application.yaml`)
@@ -33,20 +33,20 @@ application:
 
 Full reference: [API_CONFIGURATION.md](API_CONFIGURATION.md). In short:
 
-1. `APP_ENV` (environment variable) selects `local` or `production`; without it the build decides. The installer is
-   a Release build, so installed copies use **`production`** (`build-installer.ps1 -AppEnvironment` changes that).
-2. The first existing `.env.<APP_ENV>` of `%LocalAppData%\CT007_Measurement_Studio\Config\` and, when running from
-   source, `Frontend\`. The `Config` folder is **outside** the Velopack install folder
-   (`%LocalAppData%\CT007.MeasurementStudio\`), so updates never touch it. Start from `Frontend/.env.example`.
-3. Environment variables `API_BASE_URL`, `API_TIMEOUT_SECONDS`, `API_RETRY_INTERVAL_SECONDS` override the file.
+- **Development** (Debug build, `dotnet watch run`) reads `Frontend\.env.local`.
+- **Installed app** (always built as `production` by the script) reads only
+  `%LocalAppData%\CT007_Measurement_Studio\Config\.env.production`. The installer ships `Frontend\.env.production` as
+  `Config\.env.production.template`; on first launch the app copies it to that per-user file. An existing file is
+  never overwritten, and the folder is **outside** the Velopack install folder (`%LocalAppData%\CT007.MeasurementStudio\`),
+  so updates keep the configured address. Edit the file and restart the app to change it — no rebuild.
 
-`API_BASE_URL` is required (no default); the two timings default to 5 s. A missing file, missing URL or invalid
-value stops the app with a "configuration error" message naming the file and key; the app never switches to another
-backend or environment on its own. The URL is not repeated in the message. The API base URL is **not** a database
-connection string: the frontend never connects to SQL Server.
+`API_BASE_URL` is required (no default); the two timings default to 5 s. A missing file without a template, a missing
+URL or an invalid value stops the app with a "configuration error" message naming the file and key; the app never
+switches to another backend on its own. The API base URL is **not** a database connection string: the frontend never
+connects to SQL Server.
 
-Real `.env` files are ignored by Git and never copied to the build output, so they cannot reach an installer
-(the script also refuses to package one). The installer ships no `.env.production`: create it on each computer.
+`Frontend\.env.production` must hold only non-secret API settings: the script rejects any other key (passwords,
+tokens, connection strings). All other `.env` files are ignored by Git and never copied to the build output.
 
 ### Backend database connection (not changed)
 
@@ -90,17 +90,20 @@ If scripts are blocked: `powershell -ExecutionPolicy Bypass -File .\build-instal
 The script:
 
 1. Reads and validates `id`, `name` and `version` from `Frontend/Config/application.yaml`.
-2. Checks that `vpk` is installed and empties `publish\`.
-3. `dotnet restore`, `dotnet build` and `dotnet publish` for `win-x64` (self-contained), passing the YAML version as
-   `-p:Version`.
-4. Verifies that `publish\Frontend.exe` carries the YAML version and that `Config\application.yaml` is published,
-   and refuses to continue if any `.env` file is in `publish\`.
-5. Runs `vpk pack` with the YAML metadata, output in `Releases\`.
-6. Prints the installer path and version.
+2. Validates `Frontend\.env.production`: it must exist, contain only the four API keys (no secrets), say
+   `APP_ENV=production` if it has that line, and set `API_BASE_URL` to an absolute http(s) URL without credentials.
+   Prints the production API address.
+3. Checks that `vpk` is installed and empties `publish\`.
+4. `dotnet restore`, `dotnet build` and `dotnet publish` for `win-x64` (self-contained), passing the YAML version as
+   `-p:Version` and `-p:AppEnvironment=production`.
+5. Verifies that `publish\Frontend.exe` carries the YAML version, that `Config\application.yaml` is published, that
+   `Config\.env.production.template` is exactly `Frontend\.env.production`, and that no other `.env` file is in
+   `publish\`.
+6. Runs `vpk pack` with the YAML metadata, output in `Releases\`.
+7. Prints the installer path and version.
 
 Every step stops the script on failure. Optional parameters: `-Configuration` (default `Release`), `-Runtime`
-(default `win-x64`), `-OutputDir` (default `Releases`), `-AppEnvironment` (default `production`: the `.env` file
-installed copies read, see [API_CONFIGURATION.md](API_CONFIGURATION.md)).
+(default `win-x64`), `-OutputDir` (default `Releases`).
 
 The manual steps below are what the script does.
 
@@ -124,7 +127,8 @@ dotnet publish Frontend/Frontend.csproj `
 ```
 
 `publish\` then contains `Frontend.exe`, the runtime, and the configuration files next to the executable:
-`Config\application.yaml`, `Calculation\Core-Information\device-settings.json` and
+`Config\application.yaml`, `Config\.env.production.template` (from `Frontend\.env.production`, when it exists),
+`Calculation\Core-Information\device-settings.json` and
 `Pages\**\*.yaml`.
 
 ## Generate installer
@@ -186,10 +190,10 @@ On a second Windows 10 (2004+) / 11 x64 computer:
    *SPP CT-007 Measurement Studio*.
 3. **Name and version.** The window title reads `SPP CT-007 Measurement Studio 1.0.0` (the YAML values). Also
    *Settings → Apps → Installed apps* shows the same name and version.
-4. **Configure the API URL.** Until it is configured, the app starts with a *configuration error* naming the
-   expected file. Create `%LocalAppData%\CT007_Measurement_Studio\Config\.env.production` from
-   `Frontend/.env.example` and set `API_BASE_URL` to the backend (for example `https://ct007-api.example.com`), see
-   [API_CONFIGURATION.md](API_CONFIGURATION.md#configure-an-employee-computer). Restart the app.
+4. **API configuration.** After the first start,
+   `%LocalAppData%\CT007_Measurement_Studio\Config\.env.production` exists with the content of
+   `Frontend\.env.production` from the build — no manual step. To use another backend, edit `API_BASE_URL` there
+   and restart the app ([API_CONFIGURATION.md](API_CONFIGURATION.md#change-the-production-api-address-no-rebuild)).
    A deliberate mistake (e.g. `API_TIMEOUT_SECONDS=abc`) must show a *configuration error* message and close the
    app; restore the value afterwards.
 5. **API connectivity.** The sidebar indicator turns *Online* within the retry interval; its tooltip shows the
@@ -214,5 +218,6 @@ On a second Windows 10 (2004+) / 11 x64 computer:
 | `Velopack CLI 'vpk' not found` | Install it: `dotnet tool install -g vpk --version 1.2.161`. |
 | `equal or greater to the current version` | Increase `version` in `application.yaml`. |
 | `application.version '…' is not a SemVer version` | Use `MAJOR.MINOR.PATCH`, optionally `-prerelease` (e.g. `1.1.0-beta.1`). |
-| App shows *configuration error* at start | The message names the file/variable and key: fix `application.yaml`, the `.env.production` file or the `API_*` variable. A missing `.env.production` is reported with its expected path. |
+| App shows *configuration error* at start | The message names the file/variable and key: fix `application.yaml` or `%LocalAppData%\CT007_Measurement_Studio\Config\.env.production`. *No configuration template*: the installer was built without `Frontend\.env.production`; rebuild it. |
+| Script: *Frontend\.env.production not found* / *'X' is not an API setting* / *APP_ENV is 'local'* | Create or fix `Frontend\.env.production` (only `APP_ENV=production`, `API_BASE_URL`, `API_TIMEOUT_SECONDS`, `API_RETRY_INTERVAL_SECONDS`). |
 | Sidebar stays *Offline* | Wrong `API_BASE_URL`, backend not running, or firewall; see step 5. |

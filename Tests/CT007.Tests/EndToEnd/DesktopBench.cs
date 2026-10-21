@@ -91,6 +91,11 @@ public sealed class DesktopBench : IAsyncDisposable
             gg.Sample(Serial, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         }
 
+        // The copied Debug build reads .env.local of the "source checkout" above it: the test folder, marked as one by
+        // a placeholder Frontend.csproj (ApiSettings.LocalFile), so the repository's own .env.local is never used.
+        File.WriteAllText(folder.Path("Frontend.csproj"), "<Project />");
+        File.WriteAllText(folder.Path(".env.local"),
+            $"APP_ENV=local\nAPI_BASE_URL=http://127.0.0.1:{port}\nAPI_TIMEOUT_SECONDS=5\nAPI_RETRY_INTERVAL_SECONDS=1\n");
         File.WriteAllText(Path.Combine(appDirectory, "Calculation", "Core-Information", "device-settings.json"),
             JsonSerializer.Serialize(new { gammaGuardDatabasePath = gammaGuard, checkIntervalSeconds = 1 }));
 
@@ -118,13 +123,7 @@ public sealed class DesktopBench : IAsyncDisposable
 
     public async Task<DesktopApp> LaunchAsync()
     {
-        // The backend address comes from the API_* variables (they override any .env.local of this account).
-        var start = new ProcessStartInfo(Path.Combine(AppDirectory, "Frontend.exe")) { WorkingDirectory = AppDirectory, UseShellExecute = false };
-        start.Environment["APP_ENV"] = "local";
-        start.Environment["API_BASE_URL"] = $"http://127.0.0.1:{Port}";
-        start.Environment["API_TIMEOUT_SECONDS"] = "5";
-        start.Environment["API_RETRY_INTERVAL_SECONDS"] = "1";
-        var process = Process.Start(start)!;
+        var process = Process.Start(new ProcessStartInfo(Path.Combine(AppDirectory, "Frontend.exe")) { WorkingDirectory = AppDirectory, UseShellExecute = false })!;
         var window = await DesktopApp.WaitAsync(() => AutomationElement.RootElement.FindFirst(TreeScope.Children,
             new PropertyCondition(AutomationElement.ProcessIdProperty, process.Id)), "main window", 30_000);
         return new DesktopApp(process, window);
