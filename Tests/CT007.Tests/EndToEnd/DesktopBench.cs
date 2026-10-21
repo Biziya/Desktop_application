@@ -91,8 +91,6 @@ public sealed class DesktopBench : IAsyncDisposable
             gg.Sample(Serial, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         }
 
-        File.WriteAllText(Path.Combine(appDirectory, "Api", "api-settings.json"),
-            JsonSerializer.Serialize(new { baseUrl = $"http://127.0.0.1:{port}", requestTimeoutSeconds = 5, statusIntervalSeconds = 1 }));
         File.WriteAllText(Path.Combine(appDirectory, "Calculation", "Core-Information", "device-settings.json"),
             JsonSerializer.Serialize(new { gammaGuardDatabasePath = gammaGuard, checkIntervalSeconds = 1 }));
 
@@ -120,7 +118,13 @@ public sealed class DesktopBench : IAsyncDisposable
 
     public async Task<DesktopApp> LaunchAsync()
     {
-        var process = Process.Start(new ProcessStartInfo(Path.Combine(AppDirectory, "Frontend.exe")) { WorkingDirectory = AppDirectory, UseShellExecute = false })!;
+        // The backend address comes from the API_* variables (they override any .env.local of this account).
+        var start = new ProcessStartInfo(Path.Combine(AppDirectory, "Frontend.exe")) { WorkingDirectory = AppDirectory, UseShellExecute = false };
+        start.Environment["APP_ENV"] = "local";
+        start.Environment["API_BASE_URL"] = $"http://127.0.0.1:{Port}";
+        start.Environment["API_TIMEOUT_SECONDS"] = "5";
+        start.Environment["API_RETRY_INTERVAL_SECONDS"] = "1";
+        var process = Process.Start(start)!;
         var window = await DesktopApp.WaitAsync(() => AutomationElement.RootElement.FindFirst(TreeScope.Children,
             new PropertyCondition(AutomationElement.ProcessIdProperty, process.Id)), "main window", 30_000);
         return new DesktopApp(process, window);

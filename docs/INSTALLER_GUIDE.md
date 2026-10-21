@@ -9,7 +9,7 @@ deployed separately and is not changed by anything in this guide.
 | What | Where | Used by |
 |---|---|---|
 | Application id, name, version, description | `Frontend/Config/application.yaml` (single source of truth) | `Frontend.csproj` (compiled version), `build-installer.ps1` (Velopack id, title, version), the app (window title) |
-| Frontend → backend API URL, timeout, retry interval | `Frontend/Api/api-settings.json` (shipped defaults), per-user `.env`, `API_*` environment variables | Frontend `ApiSettings` |
+| Frontend → backend API URL, timeout, retry interval | `.env.<APP_ENV>` in `%LocalAppData%\CT007_Measurement_Studio\Config\` (installed) or `Frontend\` (source), `API_*` environment variables | Frontend `ApiSettings` ([API_CONFIGURATION.md](API_CONFIGURATION.md)) |
 | Backend → SQL Server connection string | `Backend/appsettings.json`, `ConnectionStrings:DefaultConnection` | Backend `DrillholeRepository` — **out of scope, not changed** |
 
 ### Application metadata (`application.yaml`)
@@ -31,28 +31,22 @@ application:
 
 ### Frontend API connection (`.env`)
 
-Lookup order — a later source overrides an earlier one, key by key:
+Full reference: [API_CONFIGURATION.md](API_CONFIGURATION.md). In short:
 
-1. `Api\api-settings.json` next to `Frontend.exe` — the shipped defaults (`http://localhost:5002`, 5 s, 5 s). This
-   file keeps its existing behaviour: missing or invalid values fall back to those defaults.
-2. `%LocalAppData%\CT007_Measurement_Studio\.env` — per-user settings. This folder (also holding
-   `measurements.db`) is **outside** the Velopack install folder (`%LocalAppData%\CT007.MeasurementStudio\`), so
-   updates do not overwrite it. Start from `Frontend/.env.example`.
-3. Environment variables `API_BASE_URL`, `API_TIMEOUT_SECONDS`, `API_RETRY_INTERVAL_SECONDS`.
+1. `APP_ENV` (environment variable) selects `local` or `production`; without it the build decides. The installer is
+   a Release build, so installed copies use **`production`** (`build-installer.ps1 -AppEnvironment` changes that).
+2. The first existing `.env.<APP_ENV>` of `%LocalAppData%\CT007_Measurement_Studio\Config\` and, when running from
+   source, `Frontend\`. The `Config` folder is **outside** the Velopack install folder
+   (`%LocalAppData%\CT007.MeasurementStudio\`), so updates never touch it. Start from `Frontend/.env.example`.
+3. Environment variables `API_BASE_URL`, `API_TIMEOUT_SECONDS`, `API_RETRY_INTERVAL_SECONDS` override the file.
 
-| Key | Meaning | Rule |
-|---|---|---|
-| `API_BASE_URL` | Backend base URL | Absolute `http://` or `https://` URL, no user name/password |
-| `API_TIMEOUT_SECONDS` | Seconds before a request is abandoned | Number > 0 |
-| `API_RETRY_INTERVAL_SECONDS` | Seconds between backend reachability checks (sidebar Online/Offline) | Number > 0 |
-
-A value in the `.env` file or an environment variable that breaks these rules stops the app with a
-"configuration error" message naming the source and key; the app never switches to another backend on its own.
-The URL is not repeated in the message or anywhere in logs. Use `https://` for a deployed backend. The API base URL
-is **not** a database connection string: the frontend never connects to SQL Server.
+`API_BASE_URL` is required (no default); the two timings default to 5 s. A missing file, missing URL or invalid
+value stops the app with a "configuration error" message naming the file and key; the app never switches to another
+backend or environment on its own. The URL is not repeated in the message. The API base URL is **not** a database
+connection string: the frontend never connects to SQL Server.
 
 Real `.env` files are ignored by Git and never copied to the build output, so they cannot reach an installer
-(the script also refuses to package one).
+(the script also refuses to package one). The installer ships no `.env.production`: create it on each computer.
 
 ### Backend database connection (not changed)
 
@@ -105,7 +99,8 @@ The script:
 6. Prints the installer path and version.
 
 Every step stops the script on failure. Optional parameters: `-Configuration` (default `Release`), `-Runtime`
-(default `win-x64`), `-OutputDir` (default `Releases`).
+(default `win-x64`), `-OutputDir` (default `Releases`), `-AppEnvironment` (default `production`: the `.env` file
+installed copies read, see [API_CONFIGURATION.md](API_CONFIGURATION.md)).
 
 The manual steps below are what the script does.
 
@@ -129,7 +124,7 @@ dotnet publish Frontend/Frontend.csproj `
 ```
 
 `publish\` then contains `Frontend.exe`, the runtime, and the configuration files next to the executable:
-`Config\application.yaml`, `Api\api-settings.json`, `Calculation\Core-Information\device-settings.json` and
+`Config\application.yaml`, `Calculation\Core-Information\device-settings.json` and
 `Pages\**\*.yaml`.
 
 ## Generate installer
@@ -191,8 +186,10 @@ On a second Windows 10 (2004+) / 11 x64 computer:
    *SPP CT-007 Measurement Studio*.
 3. **Name and version.** The window title reads `SPP CT-007 Measurement Studio 1.0.0` (the YAML values). Also
    *Settings → Apps → Installed apps* shows the same name and version.
-4. **Configure the API URL.** Create `%LocalAppData%\CT007_Measurement_Studio\.env` from `Frontend/.env.example`
-   and set `API_BASE_URL` to the backend (for example `https://ct007-api.example.com`). Restart the app.
+4. **Configure the API URL.** Until it is configured, the app starts with a *configuration error* naming the
+   expected file. Create `%LocalAppData%\CT007_Measurement_Studio\Config\.env.production` from
+   `Frontend/.env.example` and set `API_BASE_URL` to the backend (for example `https://ct007-api.example.com`), see
+   [API_CONFIGURATION.md](API_CONFIGURATION.md#configure-an-employee-computer). Restart the app.
    A deliberate mistake (e.g. `API_TIMEOUT_SECONDS=abc`) must show a *configuration error* message and close the
    app; restore the value afterwards.
 5. **API connectivity.** The sidebar indicator turns *Online* within the retry interval; its tooltip shows the
@@ -208,7 +205,7 @@ On a second Windows 10 (2004+) / 11 x64 computer:
    restart.
 8. **Uninstall.** *Settings → Apps → Installed apps → SPP CT-007 Measurement Studio → Uninstall*. This removes
    `%LocalAppData%\CT007.MeasurementStudio\`. User data in `%LocalAppData%\CT007_Measurement_Studio\`
-   (`measurements.db`, `.env`) is kept on purpose; delete that folder manually for a clean machine.
+   (`measurements.db`, `Config\.env.production`) is kept on purpose; delete that folder manually for a clean machine.
 
 ## Troubleshooting
 
@@ -217,5 +214,5 @@ On a second Windows 10 (2004+) / 11 x64 computer:
 | `Velopack CLI 'vpk' not found` | Install it: `dotnet tool install -g vpk --version 1.2.161`. |
 | `equal or greater to the current version` | Increase `version` in `application.yaml`. |
 | `application.version '…' is not a SemVer version` | Use `MAJOR.MINOR.PATCH`, optionally `-prerelease` (e.g. `1.1.0-beta.1`). |
-| App shows *configuration error* at start | The message names the file/variable and key: fix `application.yaml`, the `.env` file or the `API_*` variable. |
+| App shows *configuration error* at start | The message names the file/variable and key: fix `application.yaml`, the `.env.production` file or the `API_*` variable. A missing `.env.production` is reported with its expected path. |
 | Sidebar stays *Offline* | Wrong `API_BASE_URL`, backend not running, or firewall; see step 5. |

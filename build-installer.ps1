@@ -17,6 +17,11 @@ param(
     [string]$Configuration = 'Release',
     [string]$Runtime = 'win-x64',
 
+    # Backend API environment compiled into the app: it reads .env.<AppEnvironment> from
+    # %LocalAppData%\CT007_Measurement_Studio\Config unless APP_ENV is set (docs\API_CONFIGURATION.md).
+    [ValidateSet('production', 'local')]
+    [string]$AppEnvironment = 'production',
+
     # Velopack output folder. Keep previous releases in it: Velopack builds delta updates from them.
     [string]$OutputDir = (Join-Path $PSScriptRoot 'Releases')
 )
@@ -93,11 +98,11 @@ Invoke-Step 'Restore' {
 }
 
 Invoke-Step 'Build' {
-    dotnet build $project -c $Configuration -r $Runtime --self-contained true --no-restore "-p:Version=$($app.version)"
+    dotnet build $project -c $Configuration -r $Runtime --self-contained true --no-restore "-p:Version=$($app.version)" "-p:AppEnvironment=$AppEnvironment"
 }
 
 Invoke-Step 'Publish' {
-    dotnet publish $project -c $Configuration -r $Runtime --self-contained true --no-build -o $publishDir "-p:Version=$($app.version)"
+    dotnet publish $project -c $Configuration -r $Runtime --self-contained true --no-build -o $publishDir "-p:Version=$($app.version)" "-p:AppEnvironment=$AppEnvironment"
 }
 
 # The compiled product version must be the YAML version (Frontend.csproj reads the same file).

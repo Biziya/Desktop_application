@@ -1,86 +1,141 @@
 using System.IO;
-using System.Text.Json;
+using System.Reflection;
 
 namespace Frontend.Api;
 
 /// <summary>
-/// Backend settings. Lookup order, later wins:
-/// 1. Api/api-settings.json next to the executable: the shipped defaults. Missing or invalid values fall back to
-///    the defaults below (unchanged behaviour).
-/// 2. %LocalAppData%\CT007_Measurement_Studio\.env: per-user settings, outside the Velopack install folder so an
-///    update keeps them (see Frontend/.env.example).
-/// 3. API_BASE_URL, API_TIMEOUT_SECONDS and API_RETRY_INTERVAL_SECONDS environment variables.
-/// Values from 2 and 3 are checked strictly (<see cref="WithOverrides"/>): a wrong value stops the app with a message
-/// instead of silently pointing it at another backend.
+/// Backend settings, read once at start-up from the .env file of the selected environment (docs/API_CONFIGURATION.md).
+/// 1. APP_ENV selects the environment (local or production): the APP_ENV environment variable, otherwise the value
+///    compiled into the build (AppEnvironment in Frontend.csproj: Debug builds local, other builds production).
+///    It is never read from a .env file, because the file is chosen by it.
+/// 2. The first existing .env.&lt;APP_ENV&gt; file of <see cref="EnvFileCandidates"/>: the per-user
+///    %LocalAppData%\CT007_Measurement_Studio\Config folder (outside the Velopack install folder, so updates keep it),
+///    then the Frontend project folder when running from source.
+/// 3. API_BASE_URL, API_TIMEOUT_SECONDS and API_RETRY_INTERVAL_SECONDS environment variables override the file, key by key.
+/// API_BASE_URL is required; the two timings default to 5 s. Every problem stops the app with a message instead of
+/// silently pointing it at another backend: there is no fallback from one environment to the other.
 /// </summary>
 public sealed record ApiSettings(string BaseUrl, TimeSpan RequestTimeout, TimeSpan StatusInterval)
 {
+    public const string EnvironmentKey = "APP_ENV";
     public const string BaseUrlKey = "API_BASE_URL";
     public const string TimeoutKey = "API_TIMEOUT_SECONDS";
     public const string RetryIntervalKey = "API_RETRY_INTERVAL_SECONDS";
 
-    public static ApiSettings Default { get; } = new("http://localhost:5002", TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+    public static IReadOnlyList<string> Environments { get; } = ["local", "production"];
 
-    public static ApiSettings Load(string path)
+    // Optional values only; the backend address never has a default.
+    private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan DefaultStatusInterval = TimeSpan.FromSeconds(5);
+
+    /// <summary>The settings the app uses (environment variables, the selected .env file, the build's environment).</summary>
+    /// <exception cref="InvalidDataException">The configuration is missing or invalid; the message says what to fix.</exception>
+    public static ApiSettings LoadConfigured()
     {
-        try
-        {
-            using var document = JsonDocument.Parse(File.ReadAllText(path));
-            var root = document.RootElement;
-
-            return new ApiSettings(
-                root.TryGetProperty("baseUrl", out var url) && Uri.TryCreate(url.GetString(), UriKind.Absolute, out _)
-                    ? url.GetString()! : Default.BaseUrl,
-                Seconds(root, "requestTimeoutSeconds", Default.RequestTimeout),
-                Seconds(root, "statusIntervalSeconds", Default.StatusInterval));
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException)
-        {
-            return Default;
-        }
+        var environment = SelectEnvironment(Environment.GetEnvironmentVariable, BuildEnvironment);
+        return Load(environment, EnvFileCandidates(environment, ConfigDirectory, ProjectDirectory(AppContext.BaseDirectory)),
+            Environment.GetEnvironmentVariable);
     }
 
-    /// <summary>The settings the app uses: api-settings.json, then the user's .env file, then environment variables.</summary>
-    /// <exception cref="InvalidDataException">The .env file or an API_* environment variable has an invalid value.</exception>
-    public static ApiSettings LoadConfigured() => Load(DefaultPath).WithOverrides(EnvFilePath, Environment.GetEnvironmentVariable);
+    /// <summary>%LocalAppData%\CT007_Measurement_Studio\Config: per user, beside measurements.db, kept by updates.</summary>
+    public static string ConfigDirectory => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CT007_Measurement_Studio", "Config");
 
-    public static string DefaultPath => Path.Combine(AppContext.BaseDirectory, "Api", "api-settings.json");
+    /// <summary>AppEnvironment from Frontend.csproj, compiled into the assembly.</summary>
+    public static string? BuildEnvironment => typeof(ApiSettings).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+        .FirstOrDefault(attribute => attribute.Key == "AppEnvironment")?.Value;
 
-    /// <summary>%LocalAppData%\CT007_Measurement_Studio\.env, next to the measurement database.</summary>
-    public static string EnvFilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CT007_Measurement_Studio", ".env");
+    /// <summary>The APP_ENV variable when set, otherwise <paramref name="buildEnvironment"/>; must be local or production.</summary>
+    /// <exception cref="InvalidDataException">Neither is set, or the value is not a supported environment.</exception>
+    public static string SelectEnvironment(Func<string, string?> environment, string? buildEnvironment)
+    {
+        var (value, source) = environment(EnvironmentKey) is { Length: > 0 } variable
+            ? (variable.Trim(), $"Environment variable {EnvironmentKey}")
+            : (buildEnvironment ?? "", "The build's AppEnvironment");
+
+        return Environments.Contains(value)
+            ? value
+            : throw new InvalidDataException($"{source} is '{value}'. Use one of: {string.Join(", ", Environments)}.");
+    }
 
     /// <summary>
-    /// Applies the API_* values from <paramref name="envFile"/> (when it exists) and from <paramref name="environment"/>
-    /// (which wins). Keys not set in either keep this instance's value.
+    /// Where .env.&lt;environment&gt; is looked for, in order: the per-user config folder, then the Frontend project
+    /// folder (only when the app runs from a source checkout, i.e. <paramref name="projectDirectory"/> is not null).
     /// </summary>
-    /// <exception cref="InvalidDataException">A line or value is invalid; the message names the source and key.</exception>
-    public ApiSettings WithOverrides(string envFile, Func<string, string?> environment)
+    public static IReadOnlyList<string> EnvFileCandidates(string environment, string configDirectory, string? projectDirectory) =>
+        projectDirectory is null
+            ? [Path.Combine(configDirectory, $".env.{environment}")]
+            : [Path.Combine(configDirectory, $".env.{environment}"), Path.Combine(projectDirectory, $".env.{environment}")];
+
+    /// <summary>The folder holding Frontend.csproj above <paramref name="baseDirectory"/> (bin\Debug\...), or null when installed.</summary>
+    public static string? ProjectDirectory(string baseDirectory)
     {
-        var file = File.Exists(envFile) ? ReadEnvFile(envFile) : [];
-        var settings = this;
+        for (var directory = new DirectoryInfo(baseDirectory); directory is not null; directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Frontend.csproj")))
+            {
+                return directory.FullName;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Reads the first existing file of <paramref name="candidates"/> (only that one), then applies the API_*
+    /// values of <paramref name="variables"/>, which win key by key.
+    /// </summary>
+    /// <exception cref="InvalidDataException">A file, line or value is invalid, or API_BASE_URL is not set anywhere.</exception>
+    public static ApiSettings Load(string environment, IReadOnlyList<string> candidates, Func<string, string?> variables)
+    {
+        var envFile = candidates.FirstOrDefault(File.Exists);
+        var file = envFile is null ? [] : ReadEnvFile(envFile);
+
+        // The file was chosen by APP_ENV; an APP_ENV line inside it may only confirm that choice.
+        if (file.TryGetValue(EnvironmentKey, out var declared) && declared != environment)
+        {
+            throw new InvalidDataException(
+                $"{envFile}: {EnvironmentKey}={declared}, but this file was selected for {EnvironmentKey}={environment}. Fix or remove the line.");
+        }
+
+        string? baseUrl = null;
+        var timeout = DefaultTimeout;
+        var interval = DefaultStatusInterval;
 
         foreach (var key in new[] { BaseUrlKey, TimeoutKey, RetryIntervalKey })
         {
-            var (value, source) = environment(key) is { Length: > 0 } variable ? (variable, "Environment variable")
-                : file.TryGetValue(key, out var line) ? (line, envFile)
+            var (value, source) = variables(key) is { Length: > 0 } variable ? (variable, "Environment variable")
+                : file.TryGetValue(key, out var line) && line.Length > 0 ? (line, envFile!)
                 : (null, "");
 
-            settings = value is null ? settings : key switch
+            switch (value is null ? null : key)
             {
-                BaseUrlKey => settings with { BaseUrl = CheckedUrl(value, source) },
-                TimeoutKey => settings with { RequestTimeout = CheckedSeconds(value, key, source) },
-                _ => settings with { StatusInterval = CheckedSeconds(value, key, source) }
-            };
+                case BaseUrlKey: baseUrl = CheckedUrl(value!, source); break;
+                case TimeoutKey: timeout = CheckedSeconds(value!, key, source); break;
+                case RetryIntervalKey: interval = CheckedSeconds(value!, key, source); break;
+            }
         }
 
-        return settings;
+        return baseUrl is null
+            ? throw new InvalidDataException(MissingBaseUrl(environment, candidates, envFile))
+            : new ApiSettings(baseUrl, timeout, interval);
     }
 
-    private static TimeSpan Seconds(JsonElement root, string name, TimeSpan fallback) =>
-        root.TryGetProperty(name, out var value) && value.TryGetDouble(out var seconds) && seconds > 0
-            ? TimeSpan.FromSeconds(seconds)
-            : fallback;
+    private static string MissingBaseUrl(string environment, IReadOnlyList<string> candidates, string? envFile)
+    {
+        var where = envFile is null
+            ? $"No configuration file was found for {EnvironmentKey}={environment}. Looked for:\n" +
+              string.Join("\n", candidates.Select(path => "  " + path)) +
+              $"\n\nCreate {candidates[0]} from .env.example and set {BaseUrlKey} to the backend address, or set the {BaseUrlKey} environment variable."
+            : $"{envFile} does not set {BaseUrlKey}. Add the backend address, for example {BaseUrlKey}=https://ct007-api.example.com.";
+
+        // Earlier versions read a single .env file one folder up; say so instead of ignoring it silently.
+        var legacy = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(candidates[0])!)!, ".env");
+
+        return File.Exists(legacy)
+            ? $"{where}\n\n{legacy} is no longer read: move its values to {candidates[0]}."
+            : where;
+    }
 
     // KEY=value lines; blank lines and # comments are skipped, surrounding quotes removed.
     private static Dictionary<string, string> ReadEnvFile(string path)

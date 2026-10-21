@@ -417,7 +417,7 @@ public static class CapturePipelineTests
         await repository.ResolveSessionAsync(Make.Session());
         SqliteConnection.ClearAllPools();
         using var devices = Make.Monitor(repository.DatabasePath, folder.Path("gg.sqlite"));
-        using var backendApi = new ApiClient(ApiSettings.Default, new StubBackend());
+        using var backendApi = new ApiClient(new ApiSettings("http://stub.test", TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5)), new StubBackend());
         using var backend = new BackendConnection(backendApi, TimeSpan.FromMinutes(5));
         var toasts = new ToastService();
         using var announcements = new StatusAnnouncements(backend, devices, toasts);

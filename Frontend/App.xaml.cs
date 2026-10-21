@@ -35,7 +35,7 @@ public partial class App : Application
             ApplicationSettings.Load(AppContext.BaseDirectory).AddTo(Resources);
             PageSettings.AddTo(Resources, AppContext.BaseDirectory);
 
-            // MainViewModel reads ApiSettings.LoadConfigured() (api-settings.json, .env, API_* variables).
+            // MainViewModel reads ApiSettings.LoadConfigured() (APP_ENV, .env.<APP_ENV>, API_* variables).
             window = new MainWindow();
         }
         catch (InvalidDataException error)

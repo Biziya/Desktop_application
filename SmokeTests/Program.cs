@@ -68,7 +68,7 @@ internal static class Program
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CoreSnapshot? saved = null;
         var backendStub = new StubBackend();
-        var settings = ApiSettings.Default with { RequestTimeout = TimeSpan.FromSeconds(2) };
+        var settings = new ApiSettings("http://localhost:5002", TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5));
         using var api = new ApiClient(settings, backendStub);
         using var backend = new BackendConnection(api, TimeSpan.FromMilliseconds(30));
         Check(backend.State == BackendState.Checking && backend.StateText == "Checking…", "Indicator starts as Checking…");

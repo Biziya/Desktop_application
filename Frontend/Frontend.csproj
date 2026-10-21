@@ -26,17 +26,32 @@
     <AssemblyTitle>$(Product)</AssemblyTitle>
   </PropertyGroup>
 
+  <!-- Backend API environment used when the APP_ENV environment variable is not set: Debug builds read .env.local,
+       every other build .env.production (Api\ApiSettings.cs, docs\API_CONFIGURATION.md). Override with
+       -p:AppEnvironment=local|production. Only the environment name is compiled in, never an address. -->
+  <PropertyGroup>
+    <AppEnvironment Condition="'$(AppEnvironment)' == '' and '$(Configuration)' == 'Debug'">local</AppEnvironment>
+    <AppEnvironment Condition="'$(AppEnvironment)' == ''">production</AppEnvironment>
+  </PropertyGroup>
+
   <ItemGroup>
+    <AssemblyMetadata Include="AppEnvironment" Value="$(AppEnvironment)" />
+  </ItemGroup>
+
+  <Target Name="CheckAppEnvironment" BeforeTargets="BeforeBuild"
+          Condition="'$(AppEnvironment)' != 'local' and '$(AppEnvironment)' != 'production'">
+    <Error Text="AppEnvironment must be 'local' or 'production' (is '$(AppEnvironment)')." />
+  </Target>
+
+  <ItemGroup>
+    <!-- .env files are this machine's configuration: never copied to the output, so none reaches the installer. -->
+    <None Remove=".env*" />
+
     <Resource Include="Icons\icon.ico" />
     <None Include="Icons\icon.svg" />
 
     <!-- Application metadata (name, version); read at start-up -->
     <None Update="Config\application.yaml"
-          CopyToOutputDirectory="PreserveNewest" />
-
-    <!-- Backend API configuration (defaults; per-user .env overrides them, see ApiSettings).
-         .env / .env.example are never copied to the output, so no .env reaches the installer. -->
-    <None Update="Api\api-settings.json"
           CopyToOutputDirectory="PreserveNewest" />
 
     <!-- CT-007 device configuration -->

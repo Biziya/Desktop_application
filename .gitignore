@@ -12,5 +12,7 @@ Releases/
 # Real .env files hold machine-specific settings; only .env.example is committed
 .env
 **/.env
+.env.*
+!.env.example
 **/bin/
 **/obj/
