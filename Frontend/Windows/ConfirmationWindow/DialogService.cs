@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using Frontend.Pages.Measurement;
@@ -38,6 +39,24 @@ public sealed class DialogService : IDialogService
             CheckFileExists = true,
             Multiselect = false
         };
+
+        return dialog.ShowDialog(Application.Current.MainWindow) == true ? dialog.FileName : null;
+    }
+
+    public string? PickGammaGuardDatabase(string? currentPath)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Select the Gamma Guard database",
+            Filter = "SQLite databases (*.sqlite;*.sqlite3;*.db)|*.sqlite;*.sqlite3;*.db|All files (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+
+        if (Path.GetDirectoryName(currentPath) is { Length: > 0 } folder && Directory.Exists(folder))
+        {
+            dialog.InitialDirectory = folder;
+        }
 
         return dialog.ShowDialog(Application.Current.MainWindow) == true ? dialog.FileName : null;
     }

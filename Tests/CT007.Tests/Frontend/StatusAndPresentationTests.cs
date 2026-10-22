@@ -199,6 +199,153 @@ public static class StatusAndPresentationTests
         Assert.Equal(hash, TestFolder.Sha256(gammaGuard), "the check does not modify the file");
     }
 
+    private static string CreateGammaGuard(string path)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        using (var gammaGuard = new FakeGammaGuard(path))
+        {
+            gammaGuard.Sample("SN-1001", 1_760_600_000_000);
+        }
+
+        return path;
+    }
+
+    [Test("FE-073", "Gamma Guard selection: validated read-only, saved, reused after restart, overrides discovery, falls back when moved")]
+    public static void GammaGuardSelection()
+    {
+        using var folder = new TestFolder();
+        var roots = new[] { (folder.Path("roots"), 2) };
+        var found = CreateGammaGuard(Path.Combine(folder.Path("roots"), "GammaGuard", "Database", "found.sqlite"));
+        var manual = CreateGammaGuard(folder.Path("manual.db"));
+        var other = CreateGammaGuard(folder.Path("other.sqlite3"));
+        var plain = folder.Path("plain.sqlite");
+        CreateSqlite(plain);
+        var notSqlite = folder.Path("notes.db");
+        File.WriteAllText(notSqlite, "not a database");
+        var missing = folder.Path("missing.db");
+        var selectionFile = GammaGuardDatabaseCheck.SelectionFileBeside(folder.Path("measurements.db"));
+        Assert.Equal(Path.Combine(folder.Root, "Config", "gamma-guard-database.json"), selectionFile, "saved in Config beside the measurement database");
+        var files = new[] { found, manual, other, plain, notSqlite };
+        var hashes = files.Select(TestFolder.Sha256).ToArray();
+
+        var check = new GammaGuardDatabaseCheck(DeviceSettings.Default, roots, selectionFile);
+        Assert.Equal(found, check.Check().Path, "automatic detection without a selection");
+        Assert.Equal(null, check.SelectedPath, "nothing selected");
+
+        foreach (var (file, text) in new[] { (plain, "Wrong database"), (notSqlite, "Cannot be read"), (missing, "File not found") })
+        {
+            var rejected = check.Select(file);
+            Assert.Equal(text, rejected.Text, $"{Path.GetFileName(file)} rejected");
+            Assert.False(File.Exists(selectionFile), $"{Path.GetFileName(file)}: nothing saved");
+            Assert.Equal(found, check.Check().Path, $"{Path.GetFileName(file)}: the working database is kept");
+        }
+
+        Assert.False(File.Exists(missing), "selecting a missing file does not create it");
+
+        var selected = check.Select(manual);
+        Assert.Equal(LocalState.Available, selected.State, "valid selection accepted");
+        Assert.Contains("Selected manually", selected.Detail, "detail names the source");
+        Assert.Equal(manual, check.Check().Path, "the selection overrides the found database");
+        Assert.Equal(manual, check.Check(rediscover: true).Path, "Retry keeps a valid selection");
+        Assert.Equal(manual, new GammaGuardDatabaseCheck(Make.Devices(found), [], selectionFile).Check().Path,
+            "the selection also overrides device-settings.json");
+
+        var restarted = new GammaGuardDatabaseCheck(DeviceSettings.Default, roots, selectionFile);
+        Assert.Equal(manual, restarted.SelectedPath, "selection reloaded after a restart");
+        Assert.Equal(manual, restarted.Check().Path, "and used");
+
+        Assert.Equal(other, restarted.Select(other).Path, "another valid database replaces the selection");
+        Assert.Equal(other, new GammaGuardDatabaseCheck(DeviceSettings.Default, roots, selectionFile).Check().Path, "the new one is saved");
+
+        File.Move(other, other + ".moved");
+        var fallback = restarted.Check();
+        Assert.Equal(found, fallback.Path, "a moved selection falls back to automatic detection");
+        Assert.Contains("cannot be used", fallback.Detail, "the fallback is explained");
+        Assert.Equal(other, restarted.SelectedPath, "the selection stays saved");
+        Assert.True(new GammaGuardDatabaseCheck(DeviceSettings.Default, [], selectionFile).Check() is { State: LocalState.Missing } lost && lost.Path == other,
+            "nothing found either: the missing selection is shown");
+
+        File.Move(other + ".moved", other);
+        Assert.Equal(other, restarted.Check().Path, "the selection is used again once it is back");
+
+        File.WriteAllText(selectionFile, "{");
+        Assert.Equal(found, new GammaGuardDatabaseCheck(DeviceSettings.Default, roots, selectionFile).Check().Path,
+            "an unreadable selection file means automatic detection");
+
+        SqliteConnection.ClearAllPools();
+        Assert.Sequence(hashes, files.Select(TestFolder.Sha256), "no database file was modified");
+        Assert.False(File.Exists(other + "-journal") || File.Exists(other + "-wal"), "no journal created");
+    }
+
+    [Test("FE-074", "Select / Change Database: cancel, invalid file, valid file, switch, Retry, blocked while measuring")]
+    public static async Task GammaGuardSelectDatabaseCommand()
+    {
+        using var folder = new TestFolder();
+        var measurementDb = folder.Path("m.db");
+        var first = CreateGammaGuard(folder.Path("first.sqlite"));
+        var second = CreateGammaGuard(folder.Path("second.db"));
+        var plain = folder.Path("plain.sqlite");
+        CreateSqlite(plain);
+        var selectionFile = GammaGuardDatabaseCheck.SelectionFileBeside(measurementDb);
+        var settings = DeviceSettings.Default;
+        using var devices = new DeviceStatusMonitor(new Ct007BluetoothCheck(settings, () => []), new MeasurementDatabaseCheck(measurementDb),
+            new GammaGuardDatabaseCheck(settings, [], selectionFile), TimeSpan.FromMinutes(5));
+        var api = new ApiClient(new ApiSettings("http://stub.test", TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(5)), new StubBackend());
+        var toasts = new ToastService();
+        var dialogs = new FakeDialogs();
+        var form = new CoreInformationViewModel(_ => { }, new DrillholesClient(api), new BackendConnection(api, TimeSpan.FromMinutes(5)),
+            new DrillholeCache(measurementDb), new MemoryRepository(measurementDb), devices, TimeSpan.Zero, toasts, dialogs);
+        var select = form.SelectGammaGuardDatabaseCommand;
+
+        async Task Choose(string? file)
+        {
+            dialogs.GammaGuardFile = file;
+            select.Execute(null);
+            await Assert.Eventually(() => select.CanExecute(null), "selection finished");
+        }
+
+        await devices.CheckGammaGuardDatabaseAsync();
+        Assert.Equal(LocalState.NotFound, devices.GammaGuardDatabase.State, "nothing found");
+        Assert.True(select.CanExecute(null), "Select Database available when nothing is found");
+
+        await Choose(null);
+        Assert.Equal(1, dialogs.GammaGuardDialogs, "dialog opened");
+        Assert.Equal(LocalState.NotFound, devices.GammaGuardDatabase.State, "cancel: unchanged");
+        Assert.Equal(0, toasts.Items.Count, "cancel: no toast");
+
+        await Choose(plain);
+        Assert.Equal(LocalState.NotFound, devices.GammaGuardDatabase.State, "invalid file: unchanged");
+        Assert.True(Make.ToastedStart(toasts, ToastKind.Error, "The Gamma Guard database was not changed. Wrong database:"), "invalid file: error toast");
+
+        await Choose(first);
+        Assert.Equal(LocalState.Available, devices.GammaGuardDatabase.State, "valid file connects");
+        Assert.Equal(first, devices.GammaGuardDatabase.Path, "its path is shown");
+        Assert.True(Make.Toasted(toasts, ToastKind.Success, $"Gamma Guard database selected: {first}"), "success toast");
+        Assert.True(File.Exists(selectionFile), "selection saved");
+        Assert.True(select.CanExecute(null), "Change Database stays available while connected");
+
+        await Choose(plain);
+        Assert.Equal(first, devices.GammaGuardDatabase.Path, "an invalid file keeps the working database");
+
+        form.IsSelectionLocked = true;
+        dialogs.GammaGuardFile = second;
+        select.Execute(null);
+        await Assert.Eventually(() => select.CanExecute(null), "refused");
+        Assert.True(Make.Toasted(toasts, ToastKind.Error, "Stop the measurement before changing the Gamma Guard database."), "blocked while measuring");
+        Assert.Equal(4, dialogs.GammaGuardDialogs, "no dialog while measuring");
+        Assert.Equal(first, devices.GammaGuardDatabase.Path, "not switched while measuring");
+        form.IsSelectionLocked = false;
+
+        await Choose(second);
+        Assert.Equal(second, devices.GammaGuardDatabase.Path, "switched to another valid database");
+        Assert.Equal(second, ((GammaGuardDeviceDatabase)new GammaGuardCaptureDevices(devices).Resolve().Samples).Path,
+            "the next capture reads the new database");
+
+        form.RefreshGammaGuardDatabaseCommand.Execute(null);
+        await devices.CheckGammaGuardDatabaseAsync(rediscover: true);
+        Assert.Equal(second, devices.GammaGuardDatabase.Path, "Retry keeps the selection");
+    }
+
     [Test("FE-045", "DeviceSettings.Load: invalid values fall back; the Gamma Guard path expands variables at check time")]
     public static void DeviceSettingsLoad()
     {

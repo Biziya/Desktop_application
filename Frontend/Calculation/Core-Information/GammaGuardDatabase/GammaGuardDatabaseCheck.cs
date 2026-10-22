@@ -1,42 +1,111 @@
 using System.IO;
+using System.Text.Json;
 
 namespace Frontend.Calculation.CoreInformation.GammaGuardDatabase;
 
 /// <summary>
 /// Finds the Gamma Guard SQLite database on THIS laptop and checks it read-only (it is never modified).
-/// Discovery rules, in order:
-/// 1. <see cref="DeviceSettings.GammaGuardDatabasePath"/> when set (environment variables expanded) — used as is,
+/// Rules, in order:
+/// 1. The database the user selected (Select / Change Database), saved in the selection file. It is used while it is a
+///    readable Gamma Guard database (or only busy). When it cannot be used (moved, deleted, network drive offline) the
+///    rules below are tried; the selection stays saved and is used again as soon as the file is back.
+/// 2. <see cref="DeviceSettings.GammaGuardDatabasePath"/> when set (environment variables expanded) — used as is,
 ///    so a wrong path shows as "File not found" with that path.
-/// 2. Otherwise the Gamma Guard install layout <c>…\GammaGuard\&lt;version&gt;\Database\&lt;file&gt;.sqlite</c>
+/// 3. Otherwise the Gamma Guard install layout <c>…\GammaGuard\&lt;version&gt;\Database\&lt;file&gt;.sqlite</c>
 ///    (e.g. <c>GammaGuard\CT008 1.9.0\Database\ct008-log.sqlite</c>) is searched under the current user's
 ///    Documents, Desktop and profile folders, LocalAppData, AppData, ProgramData and Program Files: folders whose
 ///    name contains "GammaGuard" or "Gamma Guard", then files matching <see cref="DeviceSettings.GammaGuardFileName"/>
 ///    in a "Database" folder below them. The most recently written file wins.
 /// The search is bounded in depth, skips folders it may not read, and its result is reused until the file
-/// disappears or Retry is used.
+/// disappears or Retry is used. A selected file can be anywhere, so it must also have the Gamma Guard tables
+/// (<see cref="GammaGuardDeviceDatabase.StructureProblem"/>); a found or configured one only needs to be readable.
+/// Safe to call from several threads: checks and selections never run interleaved.
 /// </summary>
-public sealed class GammaGuardDatabaseCheck(DeviceSettings settings, IReadOnlyList<(string Root, int Depth)>? searchRoots = null)
+/// <param name="selectionFile">Where the selected path is saved (JSON); null: a selection lasts until the app closes.</param>
+public sealed class GammaGuardDatabaseCheck(
+    DeviceSettings settings, IReadOnlyList<(string Root, int Depth)>? searchRoots = null, string? selectionFile = null)
 {
+    private const string SelectionKey = "gammaGuardDatabasePath";
+
     private readonly IReadOnlyList<(string Root, int Depth)> roots = searchRoots ?? DefaultRoots();
+    private readonly object gate = new();
     private string? discovered;
+    private string? selected;
+    private bool selectionLoaded;
+
+    /// <summary>
+    /// gamma-guard-database.json in the Config folder beside the measurement database
+    /// (%LocalAppData%\CT007_Measurement_Studio\Config): per user, outside the install folder, so updates keep it.
+    /// </summary>
+    public static string SelectionFileBeside(string measurementDatabasePath) =>
+        Path.Combine(Path.GetDirectoryName(Path.GetFullPath(measurementDatabasePath))!, "Config", "gamma-guard-database.json");
+
+    /// <summary>The database the user selected (saved across restarts), or null.</summary>
+    public string? SelectedPath
+    {
+        get
+        {
+            lock (gate)
+            {
+                LoadSelection();
+                return selected;
+            }
+        }
+    }
 
     public LocalStatus Check(bool rediscover = false)
     {
-        if (settings.GammaGuardDatabasePath.Length > 0)
+        lock (gate)
         {
-            var configured = Environment.ExpandEnvironmentVariables(settings.GammaGuardDatabasePath);
-            return SqliteFileCheck.Check(configured, "The path set in device-settings.json does not exist on this laptop.");
+            LoadSelection();
+
+            if (selected is null)
+            {
+                return CheckAutomatic(rediscover);
+            }
+
+            var manual = Validate(selected, "The selected Gamma Guard database was moved or deleted.");
+
+            if (manual.State is LocalState.Available or LocalState.Busy)
+            {
+                return manual with { Detail = $"Selected manually. {manual.Detail}" };
+            }
+
+            var automatic = CheckAutomatic(rediscover);
+            return automatic.State == LocalState.Available
+                ? automatic with
+                {
+                    Detail = $"The selected database cannot be used ({manual.Text.ToLowerInvariant()}: {selected}); using the one found automatically. {automatic.Detail}"
+                }
+                : manual;
+        }
+    }
+
+    /// <summary>
+    /// Makes <paramref name="path"/> the database to use if it is a readable Gamma Guard database: it is saved for the
+    /// next start and replaces any earlier selection or found path. Otherwise nothing changes and the returned status
+    /// says why. The file is only read.
+    /// </summary>
+    /// <exception cref="IOException">The selection could not be saved; nothing changed.</exception>
+    /// <exception cref="UnauthorizedAccessException">The selection could not be saved; nothing changed.</exception>
+    public LocalStatus Select(string path)
+    {
+        var full = Path.GetFullPath(path);
+        var status = Validate(full, "The selected file does not exist.");
+
+        if (status.State != LocalState.Available)
+        {
+            return status;
         }
 
-        if (rediscover || discovered is null || !File.Exists(discovered))
+        lock (gate)
         {
-            discovered = Discover();
+            SaveSelection(full);
+            selected = full;
+            selectionLoaded = true;
         }
 
-        return discovered is null
-            ? new LocalStatus(LocalState.NotFound, "Not found",
-                "No Gamma Guard database was found on this laptop. Set gammaGuardDatabasePath in device-settings.json if it is elsewhere.")
-            : SqliteFileCheck.Check(discovered, "The Gamma Guard database was moved or deleted.");
+        return status with { Detail = $"Selected manually. {status.Detail}" };
     }
 
     public string? Discover()
@@ -80,6 +149,73 @@ public sealed class GammaGuardDatabaseCheck(DeviceSettings settings, IReadOnlyLi
             .GroupBy(f => f.FullName, StringComparer.OrdinalIgnoreCase).Select(g => g.First())
             .OrderByDescending(f => f.LastWriteTimeUtc).ThenBy(f => f.FullName, StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault()?.FullName;
+    }
+
+    private static LocalStatus Validate(string path, string missingDetail) =>
+        SqliteFileCheck.Check(path, missingDetail, GammaGuardDeviceDatabase.StructureProblem);
+
+    // Rules 2 and 3: the configured path, else the discovered one.
+    private LocalStatus CheckAutomatic(bool rediscover)
+    {
+        if (settings.GammaGuardDatabasePath.Length > 0)
+        {
+            var configured = Environment.ExpandEnvironmentVariables(settings.GammaGuardDatabasePath);
+            return SqliteFileCheck.Check(configured, "The path set in device-settings.json does not exist on this laptop.");
+        }
+
+        if (rediscover || discovered is null || !File.Exists(discovered))
+        {
+            discovered = Discover();
+        }
+
+        return discovered is null
+            ? new LocalStatus(LocalState.NotFound, "Not found",
+                "No Gamma Guard database was found on this laptop. Use Select Database to choose the file.")
+            : SqliteFileCheck.Check(discovered, "The Gamma Guard database was moved or deleted.");
+    }
+
+    // Read once; a missing or unreadable file means no selection (the automatic rules apply).
+    private void LoadSelection()
+    {
+        if (selectionLoaded)
+        {
+            return;
+        }
+
+        selectionLoaded = true;
+
+        try
+        {
+            if (selectionFile is null || !File.Exists(selectionFile))
+            {
+                return;
+            }
+
+            using var document = JsonDocument.Parse(File.ReadAllText(selectionFile));
+            var root = document.RootElement;
+            selected = root.ValueKind == JsonValueKind.Object && root.TryGetProperty(SelectionKey, out var value) &&
+                       value.ValueKind == JsonValueKind.String && value.GetString()!.Trim() is { Length: > 0 } path
+                ? path
+                : null;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException)
+        {
+            selected = null;
+        }
+    }
+
+    // Written to a temporary file, then moved over the old one.
+    private void SaveSelection(string path)
+    {
+        if (selectionFile is null)
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(selectionFile))!);
+        var temporary = selectionFile + ".tmp";
+        File.WriteAllText(temporary, JsonSerializer.Serialize(new Dictionary<string, string> { [SelectionKey] = path }));
+        File.Move(temporary, selectionFile, true);
     }
 
     private static bool IsGammaGuardFolder(string directory)

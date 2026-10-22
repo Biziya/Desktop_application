@@ -156,6 +156,42 @@ public sealed class DeviceStatusMonitor : ObservableObject, IDisposable
     public Task CheckGammaGuardDatabaseAsync(bool rediscover = false) =>
         Run(ref gammaGuardRun, () => gammaGuardCheck.Check(rediscover), status => GammaGuardDatabase = status, Unavailable);
 
+    /// <summary>
+    /// Switches to the Gamma Guard database the user chose, if it is valid (<see cref="GammaGuardDatabaseCheck.Select"/>):
+    /// the row shows it at once and every later read (the next capture) uses it; it is saved for the next start.
+    /// Otherwise the current database stays and the returned status says why. Runs off the UI thread after a running
+    /// Gamma Guard check, and checks requested meanwhile wait for it, so an older result never replaces the new one.
+    /// No connection is kept open to either file.
+    /// </summary>
+    public Task<LocalStatus> SelectGammaGuardDatabaseAsync(string path)
+    {
+        var selecting = SelectAfterAsync(gammaGuardRun ?? Task.CompletedTask);
+        gammaGuardRun = selecting;
+        return selecting;
+
+        async Task<LocalStatus> SelectAfterAsync(Task before)
+        {
+            await before;
+            LocalStatus status;
+
+            try
+            {
+                status = await Task.Run(() => gammaGuardCheck.Select(path));
+            }
+            catch (Exception error)
+            {
+                status = new LocalStatus(LocalState.Unavailable, "Not saved", $"The selection could not be saved: {error.Message}", path);
+            }
+
+            if (!disposed && status.State == LocalState.Available)
+            {
+                GammaGuardDatabase = status;
+            }
+
+            return status;
+        }
+    }
+
     private static LocalStatus Unavailable(Exception error) => new(LocalState.Unavailable, "Status unavailable", error.Message);
 
     public void Dispose()

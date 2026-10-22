@@ -52,11 +52,13 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         api = new ApiClient(apiSettings, handler);
         Backend = new BackendConnection(api, apiSettings.StatusInterval);
 
-        // Device Status is checked on this laptop, independently of the backend; also one instance for the whole app.
+        // Device Status is checked on this laptop, independently of the backend; also one instance for the whole app. A
+        // Gamma Guard database chosen by the user is saved beside the measurement database (Config folder), so it is kept
+        // across restarts and updates.
         Devices = new DeviceStatusMonitor(
             bluetoothDevices is null ? new Ct007BluetoothCheck(deviceSettings) : new Ct007BluetoothCheck(deviceSettings, bluetoothDevices),
             new MeasurementDatabaseCheck(repository.DatabasePath),
-            new GammaGuardDatabaseCheck(deviceSettings),
+            new GammaGuardDatabaseCheck(deviceSettings, selectionFile: GammaGuardDatabaseCheck.SelectionFileBeside(repository.DatabasePath)),
             deviceSettings.CheckInterval,
             deviceSettings.BluetoothCheckInterval);
 
@@ -90,7 +92,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             new DrillholeCache(repository.DatabasePath),
             repository,
             Devices,
-            toasts: Toasts);
+            toasts: Toasts,
+            dialogs: dialogs);
         Core.Edited += () => Measurement.SetCore(null);
         Core.DrillholeChanged += drillholeId => Measurement.SelectDrillhole(drillholeId);
 

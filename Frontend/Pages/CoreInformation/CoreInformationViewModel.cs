@@ -5,6 +5,7 @@ using Frontend.Pages.CoreInformation.DrillholeInformation;
 using Frontend.Pages.Measurement;
 using Frontend.Shared.Infrastructure;
 using Frontend.Shared.Models;
+using Frontend.Windows.ConfirmationWindow;
 
 namespace Frontend.Pages.CoreInformation;
 
@@ -23,6 +24,7 @@ public sealed class CoreInformationViewModel : ObservableObject
     private readonly DrillholesClient drillholesApi;
     private readonly DrillholeCache cache;
     private readonly IMeasurementRepository history;
+    private readonly IDialogService dialogs;
     private readonly TimeSpan searchDelay;
     private string drillholeId = "";
     private string drillholeName = "";
@@ -55,12 +57,14 @@ public sealed class CoreInformationViewModel : ObservableObject
         IMeasurementRepository history,
         DeviceStatusMonitor devices,
         TimeSpan? searchDelay = null,
-        ToastService? toasts = null)
+        ToastService? toasts = null,
+        IDialogService? dialogs = null)
     {
         Toasts = toasts ?? new ToastService();
         this.drillholesApi = drillholesApi;
         this.cache = cache;
         this.history = history;
+        this.dialogs = dialogs ?? new DialogService();
         this.searchDelay = searchDelay ?? TimeSpan.FromMilliseconds(150);
         Devices = devices;
         operatorName = WindowsAccount.Current();
@@ -69,6 +73,8 @@ public sealed class CoreInformationViewModel : ObservableObject
         ClearDrillholeCommand = new RelayCommand(_ => ClearDrillhole(), _ => CanClearDrillhole);
         RefreshMeasurementDatabaseCommand = new RelayCommand(_ => _ = devices.CheckMeasurementDatabaseAsync());
         RefreshGammaGuardDatabaseCommand = new RelayCommand(_ => _ = devices.CheckGammaGuardDatabaseAsync(rediscover: true));
+        SelectGammaGuardDatabaseCommand = new AsyncCommand(SelectGammaGuardDatabaseAsync,
+            error => Toasts.Error($"The Gamma Guard database could not be changed: {error.Message}"));
 
         // A drillhole list that failed because the backend was offline loads again as soon as it is back.
         backend.CameOnline += () =>
@@ -131,6 +137,9 @@ public sealed class CoreInformationViewModel : ObservableObject
     public RelayCommand RefreshMeasurementDatabaseCommand { get; }
 
     public RelayCommand RefreshGammaGuardDatabaseCommand { get; }
+
+    /// <summary>Select / Change Database: lets the user choose the Gamma Guard database file (always available).</summary>
+    public AsyncCommand SelectGammaGuardDatabaseCommand { get; }
 
     /// <summary>Local Device Status of this laptop: CT-007 Bluetooth, measurement database, Gamma Guard database.</summary>
     public DeviceStatusMonitor Devices { get; }
@@ -550,6 +559,35 @@ public sealed class CoreInformationViewModel : ObservableObject
         // Put the dropdown back on the picked entry and its text (a rebuild may have cleared both in the control).
         Changed(nameof(PickedDrillhole));
         Changed(nameof(DrillholeSearch));
+    }
+
+    // ---------- Device Status ----------
+
+    // Cancelling the dialog or choosing an unusable file keeps the current database. Not while measuring: the
+    // samples of one drillhole run come from one database.
+    private async Task SelectGammaGuardDatabaseAsync()
+    {
+        if (isSelectionLocked)
+        {
+            Toasts.Error("Stop the measurement before changing the Gamma Guard database.");
+            return;
+        }
+
+        if (dialogs.PickGammaGuardDatabase(Devices.GammaGuardDatabase.Path) is not { } path)
+        {
+            return;
+        }
+
+        var status = await Devices.SelectGammaGuardDatabaseAsync(path);
+
+        if (status.State == LocalState.Available)
+        {
+            Toasts.Success($"Gamma Guard database selected: {status.Path}");
+        }
+        else
+        {
+            Toasts.Error($"The Gamma Guard database was not changed. {status.Text}: {status.Detail}");
+        }
     }
 
     // ---------- Saving ----------

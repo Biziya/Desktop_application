@@ -10,6 +10,7 @@ deployed separately and is not changed by anything in this guide.
 |---|---|---|
 | Application id, name, version, description | `Frontend/Config/application.yaml` (single source of truth) | `Frontend.csproj` (compiled version), `build-installer.ps1` (Velopack id, title, version), the app (window title) |
 | Frontend → backend API URL, timeout, retry interval | Installed: `%LocalAppData%\CT007_Measurement_Studio\Config\.env.production` (created on first start from `Frontend\.env.production`, shipped as a template). Development: `Frontend\.env.local` | Frontend `ApiSettings` ([API_CONFIGURATION.md](API_CONFIGURATION.md)) |
+| Gamma Guard database chosen with Select / Change Database | `%LocalAppData%\CT007_Measurement_Studio\Config\gamma-guard-database.json` (per user, written only when the user selects a database; outside the install folder, so updates keep it) | Frontend `GammaGuardDatabaseCheck` |
 | Backend → SQL Server connection string | `Backend/appsettings.json`, `ConnectionStrings:DefaultConnection` | Backend `DrillholeRepository` — **out of scope, not changed** |
 
 ### Application metadata (`application.yaml`)

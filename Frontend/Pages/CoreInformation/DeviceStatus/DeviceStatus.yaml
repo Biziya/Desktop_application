@@ -5,6 +5,9 @@ labels:
   measurementDatabase: Measurement SQLite Database
   gammaGuardDatabase: Gamma Guard SQLite Database
   retry: Retry                                  # shown on a database row that is not available
+  selectDatabase: Select Database               # Gamma Guard row, no database available
+  changeDatabase: Change Database               # Gamma Guard row, a database is available
+  selectDatabaseToolTip: Choose the Gamma Guard SQLite database file
   statusDot: "●  "                              # in front of the status text ("●  Connected"); keep the quotes
 
 sizes:

@@ -11,4 +11,8 @@ public interface IDialogService
 
     /// <summary>Full path of the CSV file the user chose to import, or null when cancelled.</summary>
     string? PickCsvFile();
+
+    /// <summary>Full path of the Gamma Guard database file the user chose (opened in the folder of
+    /// <paramref name="currentPath"/> when given), or null when cancelled.</summary>
+    string? PickGammaGuardDatabase(string? currentPath);
 }

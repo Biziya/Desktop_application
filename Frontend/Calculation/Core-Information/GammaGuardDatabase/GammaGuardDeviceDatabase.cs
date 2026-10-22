@@ -25,7 +25,34 @@ public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
     private const string SampleColumns =
         "id, serial, session_id, seq, ts_ms, count0, count0_raw, hdm, hdm_raw, dose_rate, temperature, pressure";
 
+    private const string DetectorColumns = "serial, name, mac, firmware, device_type, session_id, state, last_sample_ms, updated_ms";
+
     public string Path { get; } = path;
+
+    /// <summary>
+    /// Why the database on <paramref name="connection"/> is not a Gamma Guard database, or null when it is: every
+    /// column this class reads must exist and a row of each table must be readable. Reads at most one row per table.
+    /// </summary>
+    public static string? StructureProblem(SqliteConnection connection)
+    {
+        foreach (var (table, columns) in new[] { ("samples", SampleColumns), ("detector_status", DetectorColumns) })
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = $"SELECT {columns} FROM {table} LIMIT 1";
+
+            try
+            {
+                using var reader = command.ExecuteReader();
+                reader.Read();
+            }
+            catch (SqliteException error) when (error.SqliteErrorCode == 1) // SQLITE_ERROR: no such table or column
+            {
+                return $"The file is not a Gamma Guard database ({error.Message}).";
+            }
+        }
+
+        return null;
+    }
 
     public long? MaxSampleId()
     {
@@ -107,10 +134,7 @@ public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
     {
         using var connection = SqliteFileCheck.OpenReadOnly(Path);
         using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT serial, name, mac, firmware, device_type, session_id, state, last_sample_ms, updated_ms
-            FROM detector_status WHERE serial = $serial
-            """;
+        command.CommandText = $"SELECT {DetectorColumns} FROM detector_status WHERE serial = $serial";
         command.Parameters.AddWithValue("$serial", serial);
         using var reader = command.ExecuteReader();
         var rows = new List<DetectorStatus>();

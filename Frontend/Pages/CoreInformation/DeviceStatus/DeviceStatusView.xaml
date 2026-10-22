@@ -64,6 +64,30 @@
                 <Setter Property="Margin" Value="{StaticResource DeviceRetryMargin}"/>
                 <Setter Property="Visibility" Value="{Binding CanRetry, Converter={StaticResource BoolVisibility}}"/>
             </Style>
+            <!-- Gamma Guard row: Retry stays available next to a database that works too (it checks the selected
+                 database first, then searches again); hidden only while a check runs. -->
+            <Style x:Key="GammaGuardRetry" TargetType="Button" BasedOn="{StaticResource DeviceRetry}">
+                <Setter Property="Visibility" Value="Visible"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding State}" Value="Checking">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <!-- Select Database (nothing available) / Change Database (a database is available): always shown, so an
+                 automatically found database can be replaced at any time. -->
+            <Style x:Key="GammaGuardSelect" TargetType="Button" BasedOn="{StaticResource SmallButton}">
+                <Setter Property="DockPanel.Dock" Value="Right"/>
+                <Setter Property="Margin" Value="{StaticResource DeviceRetryMargin}"/>
+                <Setter Property="Content" Value="{StaticResource SelectDatabaseLabel}"/>
+                <Setter Property="ToolTip" Value="{StaticResource SelectDatabaseToolTip}"/>
+                <Setter Property="AutomationProperties.HelpText" Value="{StaticResource SelectDatabaseToolTip}"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding State}" Value="Available">
+                        <Setter Property="Content" Value="{StaticResource ChangeDatabaseLabel}"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -116,7 +140,10 @@
             </Border>
             <Border Style="{StaticResource DeviceRow}" DataContext="{Binding Devices.GammaGuardDatabase}">
                 <DockPanel>
-                    <Button Style="{StaticResource DeviceRetry}"
+                    <!-- Docked right in this order: [Retry] [Select / Change Database] -->
+                    <Button Style="{StaticResource GammaGuardSelect}"
+                            Command="{Binding DataContext.SelectGammaGuardDatabaseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                    <Button Style="{StaticResource GammaGuardRetry}"
                             Command="{Binding DataContext.RefreshGammaGuardDatabaseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                     <TextBlock Style="{StaticResource DeviceStatusValue}"
                                AutomationProperties.Name="Gamma Guard database status"><Run Text="{StaticResource DeviceStatusDot}"/><Run Text="{Binding Text, Mode=OneWay}"/></TextBlock>

@@ -22,6 +22,9 @@ public sealed class DeviceStatusSettings
         resources.Add("MeasurementDatabaseLabel", Labels.MeasurementDatabase);
         resources.Add("GammaGuardDatabaseLabel", Labels.GammaGuardDatabase);
         resources.Add("DeviceRetryLabel", Labels.Retry);
+        resources.Add("SelectDatabaseLabel", Labels.SelectDatabase);
+        resources.Add("ChangeDatabaseLabel", Labels.ChangeDatabase);
+        resources.Add("SelectDatabaseToolTip", Labels.SelectDatabaseToolTip);
         resources.Add("DeviceStatusDot", Labels.StatusDot);
 
         resources.Add("BluetoothDropdownMaxWidth", Sizes.BluetoothDropdownMaxWidth);
@@ -42,6 +45,9 @@ public sealed class DeviceStatusSettings
         public required string MeasurementDatabase { get; init; }
         public required string GammaGuardDatabase { get; init; }
         public required string Retry { get; init; }
+        public required string SelectDatabase { get; init; }
+        public required string ChangeDatabase { get; init; }
+        public required string SelectDatabaseToolTip { get; init; }
         public required string StatusDot { get; init; }
     }
 

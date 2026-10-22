@@ -39,7 +39,9 @@ public static class SqliteFileCheck
         }
     }
 
-    public static LocalStatus Check(string path, string missingDetail)
+    /// <param name="verify">Optional extra read-only check on the open connection: returns why the file is not the
+    /// expected database (shown as "Wrong database"), or null when it is.</param>
+    public static LocalStatus Check(string path, string missingDetail, Func<SqliteConnection, string?>? verify = null)
     {
         try
         {
@@ -52,6 +54,11 @@ public static class SqliteFileCheck
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'";
             var tables = Convert.ToInt64(command.ExecuteScalar());
+
+            if (verify?.Invoke(connection) is { } problem)
+            {
+                return new LocalStatus(LocalState.Inaccessible, "Wrong database", problem, path);
+            }
 
             return new LocalStatus(LocalState.Available, "Available", $"Readable SQLite database ({tables} tables).", path);
         }

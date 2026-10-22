@@ -229,6 +229,18 @@ public sealed class FakeDialogs : IDialogService
     public string? CsvFile { get; set; }
 
     public string? PickCsvFile() => CsvFile;
+
+    /// <summary>The file "chosen" in the Gamma Guard database dialog; null = cancelled.</summary>
+    public string? GammaGuardFile { get; set; }
+
+    /// <summary>How often the Gamma Guard database dialog was opened.</summary>
+    public int GammaGuardDialogs { get; private set; }
+
+    public string? PickGammaGuardDatabase(string? currentPath)
+    {
+        GammaGuardDialogs++;
+        return GammaGuardFile;
+    }
 }
 
 public sealed class FakeExport : ICsvExportService
