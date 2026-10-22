@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "B/EYZvZX63M=",
+  "dgSpecHash": "IdKcJyhfq6A=",
   "success": true,
   "projectFilePath": "C:\\Users\\Bek\\Documents\\Projects\\Desktop_application\\Frontend\\Frontend.csproj",
   "expectedPackageFiles": [
@@ -12,9 +12,6 @@
     "C:\\Users\\Bek\\.nuget\\packages\\sqlitepclraw.provider.e_sqlite3\\2.1.11\\sqlitepclraw.provider.e_sqlite3.2.1.11.nupkg.sha512",
     "C:\\Users\\Bek\\.nuget\\packages\\velopack\\1.2.161\\velopack.1.2.161.nupkg.sha512",
     "C:\\Users\\Bek\\.nuget\\packages\\yamldotnet\\18.1.0\\yamldotnet.18.1.0.nupkg.sha512",
-    "C:\\Users\\Bek\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\10.0.13\\microsoft.netcore.app.runtime.win-x64.10.0.13.nupkg.sha512",
-    "C:\\Users\\Bek\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\10.0.13\\microsoft.windowsdesktop.app.runtime.win-x64.10.0.13.nupkg.sha512",
-    "C:\\Users\\Bek\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\10.0.13\\microsoft.aspnetcore.app.runtime.win-x64.10.0.13.nupkg.sha512",
     "C:\\Users\\Bek\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.57\\microsoft.windows.sdk.net.ref.10.0.19041.57.nupkg.sha512"
   ],
   "logs": [
@@ -27,8 +24,7 @@
       "filePath": "C:\\Users\\Bek\\Documents\\Projects\\Desktop_application\\Frontend\\Frontend.csproj",
       "libraryId": "SQLitePCLRaw.lib.e_sqlite3",
       "targetGraphs": [
-        "net10.0-windows10.0.19041.0",
-        "net10.0-windows10.0.19041.0/win-x64"
+        "net10.0-windows10.0.19041.0"
       ]
     }
   ]
