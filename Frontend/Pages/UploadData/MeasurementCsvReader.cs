@@ -7,8 +7,9 @@ using Frontend.Pages.Measurement.Table;
 namespace Frontend.Pages.UploadData;
 
 /// <summary>
-/// Metadata of an imported CSV: the same on every row. A column missing from the file (older exports have no
-/// Created Username; the oldest no metadata at all) is null, never guessed.
+/// Metadata of an imported CSV: the same on every row. A column missing from the file (older exports have no Created At
+/// or Created Username; the oldest no metadata at all) is null, never guessed. CreatedAt is the measurement session's
+/// creation time as exported (its own offset kept), never the file's date.
 /// </summary>
 public sealed record ImportedMetadata(
     Guid SessionId,
@@ -17,7 +18,8 @@ public sealed record ImportedMetadata(
     string? Campaign,
     string? Operator,
     string? Notes,
-    string? CreatedUsername);
+    string? CreatedUsername,
+    DateTimeOffset? CreatedAt = null);
 
 /// <summary>An imported CSV: its metadata and its rows in display order (sorted by From, numbered from 1).</summary>
 public sealed record ImportedMeasurements(ImportedMetadata Metadata, IReadOnlyList<MeasurementResult> Rows);
@@ -94,12 +96,13 @@ public static class MeasurementCsvReader
                 row.Text(CsvExportService.CampaignHeader),
                 row.Text(CsvExportService.OperatorHeader),
                 row.Text(CsvExportService.NotesHeader),
-                row.Text(CsvExportService.CreatedUsernameHeader));
+                row.Text(CsvExportService.CreatedUsernameHeader),
+                row.OptionalTime(CsvExportService.CreatedAtHeader));
 
             // One export holds one measurement session, so the metadata repeated on each row must agree.
             if (metadata is not null && metadata != rowMetadata)
             {
-                throw row.Error("its session or Drillhole, Project, Campaign, Operator, Notes or Created Username differs from the first row. " +
+                throw row.Error("its session or Drillhole, Project, Campaign, Operator, Notes, Created At or Created Username differs from the first row. " +
                                 "Import one exported measurement session per file.");
             }
 
@@ -199,13 +202,16 @@ public static class MeasurementCsvReader
             ? id
             : throw Error($"{column} '{Value(column)}' is not a session ID.");
 
-        public DateTimeOffset Time(string column)
+        public DateTimeOffset Time(string column) => OptionalTime(column) ?? throw Missing(column);
+
+        // Null when the column is missing or the cell empty.
+        public DateTimeOffset? OptionalTime(string column)
         {
             var value = Value(column)?.Trim() ?? "";
 
             if (value.Length == 0)
             {
-                throw Missing(column);
+                return null;
             }
 
             return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time)

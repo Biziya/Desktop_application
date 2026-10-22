@@ -4,12 +4,12 @@ namespace Ct007.Tests.BackendTests;
 public static class CsvExportTests
 {
     /// <summary>
-    /// The exported header row (current contract, UR-04: depths and Created Username added so exports can be imported on
+    /// The exported header row (current contract, UR-04: depths, Created At and Created Username added so exports can be imported on
     /// the Upload Data page); also used by E2E-001.
     /// </summary>
     internal const string Header =
         "\"No\",\"Capture No\",\"Start Time\",\"End Time\",\"from_m\",\"to_m\",\"step_m\",\"Sample\",\"ts_ms\",\"count0\",\"count0_raw\",\"hdm\",\"hdm_raw\",\"dose_rate\"," +
-        "\"Drillhole\",\"Project\",\"Campaign\",\"Operator\",\"Notes\",\"Created Username\",\"session_id\"";
+        "\"Drillhole\",\"Project\",\"Campaign\",\"Operator\",\"Notes\",\"Created At\",\"Created Username\",\"session_id\"";
 
     private static MeasurementSession Session(string notes = "", string operatorName = "Ann", string drillhole = "DH-001") =>
         new(Guid.Parse("33333333-3333-3333-3333-333333333333"), DateTimeOffset.UnixEpoch, drillhole, "North Ridge", "2024", operatorName, notes);
@@ -44,7 +44,7 @@ public static class CsvExportTests
             CultureInfo.CurrentCulture = culture;
         }
 
-        var meta = "\"DH-001\",\"North Ridge\",\"2024\",\"Ann\",\"\",\"CORP\\ann\",\"33333333-3333-3333-3333-333333333333\"";
+        var meta = "\"DH-001\",\"North Ridge\",\"2024\",\"Ann\",\"\",\"1970-01-01T00:00:00.0000000+00:00\",\"CORP\\ann\",\"33333333-3333-3333-3333-333333333333\"";
         var expected =
             Header + "\r\n" +
             "\"1\",\"1\",\"2026-10-16T09:00:00.1234567+08:00\",\"2026-10-16T09:00:05.1234567+08:00\",\"10\",\"10.25\",\"0.25\",\"5\",\"1760600000001\"," +

@@ -20,7 +20,6 @@ multipliers:
   startStopButtonWidth: 1.0
   startStopButtonFontSize: 1.0
   startStopButtonIconFontSize: 1.0
-  labelFontSize: 1.0                            # Starting Depth, Step and Threshold labels
 
 # Original sizes; leave these as they are and change the multipliers instead.
 sizes:
@@ -29,18 +28,28 @@ sizes:
   countdownRingThickness: 8
   countdownLabelFontSize: 14
   startStopButtonWidth: 200                     # also the width of the Starting Depth, Step and Threshold boxes
-  startStopButtonFontSize: 16                   # the button is as tall as the boxes (ControlHeight, 40 px, in the theme)
+  startStopButtonFontSize: 16                   # the button is as tall as the boxes (floatingInput.boxHeight)
   startStopButtonIconFontSize: 13               # the play / stop glyph
-  labelFontSize: 14
   startStopButtonPadding: 16,0                  # no multiplier: used as is
   durationEditorWidth: 230                      # no multiplier
 
 spacing:
-  stepLabel: 0,14,0,0                           # between Starting Depth and Step
-  thresholdLabel: 0,14,0,0                      # between Step and Threshold
-  startStopButton: 0,18,0,0                     # between Threshold and Start / Stop
+  startStopButton: 0,12,0,0                     # between Threshold and Start / Stop
   countdownColumn: 24,0                         # left and right of the countdown
   countdownLabel: 0,0,0,10                      # below "Capture Countdown"
+
+# Starting Depth, Step and Threshold: compact inputs whose label sits on the box's top border (one shared style in
+# CapturePanelView.xaml). No multipliers: used as is.
+floatingInput:
+  boxHeight: 36                                 # the box, border to border (also the Start / Stop height)
+  labelOffset: 8                                # how far the label reaches above the box: about half its line
+  labelFontSize: 13                             # as the Core Information labels (FieldLabel)
+  labelPadding: 4,0                             # around the label; its background hides the border behind it
+  labelMargin: 8,0,0,0                          # from the box's left edge
+  fontSize: 14                                  # the value
+  padding: 10,0                                 # inside the box; values are right-aligned
+  borderThickness: 1.5
+  spacing: 0,8,0,0                              # between two inputs
 
 # Bar chart (x = depth, y = CPS: the finalized counts per second of each row, as in the table). It takes the remaining
 # width of the panel.

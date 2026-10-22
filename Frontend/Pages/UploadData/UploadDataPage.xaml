@@ -5,13 +5,18 @@
     <!-- Upload Data: Import CSV → review (rows can only be removed) → Upload Data. DataContext: UploadDataViewModel.
          Results and errors are toasts (MainWindow). The table is the Measurement page's (MeasurementGrid, MeasurementTable.yaml). -->
     <UserControl.Resources>
+        <!-- Measurement Information: label column (Auto, so labels line up) and value column; one gap between fields. -->
         <Style x:Key="InfoLabel" TargetType="TextBlock" BasedOn="{StaticResource FieldLabel}">
-            <Setter Property="Margin" Value="0,0,16,8"/>
+            <Setter Property="Margin" Value="0,0,16,6"/>
+            <Setter Property="TextWrapping" Value="NoWrap"/>
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
         </Style>
+        <!-- A value too long for its column ends in "…"; the full value is the tooltip. -->
         <Style x:Key="InfoValue" TargetType="TextBlock">
-            <Setter Property="Margin" Value="0,0,24,8"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,32,6"/>
             <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
         </Style>
     </UserControl.Resources>
 
@@ -29,11 +34,7 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="Measurement Information" Style="{StaticResource SectionTitle}" Margin="0"/>
-                        <TextBlock Text="{Binding FileName}" Style="{StaticResource MutedText}" Margin="0,4,0,0"
-                                   Visibility="{Binding HasImport, Converter={StaticResource BoolVisibility}}"/>
-                    </StackPanel>
+                    <TextBlock Text="Measurement Information" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
                     <Button Grid.Column="1"
                             Content="↓   Import CSV"
                             Style="{StaticResource SecondaryButton}"
@@ -66,38 +67,43 @@
                     </TextBlock.Style>
                 </TextBlock>
 
-                <!-- Labels as on Core Information. Empty or missing values (older exports) read "Not available". -->
-                <Grid Margin="0,16,0,0" Visibility="{Binding HasImport, Converter={StaticResource BoolVisibility}}">
+                <!-- The imported file and session on the left, the drillhole on the right; Notes wraps (up to three lines,
+                     the rest in the tooltip). Missing values (older exports) read "Not available". Read-only. -->
+                <Grid Visibility="{Binding HasImport, Converter={StaticResource BoolVisibility}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*" MinWidth="120"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*" MinWidth="120"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Text="Drillhole" Style="{StaticResource InfoLabel}"/>
-                    <TextBlock Grid.Column="1" Text="{Binding Drillhole}" Style="{StaticResource InfoValue}"/>
-                    <TextBlock Grid.Column="2" Text="Created Username" Style="{StaticResource InfoLabel}"/>
-                    <TextBlock Grid.Column="3" Text="{Binding CreatedUsername}" Style="{StaticResource InfoValue}"/>
+                    <Border Grid.ColumnSpan="4" Height="1" Margin="0,14,0,12" Background="{StaticResource Line}"/>
 
-                    <TextBlock Grid.Row="1" Text="Project" Style="{StaticResource InfoLabel}"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Project}" Style="{StaticResource InfoValue}"/>
-                    <TextBlock Grid.Row="1" Grid.Column="2" Text="Uploading Username" Style="{StaticResource InfoLabel}"/>
-                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding UploadingUsername}" Style="{StaticResource InfoValue}"/>
-
-                    <TextBlock Grid.Row="2" Text="Campaign" Style="{StaticResource InfoLabel}"/>
-                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Campaign}" Style="{StaticResource InfoValue}"/>
-
+                    <TextBlock Grid.Row="1" Text="Filename" Style="{StaticResource InfoLabel}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding FileName}" Style="{StaticResource InfoValue}"/>
+                    <TextBlock Grid.Row="2" Text="Created At" Style="{StaticResource InfoLabel}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding CreatedAt}" Style="{StaticResource InfoValue}"/>
                     <TextBlock Grid.Row="3" Text="Operator" Style="{StaticResource InfoLabel}"/>
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Operator}" Style="{StaticResource InfoValue}"/>
-                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Notes" Style="{StaticResource InfoLabel}"/>
-                    <TextBlock Grid.Row="2" Grid.RowSpan="2" Grid.Column="3" Text="{Binding Notes}" Style="{StaticResource InfoValue}"/>
+                    <TextBlock Grid.Row="4" Text="Uploading User" Style="{StaticResource InfoLabel}"/>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding UploadingUsername}" Style="{StaticResource InfoValue}"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="2" Text="Drillhole" Style="{StaticResource InfoLabel}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Drillhole}" Style="{StaticResource InfoValue}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Project" Style="{StaticResource InfoLabel}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding Project}" Style="{StaticResource InfoValue}"/>
+                    <TextBlock Grid.Row="3" Grid.Column="2" Text="Campaign" Style="{StaticResource InfoLabel}"/>
+                    <TextBlock Grid.Row="3" Grid.Column="3" Text="{Binding Campaign}" Style="{StaticResource InfoValue}"/>
+                    <TextBlock Grid.Row="4" Grid.Column="2" Text="Notes" Style="{StaticResource InfoLabel}"/>
+                    <TextBlock Grid.Row="4" Grid.Column="3" Text="{Binding Notes}" Style="{StaticResource InfoValue}"
+                               TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="60"/>
                 </Grid>
             </StackPanel>
         </Border>

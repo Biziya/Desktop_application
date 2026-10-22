@@ -41,17 +41,63 @@
                 </Setter>
             </Style>
 
-            <!-- Starting Depth, Step and Threshold: numbers are right-aligned in the box (labels stay where they are). -->
-            <Style x:Key="NumericInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <!-- Starting Depth, Step and Threshold: compact inputs (after the Uiverse "coolinput"). The label (Tag, the same
+                 text style as the Core Information labels) sits on the box's top border with the card's white behind it,
+                 so it takes no row of its own. Value text as in every text box (Navy, 14 px), right-aligned.
+                 Border: near-black (Navy) → gray on hover (InputHoverBorder, as the Drillhole box) → blue while focused
+                 (the focus trigger is declared last, so it wins over hover). An invalid value (each box's DataTrigger,
+                 declared later still) turns it red. Sizes: floatingInput in CapturePanel.yaml. -->
+            <Style x:Key="FloatingLabelInput" TargetType="TextBox">
+                <Setter Property="Height" Value="{StaticResource FloatingInputHeight}"/>
+                <Setter Property="Margin" Value="{StaticResource FloatingInputSpacing}"/>
+                <Setter Property="Padding" Value="{StaticResource FloatingInputPadding}"/>
+                <Setter Property="FontSize" Value="{StaticResource FloatingInputFontSize}"/>
                 <Setter Property="TextAlignment" Value="Right"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+                <Setter Property="Background" Value="{StaticResource Surface}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource Navy}"/>
+                <Setter Property="BorderThickness" Value="{StaticResource FloatingInputBorderThickness}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TextBox">
+                            <Grid>
+                                <Border x:Name="Frame" Margin="{StaticResource FloatingInputBoxMargin}" CornerRadius="{StaticResource ControlRadius}"
+                                        Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}">
+                                    <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                </Border>
+                                <TextBlock Text="{TemplateBinding Tag}" Style="{StaticResource FieldLabel}" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                           Margin="{StaticResource FloatingInputLabelMargin}" Padding="{StaticResource FloatingInputLabelPadding}"
+                                           Background="{StaticResource Surface}"
+                                           FontSize="{StaticResource FloatingInputLabelFontSize}"
+                                           IsHitTestVisible="False"/>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Frame" Property="Opacity" Value="0.6"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource InputHoverBorder}"/>
+                    </Trigger>
+                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource Blue}"/>
+                    </Trigger>
+                </Style.Triggers>
             </Style>
 
-            <!-- One toggle: green "Start" while stopped, red "Stop" while measuring. Exactly as tall as the Starting Depth
-                 and Step boxes (the box, not their labels). -->
+            <!-- One toggle: green "Start" while stopped, red "Stop" while measuring. Exactly as tall as the Starting Depth,
+                 Step and Threshold boxes (the box, not their labels). -->
             <Style x:Key="StartStopButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                 <Setter Property="FontSize" Value="{StaticResource StartStopButtonFontSize}"/>
                 <Setter Property="MinWidth" Value="{StaticResource StartStopButtonWidth}"/>
-                <Setter Property="Height" Value="{StaticResource ControlHeight}"/>
+                <Setter Property="Height" Value="{StaticResource FloatingInputBoxHeight}"/>
                 <Setter Property="MinHeight" Value="0"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
                 <Setter Property="Padding" Value="{StaticResource StartStopButtonPadding}"/>
@@ -95,14 +141,14 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
+        <!-- The first box's spacing is dropped so the column starts at its label. Invalid text gets a red border while
+             typing; leaving the box (or Start) reports it in a toast. -->
         <StackPanel Width="{StaticResource StartStopButtonWidth}" VerticalAlignment="Center">
-            <TextBlock Text="{StaticResource StartingDepthLabel}" Style="{StaticResource FieldLabel}" FontSize="{StaticResource CaptureLabelFontSize}"/>
-            <!-- Invalid text gets a red border while typing; leaving the box (or Start) reports it in a toast. -->
-            <TextBox Text="{Binding NextFrom, UpdateSourceTrigger=PropertyChanged}"
+            <TextBox Text="{Binding NextFrom, UpdateSourceTrigger=PropertyChanged}" Tag="{StaticResource StartingDepthLabel}" Margin="0"
                      LostFocus="DepthCommitted"
                      AutomationProperties.Name="Starting depth in metres">
                 <TextBox.Style>
-                    <Style TargetType="TextBox" BasedOn="{StaticResource NumericInput}">
+                    <Style TargetType="TextBox" BasedOn="{StaticResource FloatingLabelInput}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsNextFromInvalid}" Value="True">
                                 <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
@@ -111,13 +157,11 @@
                     </Style>
                 </TextBox.Style>
             </TextBox>
-            <TextBlock Text="{StaticResource StepLabel}" Style="{StaticResource FieldLabel}" FontSize="{StaticResource CaptureLabelFontSize}"
-                       Margin="{StaticResource StepLabelMargin}"/>
-            <TextBox Text="{Binding Step, UpdateSourceTrigger=PropertyChanged}"
+            <TextBox Text="{Binding Step, UpdateSourceTrigger=PropertyChanged}" Tag="{StaticResource StepLabel}"
                      LostFocus="DepthCommitted"
                      AutomationProperties.Name="Depth step in centimetres">
                 <TextBox.Style>
-                    <Style TargetType="TextBox" BasedOn="{StaticResource NumericInput}">
+                    <Style TargetType="TextBox" BasedOn="{StaticResource FloatingLabelInput}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsStepInvalid}" Value="True">
                                 <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
@@ -127,14 +171,12 @@
                 </TextBox.Style>
             </TextBox>
             <!-- A completed row whose CPS is above this sounds the alarm (it never stops or changes the measurement). -->
-            <TextBlock Text="{StaticResource ThresholdLabel}" Style="{StaticResource FieldLabel}" FontSize="{StaticResource CaptureLabelFontSize}"
-                       Margin="{StaticResource ThresholdLabelMargin}"/>
-            <TextBox Text="{Binding Threshold, UpdateSourceTrigger=PropertyChanged}"
+            <TextBox Text="{Binding Threshold, UpdateSourceTrigger=PropertyChanged}" Tag="{StaticResource ThresholdLabel}"
                      LostFocus="ThresholdCommitted"
                      ToolTip="An alarm sounds when a completed measurement's CPS is above this value. Leave empty for no alarm."
                      AutomationProperties.Name="CPS alarm threshold">
                 <TextBox.Style>
-                    <Style TargetType="TextBox" BasedOn="{StaticResource NumericInput}">
+                    <Style TargetType="TextBox" BasedOn="{StaticResource FloatingLabelInput}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsThresholdInvalid}" Value="True">
                                 <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>

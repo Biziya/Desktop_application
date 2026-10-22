@@ -19,6 +19,8 @@ public sealed class CapturePanelSettings
 
     public required SpacingSettings Spacing { get; init; }
 
+    public required FloatingInputSettings FloatingInput { get; init; }
+
     public required ChartSettings Chart { get; init; }
 
     public required AlarmSettings Alarm { get; init; }
@@ -46,15 +48,23 @@ public sealed class CapturePanelSettings
         resources.Add("StartStopButtonWidth", Sizes.StartStopButtonWidth * Multipliers.StartStopButtonWidth);
         resources.Add("StartStopButtonFontSize", Sizes.StartStopButtonFontSize * Multipliers.StartStopButtonFontSize);
         resources.Add("StartStopButtonIconFontSize", Sizes.StartStopButtonIconFontSize * Multipliers.StartStopButtonIconFontSize);
-        resources.Add("CaptureLabelFontSize", Sizes.LabelFontSize * Multipliers.LabelFontSize);
         resources.Add("StartStopButtonPadding", Sizes.StartStopButtonPadding);
         resources.Add("DurationEditorWidth", Sizes.DurationEditorWidth);
 
-        resources.Add("StepLabelMargin", Spacing.StepLabel);
-        resources.Add("ThresholdLabelMargin", Spacing.ThresholdLabel);
         resources.Add("StartStopButtonMargin", Spacing.StartStopButton);
         resources.Add("CountdownColumnMargin", Spacing.CountdownColumn);
         resources.Add("CountdownLabelMargin", Spacing.CountdownLabel);
+
+        resources.Add("FloatingInputBoxHeight", FloatingInput.BoxHeight);
+        resources.Add("FloatingInputHeight", FloatingInput.BoxHeight + FloatingInput.LabelOffset);
+        resources.Add("FloatingInputBoxMargin", new Thickness(0, FloatingInput.LabelOffset, 0, 0));
+        resources.Add("FloatingInputLabelFontSize", FloatingInput.LabelFontSize);
+        resources.Add("FloatingInputLabelPadding", FloatingInput.LabelPadding);
+        resources.Add("FloatingInputLabelMargin", FloatingInput.LabelMargin);
+        resources.Add("FloatingInputFontSize", FloatingInput.FontSize);
+        resources.Add("FloatingInputPadding", FloatingInput.Padding);
+        resources.Add("FloatingInputBorderThickness", new Thickness(FloatingInput.BorderThickness));
+        resources.Add("FloatingInputSpacing", FloatingInput.Spacing);
 
         resources.Add("ChartXAxisLabel", Chart.XAxisLabel);
         resources.Add("ChartYAxisLabel", Chart.YAxisLabel);
@@ -88,7 +98,6 @@ public sealed class CapturePanelSettings
         public required double StartStopButtonWidth { get; init; }
         public required double StartStopButtonFontSize { get; init; }
         public required double StartStopButtonIconFontSize { get; init; }
-        public required double LabelFontSize { get; init; }
     }
 
     public sealed class SizeSettings
@@ -100,15 +109,12 @@ public sealed class CapturePanelSettings
         public required double StartStopButtonWidth { get; init; }
         public required double StartStopButtonFontSize { get; init; }
         public required double StartStopButtonIconFontSize { get; init; }
-        public required double LabelFontSize { get; init; }
         public required Thickness StartStopButtonPadding { get; init; }
         public required double DurationEditorWidth { get; init; }
     }
 
     public sealed class SpacingSettings
     {
-        public required Thickness StepLabel { get; init; }
-        public required Thickness ThresholdLabel { get; init; }
         public required Thickness StartStopButton { get; init; }
         public required Thickness CountdownColumn { get; init; }
         public required Thickness CountdownLabel { get; init; }
@@ -122,6 +128,23 @@ public sealed class CapturePanelSettings
         public required double MinHeight { get; init; }
         public required double AxisLabelFontSize { get; init; }
         public required double TickFontSize { get; init; }
+    }
+
+    /// <summary>
+    /// Starting Depth, Step and Threshold: the box height, how far the label reaches above it, label and value fonts,
+    /// paddings, border and the gap between inputs.
+    /// </summary>
+    public sealed class FloatingInputSettings
+    {
+        public required double BoxHeight { get; init; }
+        public required double LabelOffset { get; init; }
+        public required double LabelFontSize { get; init; }
+        public required Thickness LabelPadding { get; init; }
+        public required Thickness LabelMargin { get; init; }
+        public required double FontSize { get; init; }
+        public required Thickness Padding { get; init; }
+        public required double BorderThickness { get; init; }
+        public required Thickness Spacing { get; init; }
     }
 
     /// <summary>Default threshold (CPS) of the Threshold box and the alarm tone (Hz, seconds).</summary>

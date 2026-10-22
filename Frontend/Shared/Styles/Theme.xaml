@@ -2,8 +2,11 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                     xmlns:infra="clr-namespace:Frontend.Shared.Infrastructure">
-    <!-- One height for every single-line field (text boxes and dropdowns) and the Start/Stop button. -->
+    <!-- One height for every single-line field (text boxes and dropdowns). The Measurement inputs and Start / Stop use
+         CapturePanel.yaml (floatingInput.boxHeight). -->
     <sys:Double x:Key="ControlHeight">40</sys:Double>
+    <!-- Width of the blue bar beside the current page in the sidebar (its height is always the item's). -->
+    <sys:Double x:Key="SidebarIndicatorWidth">5</sys:Double>
     <!-- ===== Palette (after the Shopeers reference): white sidebar and cards on a light grey page, one blue accent. ===== -->
     <!-- Body text (near-black slate). The key name is historical. -->
     <SolidColorBrush x:Key="Navy" Color="#1F2937"/>
@@ -394,8 +397,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Grid>
-                        <!-- Sits in the sidebar padding (14 px), flush with the sidebar edge. -->
-                        <Border x:Name="Accent" Width="3" Margin="-14,8,0,8" HorizontalAlignment="Left" CornerRadius="0,2,2,0"
+                        <!-- Sits in the sidebar padding (14 px), flush with the sidebar edge, and stretches over the item's full
+                             height (no top/bottom margin), so it always matches the soft-blue fill beside it. -->
+                        <Border x:Name="Accent" Width="{StaticResource SidebarIndicatorWidth}" Margin="-14,0,0,0" HorizontalAlignment="Left" CornerRadius="0,3,3,0"
                                 Background="{StaticResource Blue}" Visibility="Collapsed"/>
                         <Border x:Name="Frame" CornerRadius="{StaticResource ControlRadius}" Background="{TemplateBinding Background}">
                             <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>

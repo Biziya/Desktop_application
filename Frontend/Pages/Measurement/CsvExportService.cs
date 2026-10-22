@@ -59,10 +59,11 @@ public sealed class CsvExportService : ICsvExportService
     public const string CampaignHeader = "Campaign";
     public const string OperatorHeader = "Operator";
     public const string NotesHeader = "Notes";
+    public const string CreatedAtHeader = "Created At";
     public const string CreatedUsernameHeader = "Created Username";
 
     // Session metadata repeated on every row: CSV header → stored session field.
-    // Placed just before Created Username and session_id, which stays the last column.
+    // Placed just before Created At (the session's creation time), Created Username and session_id, which stays the last column.
     private static readonly (string Header, Func<MeasurementSession, string?> Value)[] SessionColumns =
     [
         (DrillholeHeader, s => s.DrillholeId),
@@ -74,8 +75,8 @@ public sealed class CsvExportService : ICsvExportService
 
     /// <summary>
     /// Measurement columns, order and headers come from MeasurementTableColumns.cs, followed by the metadata of
-    /// <paramref name="session"/>, <paramref name="createdUsername"/> and session_id. Rows are written in the given (displayed, From-sorted) order and must all belong to
-    /// <paramref name="session"/>. ts_ms is the device value only — demo values are never exported.
+    /// <paramref name="session"/>, its creation time, <paramref name="createdUsername"/> and session_id. Rows are
+    /// written in the given (displayed, From-sorted) order and must all belong to <paramref name="session"/>. ts_ms is the device value only — demo values are never exported.
     /// </summary>
     public static string Serialize(IReadOnlyList<MeasurementResult> rows, MeasurementSession session, string createdUsername = "")
     {
@@ -85,10 +86,11 @@ public sealed class CsvExportService : ICsvExportService
         }
 
         var columns = MeasurementTableColumns.All.Where(c => c.IncludeInCsv && c != MeasurementTableColumns.SessionId).ToArray();
-        var metadata = SessionColumns.Select(c => Text(c.Value(session) ?? "")).Append(Text(createdUsername)).ToArray();
+        var metadata = SessionColumns.Select(c => Text(c.Value(session) ?? "")).Append(Quote(Format(session.CreatedAt))).Append(Text(createdUsername)).ToArray();
         var csv = new StringBuilder();
         var headers = columns.Select(c => c.CsvHeader)
             .Concat(SessionColumns.Select(c => c.Header))
+            .Append(CreatedAtHeader)
             .Append(CreatedUsernameHeader)
             .Append(MeasurementTableColumns.SessionId.CsvHeader);
         csv.Append(string.Join(",", headers.Select(Quote))).Append("\r\n");

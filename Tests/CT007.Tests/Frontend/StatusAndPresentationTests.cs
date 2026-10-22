@@ -319,6 +319,8 @@ public static class StatusAndPresentationTests
         Assert.Equal("Depth (m)", shipped["ChartXAxisLabel"], "chart x-axis label");
         Assert.Equal("CPS", shipped["ChartYAxisLabel"], "chart y-axis label");
         Assert.Equal("Threshold (CPS)", shipped["ThresholdLabel"], "threshold label");
+        Assert.Equal("Step (cm)", shipped["StepLabel"], "step label in centimetres");
+        Assert.Equal(44.0, shipped["FloatingInputHeight"], "floating input: 36 px box + 8 px label offset");
         Assert.Equal(150.0, ((Frontend.Pages.Measurement.CapturePanel.CapturePanelSettings.AlarmSettings)shipped["CpsAlarmSettings"]).DefaultThreshold, "default CPS threshold");
         Assert.Equal(new System.Windows.Thickness(0, 0, 14, 16), shipped["DrillholeFieldMargin"], "field spacing");
         Assert.Equal(new System.Windows.Controls.DataGridLength(64), shipped["TableDeleteColumnWidth"], "Delete column");

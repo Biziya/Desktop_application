@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using Frontend.Api.Measurements;
 using Frontend.Pages.Measurement;
+using Frontend.Pages.Measurement.Table;
 using Frontend.Shared.Infrastructure;
 
 namespace Frontend.Pages.UploadData;
@@ -80,8 +81,13 @@ public sealed class UploadDataViewModel : ObservableObject
 
     public string Notes => Show(metadata?.Notes);
 
-    /// <summary>Who created the measurements, from the CSV; files exported before it was recorded show "Not available".</summary>
-    public string CreatedUsername => Show(metadata?.CreatedUsername);
+    /// <summary>
+    /// When the measurement session was created, from the CSV, in this computer's local time; files exported before it
+    /// was recorded show "Not available" (never the file's date or the current time).
+    /// </summary>
+    public string CreatedAt => metadata?.CreatedAt is { } created
+        ? created.ToLocalTime().ToString(MeasurementCellFormat.TimestampFormat, CultureInfo.InvariantCulture)
+        : NotAvailable;
 
     /// <summary>The Windows account using this app now (DOMAIN\user when on a domain).</summary>
     public string UploadingUsername { get; }
@@ -163,7 +169,7 @@ public sealed class UploadDataViewModel : ObservableObject
         Changed(nameof(Campaign));
         Changed(nameof(Operator));
         Changed(nameof(Notes));
-        Changed(nameof(CreatedUsername));
+        Changed(nameof(CreatedAt));
         RefreshCommands();
 
         if (imported.Rows.Any(r => r.FromMm is null || r.ToMm is null))

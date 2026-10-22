@@ -16,8 +16,10 @@ namespace Ct007.Tests.FrontendTests;
 /// </summary>
 public static class UploadDataTests
 {
+    private static readonly DateTimeOffset Created = new(2026, 10, 16, 8, 30, 15, TimeSpan.FromHours(8));
+
     private static readonly MeasurementSession Session = new(Guid.Parse("44444444-4444-4444-4444-444444444444"),
-        DateTimeOffset.UnixEpoch, "DH-001", "North Ridge", "2024", "CORP\\ann", "Hole collapsed at 12 m; re-logged");
+        Created, "DH-001", "North Ridge", "2024", "CORP\\ann", "Hole collapsed at 12 m; re-logged");
 
     // Three exported rows, deliberately not in depth order.
     private static string ExportedCsv(MeasurementSession? session = null, string createdUsername = "CORP\\creator")
@@ -51,8 +53,9 @@ public static class UploadDataTests
     {
         var imported = MeasurementCsvReader.Read(ExportedCsv());
 
-        Assert.Equal(new ImportedMetadata(Session.Id, "DH-001", "North Ridge", "2024", "CORP\\ann", "Hole collapsed at 12 m; re-logged", "CORP\\creator"),
+        Assert.Equal(new ImportedMetadata(Session.Id, "DH-001", "North Ridge", "2024", "CORP\\ann", "Hole collapsed at 12 m; re-logged", "CORP\\creator", Created),
             imported.Metadata, "metadata");
+        Assert.Equal(Created.Offset, imported.Metadata.CreatedAt!.Value.Offset, "Created At keeps its original offset");
         Assert.Sequence(new[] { 2, 1, 3 }, imported.Rows.Select(r => r.CaptureNumber), "sorted by From like the Measurement page");
         Assert.Sequence(new[] { 1, 2, 3 }, imported.Rows.Select(r => r.Number), "numbered in display order");
 
@@ -121,7 +124,7 @@ public static class UploadDataTests
         Assert.Contains("Row 2 (line 3): session_id 'x' is not a session ID.", Rejected(WithCell("session_id", "x")), "session id");
         Assert.Contains("Row 2 (line 3): its session or Drillhole", Rejected(WithCell("Drillhole", "\"DH-999\"")), "metadata differs");
         Assert.Contains("Row 2 (line 3): its session or Drillhole", Rejected(WithCell("session_id", Guid.NewGuid().ToString())), "two sessions");
-        Assert.Equal("Row 2 (line 3): expected 21 values, found 20.",
+        Assert.Equal("Row 2 (line 3): expected 22 values, found 21.",
             Rejected(string.Join("\r\n", lines.Take(2).Append(lines[2][..lines[2].LastIndexOf(',')]).Concat(lines.Skip(3)))), "missing cell");
     }
 
@@ -151,18 +154,18 @@ public static class UploadDataTests
         Assert.Equal("Line 1: a quote inside an unquoted value.", Rejected("a\"b,c\n"), "stray quote");
     }
 
-    [Test("FE-064", "Legacy CSV: older exports import (no depths, no Created Username → Not available) and are not uploaded")]
+    [Test("FE-064", "Legacy CSV: older exports import (no depths, no Created At → Not available) and are not uploaded")]
     public static async Task LegacyCsv()
     {
-        // The export format before this change: no from_m / to_m / step_m and no Created Username.
+        // The export format before these changes: no from_m / to_m / step_m, Created At or Created Username.
         var current = ExportedCsv().Split("\r\n");
         var header = current[0].Split(',').ToList();
-        var dropped = new[] { "\"from_m\"", "\"to_m\"", "\"step_m\"", "\"Created Username\"" }.Select(h => header.IndexOf(h)).ToHashSet();
+        var dropped = new[] { "\"from_m\"", "\"to_m\"", "\"step_m\"", "\"Created At\"", "\"Created Username\"" }.Select(h => header.IndexOf(h)).ToHashSet();
         var legacy = string.Join("\r\n", current.Select(line => line.Length == 0 ? line
             : string.Join(",", line.Split(',').Where((_, i) => !dropped.Contains(i)))));
 
         var imported = MeasurementCsvReader.Read(legacy);
-        Assert.True(imported.Metadata.CreatedUsername is null, "no Created Username column → null, not guessed");
+        Assert.True(imported.Metadata.CreatedUsername is null && imported.Metadata.CreatedAt is null, "no Created Username / Created At columns → null, not guessed");
         Assert.Equal("DH-001", imported.Metadata.Drillhole, "metadata still read");
         Assert.True(imported.Rows.All(r => r.FromMm is null && r.ToMm is null && r.StepMm is null), "no depths");
         Assert.Sequence(new[] { 1, 2, 3 }, imported.Rows.Select(r => r.CaptureNumber), "without depths: by Start Time");
@@ -175,7 +178,7 @@ public static class UploadDataTests
 
         using var page = new UploadPage(legacy);
         await page.ImportAsync();
-        Assert.Equal(UploadDataViewModel.NotAvailable, page.ViewModel.CreatedUsername, "Created Username shown as Not available");
+        Assert.Equal(UploadDataViewModel.NotAvailable, page.ViewModel.CreatedAt, "Created At shown as Not available (not the file date or now)");
         Assert.Equal(WindowsAccount.Current(), page.ViewModel.UploadingUsername, "Uploading Username is this Windows account");
         Assert.True(Make.ToastedStart(page.Toasts, ToastKind.Warning, "Imported, but some rows have no depth"), "warned about missing depths");
 
@@ -204,7 +207,8 @@ public static class UploadDataTests
         Assert.Equal("2024", vm.Campaign, "Campaign");
         Assert.Equal("CORP\\ann", vm.Operator, "Operator");
         Assert.Equal("Hole collapsed at 12 m; re-logged", vm.Notes, "Notes");
-        Assert.Equal("CORP\\creator", vm.CreatedUsername, "Created Username from the CSV, not replaced by the uploader");
+        Assert.Equal(Created.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture), vm.CreatedAt, "Created At: the session's creation time, local");
+        Assert.Equal("export.csv", vm.FileName, "file name with extension, no path");
         Assert.Equal("Total measurements: 3", vm.TotalText, "total");
         Assert.True(vm.UploadCommand.CanExecute(null), "upload available");
 
@@ -392,7 +396,14 @@ public static class UploadDataTests
         Assert.Equal(MeasurementState.Ready, vm.State, "still measuring after the alarm");
         Assert.Equal(175.0, vm.Results.Single(r => r.CaptureNumber == 3).Reading.Count0, "measured value unchanged");
         Assert.Equal("10.75", vm.NextFrom, "depth advanced as usual");
+
+        // Step (cm): 10 means 10 cm = 0.10 m = 100 mm.
+        vm.Step = "10";
+        Assert.False(vm.IsStepInvalid, "Step 10 (cm) is valid");
         await Make.Capture(vm, device, d => Complete(d, 180));
+        var tenCm = vm.Results.Single(r => r.CaptureNumber == 4);
+        Assert.Equal(100L, tenCm.ToMm - tenCm.FromMm, "Step 10 cm = 100 mm interval");
+        Assert.Equal("10.85", vm.NextFrom, "next depth = 10.75 m + 0.10 m");
         Assert.Equal(2, played, "one alarm per completed row");
         Assert.Equal(4, vm.Results.Count, "every row added");
 
@@ -434,7 +445,7 @@ public static class UploadDataTests
         Assert.Equal("CPS", chart.YAxisLabel, "y-axis label from CapturePanel.yaml");
     }
 
-    [Test("FE-071", "Layout: Starting Depth, Step and Threshold are right-aligned; the shared table's No. column is compact")]
+    [Test("FE-071", "Layout: floating-label inputs (right-aligned, label on the border), compact No. column, Upload Data information")]
     public static async Task InputAlignmentAndNumberColumn()
     {
         WpfResources();
@@ -452,6 +463,44 @@ public static class UploadDataTests
                 boxes.Select(System.Windows.Automation.AutomationProperties.GetName), "the three inputs, in order");
             Assert.True(boxes.All(b => b.TextAlignment == TextAlignment.Right), "values right-aligned");
             Assert.True(boxes.Select(b => b.ActualWidth).Distinct().Count() == 1, "same width for all three");
+
+            // Floating labels: each label (Tag) is drawn from the top of the control across the box's top border, inside
+            // the control (no separate label row, nothing clipped), on the card's white.
+            Assert.Sequence(new[] { "Starting Depth (m)", "Step (cm)", "Threshold (CPS)" }, boxes.Select(b => (string)b.Tag), "labels");
+            foreach (var box in boxes)
+            {
+                var frame = (Border)box.Template.FindName("Frame", box);
+                var label = Descendants<TextBlock>(box).Single(t => t.Text == (string)box.Tag);
+                var labelTop = label.TranslatePoint(new Point(0, 0), box).Y;
+                Assert.Equal(36.0, frame.ActualHeight, $"{box.Tag}: box height from floatingInput.boxHeight");
+                Assert.True(labelTop >= 0 && labelTop < frame.Margin.Top && labelTop + label.ActualHeight > frame.Margin.Top,
+                    $"{box.Tag}: label crosses the top border (label {labelTop}–{labelTop + label.ActualHeight}, border at {frame.Margin.Top})");
+                Assert.True(label.TranslatePoint(new Point(0, 0), box).X > 0 && label.ActualWidth < box.ActualWidth, $"{box.Tag}: label inside the box width");
+                Assert.Equal(((SolidColorBrush)Application.Current.FindResource("Surface")).Color, ((SolidColorBrush)label.Background).Color,
+                    $"{box.Tag}: label background matches the card");
+
+                // Text as on Core Information: labels like the Drillhole label (FieldLabel), values like its text box.
+                Assert.Equal(((SolidColorBrush)Application.Current.FindResource("LabelText")).Color, ((SolidColorBrush)label.Foreground).Color, $"{box.Tag}: label colour");
+                Assert.Equal(FontWeights.SemiBold, label.FontWeight, $"{box.Tag}: label weight");
+                Assert.Equal(((SolidColorBrush)Application.Current.FindResource("Navy")).Color, ((SolidColorBrush)box.Foreground).Color, $"{box.Tag}: value colour");
+                Assert.Equal(FontWeights.Normal, box.FontWeight, $"{box.Tag}: value weight");
+                // Border: near-black by default, gray on hover (as the Drillhole box), blue while focused (wins over hover).
+                Color Brush(string key) => ((SolidColorBrush)Application.Current.FindResource(key)).Color;
+                Assert.Equal(Brush("Navy"), ((SolidColorBrush)frame.BorderBrush).Color, $"{box.Tag}: default border");
+                var triggers = box.Style.BasedOn!.Triggers.OfType<Trigger>().ToList();
+                Assert.Equal(Brush("InputHoverBorder"), ((SolidColorBrush)((Setter)triggers.Single(t => t.Property == UIElement.IsMouseOverProperty).Setters[0]).Value).Color,
+                    $"{box.Tag}: hover border");
+                Assert.True(triggers.FindIndex(t => t.Property == UIElement.IsKeyboardFocusWithinProperty) > triggers.FindIndex(t => t.Property == UIElement.IsMouseOverProperty),
+                    $"{box.Tag}: focus declared after hover, so focused blue wins");
+                box.Focus();
+                await Task.Delay(20);
+                Assert.True(box.IsKeyboardFocusWithin, $"{box.Tag}: focused");
+                Assert.Equal(Brush("Blue"), ((SolidColorBrush)frame.BorderBrush).Color, $"{box.Tag}: focused border");
+                Assert.Equal(((SolidColorBrush)Application.Current.FindResource("Navy")).Color, ((SolidColorBrush)box.Foreground).Color, $"{box.Tag}: value colour when focused");
+            }
+
+            var gap = boxes[1].TranslatePoint(new Point(0, 0), panel).Y - boxes[0].TranslatePoint(new Point(0, boxes[0].ActualHeight), panel).Y;
+            Assert.Equal(8.0, Math.Round(gap, 3), "compact gap between inputs (floatingInput.spacing)");
 
             var grid = new MeasurementGrid();
             var number = ((DataGrid)grid.FindName("ResultsGrid")).Columns[0];
@@ -478,12 +527,60 @@ public static class UploadDataTests
                 .Where(c => c.Visible).Select(c => c.Header).Append("Delete");
             Assert.Sequence(measurementColumns, table.Columns.Select(c => (string)c.Header), "same columns as the Measurement table");
             Assert.Equal(3, table.Items.Count, "imported rows shown");
-            Assert.True(Descendants<TextBlock>(page).Any(t => t.Text == "CORP\\creator") && Descendants<TextBlock>(page).Any(t => t.Text == "Total measurements: 3"),
-                "metadata and total shown");
+            var texts = Descendants<TextBlock>(page).Where(t => t.IsVisible).Select(t => t.Text).ToList();
+            foreach (var shown in new[] { "Filename", "export.csv", "Created At", upload.ViewModel.CreatedAt, "Drillhole", "DH-001", "Project", "Campaign",
+                         "Operator", "Notes", "Uploading User", WindowsAccount.Current(), "Total measurements: 3" })
+            {
+                Assert.True(texts.Contains(shown), $"shows '{shown}'");
+            }
+
+            Assert.False(texts.Any(t => t.Contains("Created Username", StringComparison.Ordinal) || t == "CORP\\creator"), "Created Username is not shown");
+            Assert.False(texts.Any(t => t.Contains('\\') && t.EndsWith(".csv", StringComparison.Ordinal)), "no local path shown");
         }
         finally
         {
             uploadWindow.Close();
+        }
+    }
+
+    [Test("FE-072", "Sidebar: the current page's blue bar is thicker and exactly as tall as its highlighted item")]
+    public static async Task SidebarIndicator()
+    {
+        WpfResources();
+        var items = new[] { "Core Information", "Measurement", "Upload Data" }
+            .Select(name => new Button { Content = name, Style = (Style)Application.Current.FindResource("NavigationButton") }).ToList();
+        var panel = new StackPanel { Margin = new Thickness(14) };
+        items.ForEach(i => panel.Children.Add(i));
+        var window = new Window { Content = panel, Width = 260, Height = 300, ShowActivated = false, WindowStyle = WindowStyle.None, Left = -10_000 };
+
+        try
+        {
+            window.Show();
+
+            foreach (var selected in items)
+            {
+                items.ForEach(i => SidebarItem.SetIsSelected(i, i == selected));
+                await Task.Delay(30);
+
+                foreach (var item in items)
+                {
+                    var accent = (Border)item.Template.FindName("Accent", item);
+                    var frame = (Border)item.Template.FindName("Frame", item);
+                    Assert.Equal(item == selected, accent.IsVisible, $"{selected.Content} selected: {item.Content} bar visibility");
+
+                    if (item == selected)
+                    {
+                        Assert.Equal(5.0, accent.ActualWidth, "bar width (SidebarIndicatorWidth)");
+                        Assert.Equal(frame.ActualHeight, accent.ActualHeight, "bar as tall as the highlighted item");
+                        Assert.Equal(frame.TranslatePoint(new Point(0, 0), item).Y, accent.TranslatePoint(new Point(0, 0), item).Y, "bar aligned with the item");
+                        Assert.Equal(-14.0, accent.TranslatePoint(new Point(0, 0), item).X, "bar at the sidebar's left edge");
+                    }
+                }
+            }
+        }
+        finally
+        {
+            window.Close();
         }
     }
 
