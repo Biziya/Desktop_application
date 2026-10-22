@@ -1,6 +1,7 @@
 using Backend.Repositories.CoreInformation.BluetoothDevice;
 using Backend.Repositories.CoreInformation.Drillhole;
 using Backend.Repositories.CoreInformation.SqliteDatabase;
+using Backend.Repositories.Measurement;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,9 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IDrillholeRepository, DrillholeRepository>();
 builder.Services.AddScoped<BluetoothDeviceRepository>();
 builder.Services.AddSingleton<SqliteDatabaseRepository>(); // Singleton keeps the discovery cache.
+
+// Upload Data page
+builder.Services.AddScoped<IMeasurementUploadRepository, MeasurementUploadRepository>();
 
 var app = builder.Build();
 

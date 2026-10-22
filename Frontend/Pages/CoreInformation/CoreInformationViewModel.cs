@@ -63,7 +63,7 @@ public sealed class CoreInformationViewModel : ObservableObject
         this.history = history;
         this.searchDelay = searchDelay ?? TimeSpan.FromMilliseconds(150);
         Devices = devices;
-        operatorName = CurrentWindowsAccount();
+        operatorName = WindowsAccount.Current();
         SaveCommand = new RelayCommand(_ => Save(saved));
         RefreshDrillholesCommand = new RelayCommand(_ => _ = LoadDrillholesAsync());
         ClearDrillholeCommand = new RelayCommand(_ => ClearDrillhole(), _ => CanClearDrillhole);
@@ -273,20 +273,6 @@ public sealed class CoreInformationViewModel : ObservableObject
 
     // The latest load got no usable answer (offline, HTTP error, unexpected data).
     private bool DrillholesFailed => drillholesStatus is not null and not ApiStatus.Ok;
-
-    /// <summary>
-    /// The Windows account running the app: DOMAIN\Username for a domain account, otherwise the user name
-    /// (a local account's "domain" is just the computer name, so it is left out).
-    /// </summary>
-    public static string CurrentWindowsAccount()
-    {
-        var user = Environment.UserName;
-        var domain = Environment.UserDomainName;
-
-        return string.IsNullOrWhiteSpace(domain) || string.Equals(domain, Environment.MachineName, StringComparison.OrdinalIgnoreCase)
-            ? user
-            : $"{domain}\\{user}";
-    }
 
     /// <summary>Red border on the Drillhole box after Save &amp; Continue without a drillhole (the message is a toast).</summary>
     public bool HasDrillholeError => showErrors && !HasDrillhole;
@@ -584,7 +570,7 @@ public sealed class CoreInformationViewModel : ObservableObject
         // An emptied Operator is filled with the signed-in account again; an edited one is kept as entered.
         if (string.IsNullOrWhiteSpace(Operator))
         {
-            Operator = CurrentWindowsAccount();
+            Operator = WindowsAccount.Current();
         }
 
         saved(new CoreSnapshot(

@@ -122,6 +122,18 @@ Paths are relative to `Tests/CT007.Tests/`. Notes give the method name, the over
 | FE-049 | Frontend/MeasurementWorkflowTests.cs | Implemented | `DemoTsMs` |
 | FE-050 | — | Unresolved | Chart semantics (UR-05); geometry is not exposed, so it is manual (MAN-008) |
 | FE-051 | — | Unresolved | Restore on start-up (UR-06); also Blocked in the plan |
+| FE-060 | Frontend/UploadDataTests.cs | Implemented | `ImportRoundTrip`: exported CSV → import (metadata, timestamps, depths, values, order) |
+| FE-061 | Frontend/UploadDataTests.cs | Implemented | `ImportStructureErrors`: empty file, header only, missing/duplicate columns |
+| FE-062 | Frontend/UploadDataTests.cs | Implemented | `ImportValueErrors`: invalid numbers/times/depths with row and line |
+| FE-063 | Frontend/UploadDataTests.cs | Implemented | `ImportCsvSyntax`: quoting, line breaks, LF, BOM, reordered and unknown columns |
+| FE-064 | Frontend/UploadDataTests.cs | Implemented | `LegacyCsv`: exports without depths / Created Username |
+| FE-065 | Frontend/UploadDataTests.cs | Implemented | `ImportAndDelete`: Upload Data import, confirmed delete, CSV file unchanged |
+| FE-066 | Frontend/UploadDataTests.cs | Implemented | `UploadFlow`: request body, busy state, failure and retry, no repeat after success |
+| FE-067 | Frontend/UploadDataTests.cs | Implemented | `UploadPreconditions` |
+| FE-068 | Frontend/UploadDataTests.cs | Implemented | `AlarmRules`: CPS threshold below/equal/above, no overlap, reset |
+| FE-069 | Frontend/UploadDataTests.cs | Implemented | `AlarmDuringMeasurement`: one alarm per completed row; capture continues |
+| FE-070 | Frontend/UploadDataTests.cs | Implemented | `ChartShowsCps` |
+| FE-071 | Frontend/UploadDataTests.cs | Implemented | `InputAlignmentAndNumberColumn` (WPF views) |
 | BE-001 | Backend/DrillholeApiTests.cs | Implemented | `DrillholesContract`; in-process host (D8) |
 | BE-002 | Backend/DrillholeApiTests.cs | Implemented | `SqlFailureIs503`; a real `SqlException` from a refused localhost port |
 | BE-003 | — | Unresolved | Expected status unknown (UR-12) |
@@ -168,6 +180,13 @@ Paths are relative to `Tests/CT007.Tests/`. Notes give the method name, the over
 | BE-044 | — | Conditional | `SaveFileDialog` is not injectable; the file path is covered by E2E-001 and MAN-013 |
 | BE-045 | — | Unresolved | Whether the script is maintained (UR-11); suspected defect already recorded |
 | BE-046 | Backend/MeasurementRepositoryTests.cs | Implemented | `TextFields` |
+| BE-050 | Backend/MeasurementUploadApiTests.cs | Implemented | `SuccessfulUpload` |
+| BE-051 | Backend/MeasurementUploadApiTests.cs | Implemented | `InvalidRequests` |
+| BE-052 | Backend/MeasurementUploadApiTests.cs | Implemented | `Fingerprint` |
+| BE-053 | Backend/MeasurementUploadApiTests.cs | Implemented | `Duplicates` (in-memory repository with the same duplicate rules) |
+| BE-054 | Backend/MeasurementUploadApiTests.cs | Implemented | `DatabaseUnavailable` |
+| BE-055 | Backend/MeasurementUploadApiTests.cs | Implemented | `UploaderIdentity` |
+| BE-056 | Backend/MeasurementUploadApiTests.cs | Implemented | `SqlStorage`; category Sql (CT007_TEST_SQL): transaction, rollback, timestamps, retry |
 | INT-001 | Integration/HttpIntegrationTests.cs | Implemented | `FieldMapping`; real HTTP to the in-process backend |
 | INT-002 | Integration/HttpIntegrationTests.cs | Implemented | `ServiceUnavailablePropagation` |
 | INT-003 | Integration/HttpIntegrationTests.cs | Implemented | `OfflineStartAndRecovery`; Timing; backend started later on the same port |
@@ -185,6 +204,7 @@ Paths are relative to `Tests/CT007.Tests/`. Notes give the method name, the over
 | INT-015 | Integration/CapturePipelineTests.cs | Implemented | `StatusAndCaptureAgree` |
 | INT-016 | Integration/CapturePipelineTests.cs | Implemented | `DatabaseStatusUnderLock`; Timing (D15) |
 | INT-017 | Integration/CapturePipelineTests.cs | Implemented | `UpgradeThenMeasure` |
+| INT-020 | Integration/UploadIntegrationTests.cs | Implemented | `ExportImportUploadWithTimeout`: retry after a client timeout stores once |
 | E2E-001 | EndToEnd/DesktopWorkflowTests.cs | Implemented | `MainJourney`; category E2E (D16); context-menu suppression left to MAN-006 |
 | E2E-002 | EndToEnd/DesktopWorkflowTests.cs | Implemented | `RestartPersistence`; the Measured-group order is covered by INT-011 instead |
 | E2E-003 | EndToEnd/DesktopWorkflowTests.cs | Implemented | `OfflineOperation` |

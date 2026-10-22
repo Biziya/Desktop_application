@@ -3,10 +3,13 @@ namespace Ct007.Tests.BackendTests;
 /// <summary>BE-042, BE-043: CSV serialisation contract and spreadsheet-formula neutralisation (F19).</summary>
 public static class CsvExportTests
 {
-    /// <summary>The exported header row (current contract, UR-04); also used by E2E-001.</summary>
+    /// <summary>
+    /// The exported header row (current contract, UR-04: depths and Created Username added so exports can be imported on
+    /// the Upload Data page); also used by E2E-001.
+    /// </summary>
     internal const string Header =
-        "\"No\",\"Capture No\",\"Start Time\",\"End Time\",\"Sample\",\"ts_ms\",\"count0\",\"count0_raw\",\"hdm\",\"hdm_raw\",\"dose_rate\"," +
-        "\"Drillhole\",\"Project\",\"Campaign\",\"Operator\",\"Notes\",\"session_id\"";
+        "\"No\",\"Capture No\",\"Start Time\",\"End Time\",\"from_m\",\"to_m\",\"step_m\",\"Sample\",\"ts_ms\",\"count0\",\"count0_raw\",\"hdm\",\"hdm_raw\",\"dose_rate\"," +
+        "\"Drillhole\",\"Project\",\"Campaign\",\"Operator\",\"Notes\",\"Created Username\",\"session_id\"";
 
     private static MeasurementSession Session(string notes = "", string operatorName = "Ann", string drillhole = "DH-001") =>
         new(Guid.Parse("33333333-3333-3333-3333-333333333333"), DateTimeOffset.UnixEpoch, drillhole, "North Ridge", "2024", operatorName, notes);
@@ -34,25 +37,24 @@ public static class CsvExportTests
 
         try
         {
-            csv = CsvExportService.Serialize(rows, session);
+            csv = CsvExportService.Serialize(rows, session, "CORP\\ann");
         }
         finally
         {
             CultureInfo.CurrentCulture = culture;
         }
 
-        var meta = "\"DH-001\",\"North Ridge\",\"2024\",\"Ann\",\"\",\"33333333-3333-3333-3333-333333333333\"";
+        var meta = "\"DH-001\",\"North Ridge\",\"2024\",\"Ann\",\"\",\"CORP\\ann\",\"33333333-3333-3333-3333-333333333333\"";
         var expected =
             Header + "\r\n" +
-            "\"1\",\"1\",\"2026-10-16T09:00:00.1234567+08:00\",\"2026-10-16T09:00:05.1234567+08:00\",\"5\",\"1760600000001\"," +
+            "\"1\",\"1\",\"2026-10-16T09:00:00.1234567+08:00\",\"2026-10-16T09:00:05.1234567+08:00\",\"10\",\"10.25\",\"0.25\",\"5\",\"1760600000001\"," +
             "\"0.1\",\"21\",\"1.25\",\"2.5\",\"0.125\"," + meta + "\r\n" +
-            "\"2\",\"2\",\"2026-10-16T09:00:00.1234567+08:00\",\"2026-10-16T09:00:05.1234567+08:00\",\"5\",\"\"," +
+            "\"2\",\"2\",\"2026-10-16T09:00:00.1234567+08:00\",\"2026-10-16T09:00:05.1234567+08:00\",\"10\",\"10.25\",\"0.25\",\"5\",\"\"," +
             "\"1E-300\",\"\",\"\",\"\",\"\"," + meta + "\r\n";
         Assert.Equal(expected, csv, "CSV text");
-        Assert.False(csv.Contains("from_m", StringComparison.Ordinal) || csv.Contains("temperature", StringComparison.Ordinal),
-            "depth, temperature and pressure columns are not exported (current contract, UR-04)");
+        Assert.False(csv.Contains("temperature", StringComparison.Ordinal), "temperature and pressure are not exported (current contract, UR-04)");
 
-        Assert.Equal(Header + "\r\n", CsvExportService.Serialize([], session), "no rows: header only");
+        Assert.Equal(Header + "\r\n", CsvExportService.Serialize([], session, "CORP\\ann"), "no rows: header only");
         var reversed = CsvExportService.Serialize(Enumerable.Reverse(rows).ToList(), session).Split("\r\n");
         Assert.True(reversed[1].StartsWith("\"2\"", StringComparison.Ordinal), "rows written in the given (displayed) order");
     }

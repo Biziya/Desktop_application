@@ -25,11 +25,11 @@ public static class MeasurementTableColumns
     public static readonly MeasurementColumn StartTime = new("startTime", nameof(MeasurementResult.StartTime), "Start Time", true, r => r.StartTime);
     public static readonly MeasurementColumn EndTime = new("endTime", nameof(MeasurementResult.EndTime), "End Time", true, r => r.EndTime);
 
-    // Saved depth interval of each capture: From and To in metres, Step in centimetres in the table. Not exported, so
-    // the CSV columns stay as they were (IncludeInCsv true would export them; Step's CSV value stays in metres, step_m).
-    public static readonly MeasurementColumn From = new("from", nameof(MeasurementResult.FromMetres), "from_m", false, r => r.FromMetres);
-    public static readonly MeasurementColumn To = new("to", nameof(MeasurementResult.ToMetres), "to_m", false, r => r.ToMetres);
-    public static readonly MeasurementColumn Step = new("step", nameof(MeasurementResult.StepCentimetres), "step_m", false, r => r.StepMetres);
+    // Saved depth interval of each capture: From and To in metres, Step in centimetres in the table. Exported in metres
+    // (step_m too) so an exported file can be imported on the Upload Data page with its depths.
+    public static readonly MeasurementColumn From = new("from", nameof(MeasurementResult.FromMetres), "from_m", true, r => r.FromMetres);
+    public static readonly MeasurementColumn To = new("to", nameof(MeasurementResult.ToMetres), "to_m", true, r => r.ToMetres);
+    public static readonly MeasurementColumn Step = new("step", nameof(MeasurementResult.StepCentimetres), "step_m", true, r => r.StepMetres);
 
     // The table shows "3 of 5" for an incomplete capture; CSV keeps the count.
     public static readonly MeasurementColumn Sample = new("sample", nameof(MeasurementResult.SampleDisplay), "Sample", true, r => r.SampleCount);

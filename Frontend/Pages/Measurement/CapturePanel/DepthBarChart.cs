@@ -8,15 +8,16 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using Frontend.Calculation.Measurement;
+using Frontend.Pages.Measurement.Table;
 
 namespace Frontend.Pages.Measurement.CapturePanel;
 
 /// <summary>
-/// Bar chart of the measurement rows: x = depth (m), y = ts_ms. Each row is one vertical bar from its saved
+/// Bar chart of the measurement rows: x = depth (m), y = CPS. Each row is one vertical bar from its saved
 /// <c>from</c> to <c>to</c> (so widths follow the actual interval, including step changes) and from 0 up to the same
-/// ts_ms the table shows. Bars are placed by depth (rows are also listed by From). Rows without depths or
-/// ts_ms are not drawn. Hover a bar for its values. Rendering only — the data stays in the ViewModel. Axis labels,
-/// empty text and font sizes are set from CapturePanel.yaml.
+/// CPS the table shows (the row's averaged count0, counts per second). Bars are placed by depth (rows are also
+/// listed by From). Rows without depths or CPS are not drawn. Hover a bar for its values. Rendering only — the data
+/// stays in the ViewModel. Axis labels, empty text and font sizes are set from CapturePanel.yaml.
 /// </summary>
 public sealed class DepthBarChart : FrameworkElement
 {
@@ -110,7 +111,7 @@ public sealed class DepthBarChart : FrameworkElement
         }
 
         var rows = (ItemsSource?.OfType<MeasurementResult>() ?? [])
-            .Where(r => r is { FromMm: not null, ToMm: not null, DisplayTsMs: >= 0 } && r.ToMm > r.FromMm)
+            .Where(r => r is { FromMm: not null, ToMm: not null, Reading.Count0: >= 0 } && r.ToMm > r.FromMm)
             .ToList();
         var axisPen = new Pen(AxisBrush, 1);
         var gridPen = new Pen(GridBrush, 1);
@@ -132,12 +133,12 @@ public sealed class DepthBarChart : FrameworkElement
             return;
         }
 
-        // X: depth range of all intervals, on round tick values. Y: 0 to a round value above the largest ts_ms.
+        // X: depth range of all intervals, on round tick values. Y: 0 to a round value above the largest CPS.
         var xStep = NiceStep((rows.Max(r => r.ToMm!.Value) - rows.Min(r => r.FromMm!.Value)) / 1000d, Math.Max(2, (int)(plot.Width / 80)));
         var xMin = Math.Floor(rows.Min(r => r.FromMm!.Value) / 1000d / xStep) * xStep;
         var xMax = Math.Max(xMin + xStep, Math.Ceiling(rows.Max(r => r.ToMm!.Value) / 1000d / xStep) * xStep);
-        var yStep = NiceStep(Math.Max(1, rows.Max(r => r.DisplayTsMs!.Value)), Math.Max(2, (int)(plot.Height / 34)));
-        var yMax = Math.Max(yStep, Math.Ceiling(rows.Max(r => r.DisplayTsMs!.Value) / yStep) * yStep);
+        var yStep = NiceStep(Math.Max(0.01, rows.Max(Cps)), Math.Max(2, (int)(plot.Height / 34)));
+        var yMax = Math.Max(yStep, Math.Ceiling(rows.Max(Cps) / yStep) * yStep);
         double X(double metres) => plot.Left + (metres - xMin) / (xMax - xMin) * plot.Width;
         double Y(double value) => plot.Bottom - value / yMax * plot.Height;
 
@@ -164,7 +165,7 @@ public sealed class DepthBarChart : FrameworkElement
         {
             var left = X(row.FromMm!.Value / 1000d);
             var right = X(row.ToMm!.Value / 1000d);
-            var area = new Rect(left, Y(row.DisplayTsMs!.Value), Math.Max(1, right - left), plot.Bottom - Y(row.DisplayTsMs.Value));
+            var area = new Rect(left, Y(Cps(row)), Math.Max(1, right - left), plot.Bottom - Y(Cps(row)));
             drawing.DrawRectangle(BarBrush, area.Width >= 4 ? separator : null, area);
             bars.Add((area, row));
         }
@@ -190,7 +191,7 @@ public sealed class DepthBarChart : FrameworkElement
             $"From: {Depth.Format(hit.FromMm!.Value)} m\n" +
             $"To: {Depth.Format(hit.ToMm!.Value)} m\n" +
             $"Step: {(hit.StepMm is { } step ? Depth.FormatCentimetres(step) : "—")} cm\n" +
-            $"ts_ms: {hit.DisplayTsMs!.Value.ToString("N0", CultureInfo.CurrentCulture)}" + (hit.IsDemoTsMs ? " (demo)" : "");
+            $"CPS: {MeasurementCellFormat.Decimal(Cps(hit))}";
         tip.HorizontalOffset = point.X + 14;
         tip.VerticalOffset = point.Y + 14;
         tip.IsOpen = true;
@@ -210,7 +211,10 @@ public sealed class DepthBarChart : FrameworkElement
         return (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10) * magnitude;
     }
 
-    // Short tick labels for large ts_ms values: 2500 → 2.5k, 1 760 152 570 851 → 1.76T.
+    // The bar height: the finalized CPS of the row (drawn rows always have one).
+    private static double Cps(MeasurementResult row) => row.Reading.Count0!.Value;
+
+    // Short tick labels for large values: 2500 → 2.5k, 1 760 152 570 851 → 1.76T.
     private static string Compact(double value)
     {
         string[] suffixes = ["", "k", "M", "G", "T"];

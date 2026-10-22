@@ -41,6 +41,9 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     private string step = "";
     private long? nextFromMm;
     private long? stepMm;
+    private readonly CpsAlarm alarm;
+    private string threshold;
+    private double? thresholdCps;
 
     // Database writes run one after another, in the order they were requested. Never faults.
     private Task persistence = Task.CompletedTask;
@@ -52,9 +55,14 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         IMeasurementRepository repository,
         bool showDemoTsMs = false,
         ToastService? toasts = null,
-        CaptureDurationSettings? durationSettings = null)
+        CaptureDurationSettings? durationSettings = null,
+        CpsAlarm? alarm = null,
+        double? defaultThreshold = null)
     {
         ShowDemoTsMs = showDemoTsMs;
+        this.alarm = alarm ?? new CpsAlarm(() => { }, TimeSpan.Zero);
+        thresholdCps = defaultThreshold;
+        threshold = defaultThreshold is { } initial ? CpsAlarm.FormatThreshold(initial) : "";
         this.measurement = measurement;
         this.export = export;
         this.dialogs = dialogs;
@@ -116,7 +124,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     public RelayCommand NewMeasurementCommand { get; }
 
     /// <summary>
-    /// DEMO / PREVIEW MODE: rows without a device ts_ms get a random one so the table and chart can be previewed.
+    /// DEMO / PREVIEW MODE: rows without a device ts_ms get a random one so the table can be previewed.
     /// Turn off (MainViewModel) once the device provides ts_ms. Demo values are never saved or exported.
     /// </summary>
     public bool ShowDemoTsMs { get; }
@@ -218,6 +226,37 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             {
                 DepthInputsChanged(save: true);
             }
+        }
+    }
+
+    /// <summary>
+    /// CPS alarm threshold: a completed row whose CPS (the table's value) is above it sounds the alarm. Empty means no
+    /// alarm. It never blocks Start or changes a measurement; a change applies from the next completed row.
+    /// </summary>
+    public string Threshold
+    {
+        get => threshold;
+        set
+        {
+            if (Set(ref threshold, value))
+            {
+                thresholdCps = CpsAlarm.TryParseThreshold(value, out var parsed) ? parsed : null;
+                Changed(nameof(IsThresholdInvalid));
+            }
+        }
+    }
+
+    /// <summary>Red border on Threshold (typed text that is not a valid threshold).</summary>
+    public bool IsThresholdInvalid => threshold.Trim().Length > 0 && thresholdCps is null;
+
+    public const string ThresholdError = "Threshold: enter a CPS value of 0 or more (at most 2 decimals), or leave it empty for no alarm.";
+
+    /// <summary>Called when the user leaves the Threshold box: invalid text gets an error toast (no alarm until fixed).</summary>
+    public void CommitThreshold()
+    {
+        if (IsThresholdInvalid)
+        {
+            Notify(ToastKind.Error, ThresholdError);
         }
     }
 
@@ -539,6 +578,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         activeCapture?.Cancel();
         State = MeasurementState.Idle;
         ResetCountdown();
+        alarm.Reset();
     }
 
     // Back to the full configured duration (after completion, cancellation, Stop or a duration change).
@@ -646,6 +686,9 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
             // The row goes to its place in the From order (not necessarily the end).
             AddSorted(row);
+
+            // Once per completed row, on the CPS the table shows; the sound plays without waiting.
+            alarm.Check(row.Reading.Count0, thresholdCps);
 
             if (row.IsIncomplete)
             {

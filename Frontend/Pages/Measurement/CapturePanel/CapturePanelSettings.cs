@@ -3,7 +3,8 @@ using System.Windows;
 namespace Frontend.Pages.Measurement.CapturePanel;
 
 /// <summary>
-/// CapturePanel.yaml: labels, sizes and spacing of Starting Depth, Step, Start / Stop, the countdown and the bar chart.
+/// CapturePanel.yaml: labels, sizes and spacing of Starting Depth, Step, Threshold, Start / Stop, the countdown and the bar
+/// chart, and the CPS threshold alarm.
 /// A size with a multiplier is used as size × multiplier.
 /// </summary>
 public sealed class CapturePanelSettings
@@ -20,11 +21,17 @@ public sealed class CapturePanelSettings
 
     public required ChartSettings Chart { get; init; }
 
+    public required AlarmSettings Alarm { get; init; }
+
+    /// <summary>Resource key of <see cref="Alarm"/> (read by MainViewModel, which sets up the Measurement page).</summary>
+    public const string AlarmResource = "CpsAlarmSettings";
+
     /// <summary>The resources CapturePanelView.xaml uses (final sizes, multipliers applied).</summary>
     public void AddTo(ResourceDictionary resources)
     {
         resources.Add("StartingDepthLabel", Labels.StartingDepth);
         resources.Add("StepLabel", Labels.Step);
+        resources.Add("ThresholdLabel", Labels.Threshold);
         resources.Add("CountdownLabel", Labels.Countdown);
         resources.Add("DurationEditorLabel", Labels.DurationEditor);
         resources.Add("StartLabel", Labels.Start);
@@ -44,6 +51,7 @@ public sealed class CapturePanelSettings
         resources.Add("DurationEditorWidth", Sizes.DurationEditorWidth);
 
         resources.Add("StepLabelMargin", Spacing.StepLabel);
+        resources.Add("ThresholdLabelMargin", Spacing.ThresholdLabel);
         resources.Add("StartStopButtonMargin", Spacing.StartStopButton);
         resources.Add("CountdownColumnMargin", Spacing.CountdownColumn);
         resources.Add("CountdownLabelMargin", Spacing.CountdownLabel);
@@ -54,12 +62,15 @@ public sealed class CapturePanelSettings
         resources.Add("ChartMinHeight", Chart.MinHeight);
         resources.Add("ChartAxisLabelFontSize", Chart.AxisLabelFontSize);
         resources.Add("ChartTickFontSize", Chart.TickFontSize);
+
+        resources.Add(AlarmResource, Alarm);
     }
 
     public sealed class LabelSettings
     {
         public required string StartingDepth { get; init; }
         public required string Step { get; init; }
+        public required string Threshold { get; init; }
         public required string Countdown { get; init; }
         public required string DurationEditor { get; init; }
         public required string Start { get; init; }
@@ -97,6 +108,7 @@ public sealed class CapturePanelSettings
     public sealed class SpacingSettings
     {
         public required Thickness StepLabel { get; init; }
+        public required Thickness ThresholdLabel { get; init; }
         public required Thickness StartStopButton { get; init; }
         public required Thickness CountdownColumn { get; init; }
         public required Thickness CountdownLabel { get; init; }
@@ -110,5 +122,13 @@ public sealed class CapturePanelSettings
         public required double MinHeight { get; init; }
         public required double AxisLabelFontSize { get; init; }
         public required double TickFontSize { get; init; }
+    }
+
+    /// <summary>Default threshold (CPS) of the Threshold box and the alarm tone (Hz, seconds).</summary>
+    public sealed class AlarmSettings
+    {
+        public required double DefaultThreshold { get; init; }
+        public required double ToneFrequency { get; init; }
+        public required double ToneDuration { get; init; }
     }
 }

@@ -27,13 +27,24 @@ public sealed class ApiClient : IDisposable
     /// <summary>Raised after every request: true when any HTTP response arrived (even an error status).</summary>
     public event Action<bool>? Reached;
 
-    public async Task<ApiResult<T>> GetAsync<T>(string path, CancellationToken cancellationToken)
+    public Task<ApiResult<T>> GetAsync<T>(string path, CancellationToken cancellationToken) =>
+        SendAsync<T>(token => http.GetAsync(path, token), showProblemDetail: false, cancellationToken);
+
+    /// <summary>
+    /// Posts <paramref name="body"/> as JSON. An error answer's ProblemDetails text (the backend's reason, written for
+    /// users: a validation or duplicate message, never internal details) becomes <see cref="ApiResult{T}.Error"/>.
+    /// </summary>
+    public Task<ApiResult<T>> PostAsync<T>(string path, object body, CancellationToken cancellationToken) =>
+        SendAsync<T>(token => http.PostAsJsonAsync(path, body, Json, token), showProblemDetail: true, cancellationToken);
+
+    private async Task<ApiResult<T>> SendAsync<T>(
+        Func<CancellationToken, Task<HttpResponseMessage>> send, bool showProblemDetail, CancellationToken cancellationToken)
     {
         HttpResponseMessage response;
 
         try
         {
-            response = await http.GetAsync(path, cancellationToken);
+            response = await send(cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -52,7 +63,8 @@ public sealed class ApiClient : IDisposable
         {
             if (!response.IsSuccessStatusCode)
             {
-                return ApiResult<T>.Failed(ApiStatus.HttpError, $"Backend error {(int)response.StatusCode} ({response.ReasonPhrase}).");
+                var detail = showProblemDetail ? await ProblemDetailAsync(response, cancellationToken) : null;
+                return ApiResult<T>.Failed(ApiStatus.HttpError, detail ?? $"Backend error {(int)response.StatusCode} ({response.ReasonPhrase}).");
             }
 
             try
@@ -65,6 +77,37 @@ public sealed class ApiClient : IDisposable
             {
                 return ApiResult<T>.Failed(ApiStatus.InvalidResponse, "Backend returned unexpected data.");
             }
+        }
+    }
+
+    // "detail" of an application/problem+json answer, else the first model-validation error; null when there is none.
+    private static async Task<string?> ProblemDetailAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        if (response.Content.Headers.ContentType?.MediaType != "application/problem+json")
+        {
+            return null;
+        }
+
+        try
+        {
+            using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+            var root = problem.RootElement;
+
+            if (root.TryGetProperty("detail", out var detail) && detail.ValueKind == JsonValueKind.String)
+            {
+                return detail.GetString();
+            }
+
+            if (root.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Object)
+            {
+                return errors.EnumerateObject().SelectMany(e => e.Value.EnumerateArray()).Select(m => m.GetString()).FirstOrDefault();
+            }
+
+            return null;
+        }
+        catch (Exception error) when (error is JsonException or InvalidOperationException or HttpRequestException or System.IO.IOException)
+        {
+            return null;
         }
     }
 

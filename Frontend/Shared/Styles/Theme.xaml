@@ -43,6 +43,7 @@
     <CornerRadius x:Key="CardRadius">12</CornerRadius>
     <Geometry x:Key="CoreIcon">M4,2 L16,2 20,6 20,22 4,22 Z M16,2 L16,6 20,6 M8,10 L16,10 M8,14 L16,14 M8,18 L13,18</Geometry>
     <Geometry x:Key="MeasurementIcon">M4,20 L4,12 7,12 7,20 Z M10,20 L10,4 13,4 13,20 Z M16,20 L16,8 19,8 19,20 Z</Geometry>
+    <Geometry x:Key="UploadIcon">M12,15 L12,3 M7,8 L12,3 17,8 M4,15 L4,21 20,21 20,15</Geometry>
     <Geometry x:Key="ChevronDownIcon">M1,1 L5,5 9,1</Geometry>
     <BooleanToVisibilityConverter x:Key="BoolVisibility"/>
 

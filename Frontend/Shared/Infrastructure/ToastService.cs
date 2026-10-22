@@ -23,7 +23,7 @@ public sealed class Toast(ToastKind kind, string message, TimeSpan duration)
 }
 
 /// <summary>
-/// The app's one toast list (shown top-right over both pages by MainWindow; it never blocks input or moves the
+/// The app's one toast list (shown top-right over every page by MainWindow; it never blocks input or moves the
 /// layout). Durations: success and information 3 s; warnings 3 s; errors — validation and other failures — 5 s.
 /// A toast identical to one already shown is not added again (polling can never stack duplicates); it restarts the
 /// visible one's timer instead. Every toast can be dismissed. Publishing happens on the caller's (UI) thread.

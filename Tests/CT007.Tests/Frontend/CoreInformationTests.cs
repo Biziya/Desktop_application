@@ -49,7 +49,7 @@ public static class CoreInformationTests
         Assert.True(main.IsMeasurementSelected, "navigated to Measurement");
         await Assert.Eventually(() => repository.Session("DH-001") is not null, "session resolved");
         var session = repository.Session("DH-001")!;
-        Assert.Equal(CoreInformationViewModel.CurrentWindowsAccount(), session.Operator, "Operator autofilled with the Windows account");
+        Assert.Equal(WindowsAccount.Current(), session.Operator, "Operator autofilled with the Windows account");
         Assert.Equal("note", session.Comment, "Notes trimmed");
         Assert.Equal("North Ridge", session.DrillholeName, "Project");
         Assert.Equal("2024", session.Project, "Campaign");

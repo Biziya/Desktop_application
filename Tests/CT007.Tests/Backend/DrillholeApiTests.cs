@@ -134,10 +134,12 @@ public static class DrillholeApiTests
         using var document = JsonDocument.Parse(await http.GetStringAsync(backend.BaseUrl + "/swagger/v1/swagger.json"));
         var paths = document.RootElement.GetProperty("paths");
 
-        Assert.Sequence(new[] { "/api/core-information/bluetooth-device", "/api/core-information/drillholes", "/api/core-information/sqlite-database" },
+        Assert.Sequence(new[] { "/api/core-information/bluetooth-device", "/api/core-information/drillholes", "/api/core-information/sqlite-database",
+                "/api/measurements/upload" },
             paths.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal), "paths");
 
-        foreach (var path in paths.EnumerateObject())
+        // The Upload Data endpoint is covered by MeasurementUploadApiTests (BE-050…).
+        foreach (var path in paths.EnumerateObject().Where(p => p.Name.StartsWith("/api/core-information/", StringComparison.Ordinal)))
         {
             Assert.Sequence(new[] { "get" }, path.Value.EnumerateObject().Select(o => o.Name), $"{path.Name}: GET only");
             Assert.Sequence(new[] { "Core Information" }, path.Value.GetProperty("get").GetProperty("tags").EnumerateArray().Select(t => t.GetString()),

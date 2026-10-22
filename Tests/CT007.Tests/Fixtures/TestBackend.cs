@@ -2,6 +2,7 @@ using Backend.Controllers.CoreInformation.Drillhole;
 using Backend.Repositories.CoreInformation.BluetoothDevice;
 using Backend.Repositories.CoreInformation.Drillhole;
 using Backend.Repositories.CoreInformation.SqliteDatabase;
+using Backend.Repositories.Measurement;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -38,8 +39,12 @@ public sealed class TestBackend : IAsyncDisposable
     /// <param name="repository">Drillhole data; null registers the real DrillholeRepository (needs a connection string in
     /// <paramref name="settings"/>).</param>
     /// <param name="port">0 for a free port; a fixed port lets a test start the backend where the client already points.</param>
+    /// <param name="uploads">Measurement upload storage; null registers the real MeasurementUploadRepository.</param>
+    /// <param name="authenticatedUser">Signs every request in as this user, as Windows authentication in the hosting would;
+    /// null leaves requests anonymous (the backend has no authentication of its own).</param>
     public static async Task<TestBackend> StartAsync(IDrillholeRepository? repository = null,
-        IDictionary<string, string?>? settings = null, int port = 0, string environment = "Production")
+        IDictionary<string, string?>? settings = null, int port = 0, string environment = "Production",
+        IMeasurementUploadRepository? uploads = null, string? authenticatedUser = null)
     {
         var contentRoot = Directory.CreateTempSubdirectory("ct007-backend-").FullName;
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -70,7 +75,26 @@ public sealed class TestBackend : IAsyncDisposable
         builder.Services.AddScoped<BluetoothDeviceRepository>();
         builder.Services.AddSingleton<SqliteDatabaseRepository>();
 
+        if (uploads is null)
+        {
+            builder.Services.AddScoped<IMeasurementUploadRepository, MeasurementUploadRepository>();
+        }
+        else
+        {
+            builder.Services.AddSingleton(uploads);
+        }
+
         var app = builder.Build();
+        if (authenticatedUser is not null)
+        {
+            app.Use((context, next) =>
+            {
+                context.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+                    [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, authenticatedUser)], "Test"));
+                return next();
+            });
+        }
+
         app.UseSwagger();
         app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Backend v1"));
         app.MapControllers();

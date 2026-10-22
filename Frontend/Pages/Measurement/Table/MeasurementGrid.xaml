@@ -1,0 +1,151 @@
+<UserControl x:Class="Frontend.Pages.Measurement.Table.MeasurementGrid"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+    <!-- The measurement table shared by the Measurement and Upload Data pages: the visible columns of MeasurementTable.yaml
+         (application resources) and a Delete column. ItemsSource is the DataContext's Results; the Delete button runs the
+         DataContext's DeleteCommand with the row. -->
+    <UserControl.Resources>
+        <!-- Implicit table styles, scoped to this section. -->
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="{StaticResource Surface}"/>
+            <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="RowBackground" Value="{StaticResource Surface}"/>
+            <Setter Property="AlternatingRowBackground" Value="{StaticResource SubtleSurface}"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource Line}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="{StaticResource Line}"/>
+            <!-- Vertical lines between every column use the same brush as the row lines and header border. -->
+            <Setter Property="GridLinesVisibility" Value="All"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <!-- Row text size is set once here; header, cells and the columns inherit it. -->
+            <Setter Property="FontSize" Value="{StaticResource TableRowFontSize}"/>
+            <Setter Property="RowHeight" Value="{StaticResource TableRowHeight}"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="CanUserSortColumns" Value="False"/>
+            <Setter Property="CanUserReorderColumns" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="EnableColumnVirtualization" Value="True"/>
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{StaticResource Canvas}"/>
+            <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+            <Setter Property="Padding" Value="{StaticResource TableHeaderPadding}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="{StaticResource TableHeaderFontSize}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="MinHeight" Value="{StaticResource TableHeaderMinHeight}"/>
+            <!-- Right edge continues the column's vertical grid line through the header row. -->
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="{StaticResource TableCellPadding}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <!-- Keeps WPF's default selected-cell highlight from showing through. -->
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{StaticResource SoftBlue}"/>
+                    <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridRow">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource HoverSurface}"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{StaticResource SoftBlue}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Body cell text; its alignment comes from the column (MeasurementTableColumn.Alignment). The small margin keeps
+             the text off the vertical grid lines; a value wider than its column ends in "…" and the full value is the tooltip. -->
+        <Style x:Key="CellText" TargetType="TextBlock">
+            <Setter Property="Margin" Value="4,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+        </Style>
+
+        <!-- Header text is centred and wraps (also inside a word such as count0_raw) instead of widening the column. -->
+        <Style x:Key="CenteredTableHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="ContentTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- Rows are always in From order (the ViewModel sorts them); column sorting and manual reordering are off,
+             so nothing can override that order. -->
+        <DataGrid x:Name="ResultsGrid"
+                  Margin="1,0,1,9"
+                  ItemsSource="{Binding Results}"
+                  AutoGenerateColumns="False"
+                  SelectionMode="Single"
+                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+            <DataGrid.Columns>
+                <!-- The measurement columns are inserted before this one (MeasurementGrid.xaml.cs). -->
+                <DataGridTemplateColumn Header="Delete"
+                                        Width="{StaticResource TableDeleteColumnWidth}"
+                                        HeaderStyle="{StaticResource CenteredTableHeader}">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="✕"
+                                    FontSize="{StaticResource TableDeleteIconFontSize}"
+                                    Width="{StaticResource TableDeleteButtonSize}"
+                                    Height="{StaticResource TableDeleteButtonSize}"
+                                    ToolTip="Delete measurement"
+                                    AutomationProperties.Name="Delete measurement"
+                                    Style="{StaticResource DeleteButton}"
+                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                    CommandParameter="{Binding}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <TextBlock Text="{Binding EmptyText, ElementName=Root}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   FontSize="{StaticResource TableEmptyTextFontSize}"
+                   Foreground="{StaticResource Muted}"
+                   IsHitTestVisible="False">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Results.Count}" Value="0">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+    </Grid>
+</UserControl>

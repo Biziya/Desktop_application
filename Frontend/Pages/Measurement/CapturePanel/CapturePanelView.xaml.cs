@@ -11,6 +11,8 @@ public partial class CapturePanelView : UserControl
     // Leaving Starting Depth or Step commits it: invalid text is reported in a toast (typing only colours the border).
     private void DepthCommitted(object sender, RoutedEventArgs e) => (DataContext as MeasurementViewModel)?.CommitDepthInputs();
 
+    private void ThresholdCommitted(object sender, RoutedEventArgs e) => (DataContext as MeasurementViewModel)?.CommitThreshold();
+
     // The duration editor opens with its text selected, ready to type over.
     private void DurationEditorOpened(object? sender, EventArgs e) => Dispatcher.BeginInvoke(() =>
     {

@@ -1,5 +1,7 @@
 using System.Net.Http;
+using System.Windows;
 using Frontend.Api;
+using Frontend.Api.Measurements;
 using Frontend.Api.CoreInformation.Drillholes;
 using Frontend.Calculation.CoreInformation;
 using Frontend.Calculation.CoreInformation.BluetoothDevice;
@@ -8,6 +10,8 @@ using Frontend.Calculation.CoreInformation.MeasurementDatabase;
 using Frontend.Calculation.Measurement;
 using Frontend.Pages.CoreInformation;
 using Frontend.Pages.Measurement;
+using Frontend.Pages.Measurement.CapturePanel;
+using Frontend.Pages.UploadData;
 using Frontend.Shared.Infrastructure;
 using Frontend.Windows.ConfirmationWindow;
 
@@ -22,21 +26,28 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public MainViewModel()
         : this(new SqliteMeasurementRepository(SqliteMeasurementRepository.DefaultPath), ApiSettings.LoadConfigured(),
-            DeviceSettings.Load(DeviceSettings.DefaultPath))
+            DeviceSettings.Load(DeviceSettings.DefaultPath),
+            alarmSettings: Application.Current?.TryFindResource(CapturePanelSettings.AlarmResource) as CapturePanelSettings.AlarmSettings)
     {
     }
 
     /// <param name="handler">HTTP handler for the backend; null uses the network (tests pass a stub).</param>
     /// <param name="bluetoothDevices">Bluetooth device list; null reads Windows' list (tests pass a fake).</param>
     /// <param name="captureService">Capture source; null reads the Gamma Guard database (tests pass a fake).</param>
+    /// <param name="alarmSettings">CPS alarm of CapturePanel.yaml; null: no default threshold and a silent alarm (tests).</param>
+    /// <param name="dialogs">Confirmations and file dialogs; null shows the real windows (tests pass a fake).</param>
     public MainViewModel(
         IMeasurementRepository repository,
         ApiSettings apiSettings,
         DeviceSettings deviceSettings,
         HttpMessageHandler? handler = null,
         Func<IReadOnlyList<KnownBluetoothDevice>>? bluetoothDevices = null,
-        IMeasurementService? captureService = null)
+        IMeasurementService? captureService = null,
+        CapturePanelSettings.AlarmSettings? alarmSettings = null,
+        IDialogService? dialogs = null)
     {
+        dialogs ??= new DialogService();
+
         // One HTTP setup and one connection monitor for the whole app, alive until the window closes.
         api = new ApiClient(apiSettings, handler);
         Backend = new BackendConnection(api, apiSettings.StatusInterval);
@@ -49,7 +60,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             deviceSettings.CheckInterval,
             deviceSettings.BluetoothCheckInterval);
 
-        // One toast list for both pages; connection changes are announced once per transition.
+        // One toast list for every page; connection changes are announced once per transition.
         Toasts = new ToastService();
         announcements = new StatusAnnouncements(Backend, Devices, Toasts);
 
@@ -58,9 +69,16 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         // Real capture: the samples the connected CT007-M detector writes to the local Gamma Guard database after each
         // click (read-only). No simulated or demo values.
         var device = captureService ?? new DeviceCaptureService(new GammaGuardCaptureDevices(Devices));
+        // The CPS alarm: a short tone; the next one can sound once it has finished.
+        var alarm = alarmSettings is null
+            ? null
+            : new CpsAlarm(new AlarmTone(alarmSettings.ToneFrequency, TimeSpan.FromSeconds(alarmSettings.ToneDuration)).Play,
+                TimeSpan.FromSeconds(alarmSettings.ToneDuration));
         Measurement = new MeasurementViewModel(
-            device, new CsvExportService(), new DialogService(), repository, showDemoTsMs: false, toasts: Toasts,
-            durationSettings: new CaptureDurationSettings(CaptureDurationSettings.PathBeside(repository.DatabasePath)));
+            device, new CsvExportService(), dialogs, repository, showDemoTsMs: false, toasts: Toasts,
+            durationSettings: new CaptureDurationSettings(CaptureDurationSettings.PathBeside(repository.DatabasePath)),
+            alarm: alarm, defaultThreshold: alarmSettings?.DefaultThreshold);
+        UploadData = new UploadDataViewModel(new MeasurementUploadClient(api), dialogs, Toasts);
         Core = new CoreInformationViewModel(
             core =>
             {
@@ -92,6 +110,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ToggleSidebarCommand = new RelayCommand(_ => IsSidebarExpanded = !IsSidebarExpanded);
         ShowCoreCommand = new RelayCommand(_ => CurrentPage = Core);
         ShowMeasurementCommand = new RelayCommand(_ => CurrentPage = Measurement);
+        ShowUploadDataCommand = new RelayCommand(_ => CurrentPage = UploadData);
         Backend.Start();
         Devices.Start();
     }
@@ -102,7 +121,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     /// <summary>Local Device Status checks of this laptop.</summary>
     public DeviceStatusMonitor Devices { get; }
 
-    /// <summary>Toasts shown over both pages (MainWindow).</summary>
+    /// <summary>Toasts shown over every page (MainWindow).</summary>
     public ToastService Toasts { get; }
 
     public bool IsSidebarExpanded
@@ -129,6 +148,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public RelayCommand ShowMeasurementCommand { get; }
 
+    /// <summary>Import a measurement CSV, review it and upload it to the central database.</summary>
+    public UploadDataViewModel UploadData { get; }
+
+    public RelayCommand ShowUploadDataCommand { get; }
+
     public ObservableObject CurrentPage
     {
         get => currentPage;
@@ -138,6 +162,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             {
                 Changed(nameof(IsCoreSelected));
                 Changed(nameof(IsMeasurementSelected));
+                Changed(nameof(IsUploadDataSelected));
             }
         }
     }
@@ -147,6 +172,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool IsCoreSelected => CurrentPage == Core;
 
     public bool IsMeasurementSelected => CurrentPage == Measurement;
+
+    public bool IsUploadDataSelected => CurrentPage == UploadData;
 
     public void Dispose()
     {

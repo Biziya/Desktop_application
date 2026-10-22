@@ -281,7 +281,7 @@ public static class StatusAndPresentationTests
         var columns = YamlSettings.Load<MeasurementTableSettings>(AppContext.BaseDirectory, MeasurementTableSettings.File).TableColumns();
         MeasurementTableColumn Of(MeasurementColumn column) => columns.Single(c => c.Column == column);
 
-        Assert.Sequence(new[] { "No", "Capture No", "Start Time", "End Time", "From (m)", "To (m)", "Step (cm)", "Sample", "ts_ms", "count0",
+        Assert.Sequence(new[] { "No", "Capture No", "Start Time", "End Time", "From (m)", "To (m)", "Step (cm)", "Sample", "Date", "CPS",
                 "count0_raw", "hdm", "hdm_raw", "dose_rate", "Session" },
             columns.Select(c => c.Header), "column order");
 
@@ -291,8 +291,13 @@ public static class StatusAndPresentationTests
             Assert.True(column.Alignment == System.Windows.TextAlignment.Right, $"{column.Header}: body cells right-aligned");
         }
 
-        Assert.Sequence(new[] { "Capture No", "Start Time", "End Time", "Session" },
+        Assert.Sequence(new[] { "Capture No", "Start Time", "End Time", "count0_raw", "hdm", "hdm_raw", "dose_rate", "Session" },
             columns.Where(c => !c.Visible).Select(c => c.Header), "hidden columns");
+
+        // The No. column is compact: a fixed 40–50 px (configured in the YAML), not a share of the table width.
+        var number = Of(MeasurementTableColumns.Number);
+        Assert.True(number.Width.IsAbsolute && number.Width.Value is >= 40 and <= 50, $"No. column width ({number.Width})");
+        Assert.True(number.MinWidth <= number.Width.Value, "No. minimum width fits its width");
 
         // Table display formats; null stays an empty cell.
         Assert.Equal("10.50", Of(MeasurementTableColumns.From).Format!(10.5m), "From in metres, two to three decimals");
@@ -312,7 +317,9 @@ public static class StatusAndPresentationTests
         Assert.Equal(175.0, shipped["CountdownRingSize"], "countdown ring: 140 × 1.25");
         Assert.Equal(40.0, shipped["CountdownFontSize"], "countdown number: 32 × 1.25");
         Assert.Equal("Depth (m)", shipped["ChartXAxisLabel"], "chart x-axis label");
-        Assert.Equal("ts_ms", shipped["ChartYAxisLabel"], "chart y-axis label");
+        Assert.Equal("CPS", shipped["ChartYAxisLabel"], "chart y-axis label");
+        Assert.Equal("Threshold (CPS)", shipped["ThresholdLabel"], "threshold label");
+        Assert.Equal(150.0, ((Frontend.Pages.Measurement.CapturePanel.CapturePanelSettings.AlarmSettings)shipped["CpsAlarmSettings"]).DefaultThreshold, "default CPS threshold");
         Assert.Equal(new System.Windows.Thickness(0, 0, 14, 16), shipped["DrillholeFieldMargin"], "field spacing");
         Assert.Equal(new System.Windows.Controls.DataGridLength(64), shipped["TableDeleteColumnWidth"], "Delete column");
 
@@ -323,7 +330,7 @@ public static class StatusAndPresentationTests
 
         // A column hidden in the YAML is hidden in the table only: CSV export still writes it.
         var hidden = (IReadOnlyList<MeasurementTableColumn>)Load(Copy(("MeasurementTable.yaml",
-            "{ id: count0,        header: \"count0\",     visible: true,", "{ id: count0,        header: \"count0\",     visible: false,")))["MeasurementTableColumns"];
+            "{ id: count0,        header: \"CPS\",        visible: true,", "{ id: count0,        header: \"CPS\",        visible: false,")))["MeasurementTableColumns"];
         Assert.False(hidden.Single(c => c.Column == MeasurementTableColumns.Count0).Visible, "count0 hidden in the table");
         Assert.Contains("\"count0\"", CsvExportService.Serialize([], Make.Session()), "count0 still in the CSV header");
 
@@ -333,7 +340,7 @@ public static class StatusAndPresentationTests
         Problem("\"rowHight: 36\"", Copy(("MeasurementTable.yaml", "  rowHeight: 36", "  rowHight: 36")), "misspelled key: its line");
         Problem("\"field: 0,x,14,16", Copy(("DrillholeInformation.yaml", "field: 0,0,14,16", "field: 0,x,14,16")), "malformed margin");
         Problem("MeasurementTable.yaml: columns[0].alignment: 'middle' is not supported",
-            Copy(("MeasurementTable.yaml", "minWidth: 32,  alignment: right", "minWidth: 32,  alignment: middle")), "alignment");
+            Copy(("MeasurementTable.yaml", "minWidth: 36,  alignment: right", "minWidth: 36,  alignment: middle")), "alignment");
         Problem("MeasurementTable.yaml: columns[1].id: column 'number' is listed more than once",
             Copy(("MeasurementTable.yaml", "id: captureNumber,", "id: number,")), "duplicate column");
         Problem("MeasurementTable.yaml: columns[6].format: 'cm' is not supported",

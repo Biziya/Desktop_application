@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using Frontend.Pages.Measurement.Table;
+using Frontend.Shared.Infrastructure;
 using Microsoft.Win32;
 
 namespace Frontend.Pages.Measurement;
@@ -30,7 +31,9 @@ public sealed class CsvExportService : ICsvExportService
         }
 
         // Snapshot serialization happens before yielding so a later capture or delete cannot affect this export.
-        var csv = Serialize(rows, session);
+        // The measurement database is per Windows user (%LocalAppData%), so the account exporting it is the account
+        // that created its measurements.
+        var csv = Serialize(rows, session, WindowsAccount.Current());
         var temporary = dialog.FileName + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
         try
@@ -50,23 +53,31 @@ public sealed class CsvExportService : ICsvExportService
         return true;
     }
 
-    // Session metadata repeated on every row: CSV header (= Core Information label) → stored session field.
-    // Placed just before session_id, which stays the last column.
+    // Metadata headers (= Core Information labels), also read back by the Upload Data import (MeasurementCsvReader).
+    public const string DrillholeHeader = "Drillhole";
+    public const string ProjectHeader = "Project";
+    public const string CampaignHeader = "Campaign";
+    public const string OperatorHeader = "Operator";
+    public const string NotesHeader = "Notes";
+    public const string CreatedUsernameHeader = "Created Username";
+
+    // Session metadata repeated on every row: CSV header → stored session field.
+    // Placed just before Created Username and session_id, which stays the last column.
     private static readonly (string Header, Func<MeasurementSession, string?> Value)[] SessionColumns =
     [
-        ("Drillhole", s => s.DrillholeId),
-        ("Project", s => s.DrillholeName),
-        ("Campaign", s => s.Project),
-        ("Operator", s => s.Operator),
-        ("Notes", s => s.Comment)
+        (DrillholeHeader, s => s.DrillholeId),
+        (ProjectHeader, s => s.DrillholeName),
+        (CampaignHeader, s => s.Project),
+        (OperatorHeader, s => s.Operator),
+        (NotesHeader, s => s.Comment)
     ];
 
     /// <summary>
     /// Measurement columns, order and headers come from MeasurementTableColumns.cs, followed by the metadata of
-    /// <paramref name="session"/> and session_id. Rows are written in the given (displayed, From-sorted) order and must all belong to
+    /// <paramref name="session"/>, <paramref name="createdUsername"/> and session_id. Rows are written in the given (displayed, From-sorted) order and must all belong to
     /// <paramref name="session"/>. ts_ms is the device value only — demo values are never exported.
     /// </summary>
-    public static string Serialize(IReadOnlyList<MeasurementResult> rows, MeasurementSession session)
+    public static string Serialize(IReadOnlyList<MeasurementResult> rows, MeasurementSession session, string createdUsername = "")
     {
         if (rows.Any(r => r.SessionId != session.Id))
         {
@@ -74,10 +85,11 @@ public sealed class CsvExportService : ICsvExportService
         }
 
         var columns = MeasurementTableColumns.All.Where(c => c.IncludeInCsv && c != MeasurementTableColumns.SessionId).ToArray();
-        var metadata = SessionColumns.Select(c => Text(c.Value(session) ?? "")).ToArray();
+        var metadata = SessionColumns.Select(c => Text(c.Value(session) ?? "")).Append(Text(createdUsername)).ToArray();
         var csv = new StringBuilder();
         var headers = columns.Select(c => c.CsvHeader)
             .Concat(SessionColumns.Select(c => c.Header))
+            .Append(CreatedUsernameHeader)
             .Append(MeasurementTableColumns.SessionId.CsvHeader);
         csv.Append(string.Join(",", headers.Select(Quote))).Append("\r\n");
 

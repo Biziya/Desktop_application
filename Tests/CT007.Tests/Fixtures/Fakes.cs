@@ -212,6 +212,23 @@ public sealed class FakeDialogs : IDialogService
         Asked++;
         return Confirm;
     }
+
+    public bool ConfirmRemoveImported()
+    {
+        Asked++;
+        return Confirm;
+    }
+
+    public bool ConfirmUpload(int recordCount, string drillhole)
+    {
+        Asked++;
+        return Confirm;
+    }
+
+    /// <summary>The file "chosen" in the import dialog; null = cancelled.</summary>
+    public string? CsvFile { get; set; }
+
+    public string? PickCsvFile() => CsvFile;
 }
 
 public sealed class FakeExport : ICsvExportService

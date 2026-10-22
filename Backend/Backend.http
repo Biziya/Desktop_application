@@ -14,3 +14,21 @@ GET {{Backend_HostAddress}}/api/core-information/sqlite-database
 Accept: application/json
 
 ###
+
+POST {{Backend_HostAddress}}/api/measurements/upload
+Content-Type: application/json
+Accept: application/json
+
+{
+  "measurementInformation": {
+    "sessionId": "8c4e1f0a-0000-4000-8000-000000000001",
+    "drillhole": "DH-001", "project": "Project A", "campaign": "2026",
+    "operator": "DOMAIN\operator", "notes": "", "createdUsername": "DOMAIN\creator", "uploadingUsername": "DOMAIN\uploader"
+  },
+  "records": [
+    { "captureNumber": 1, "startTime": "2026-10-16T09:00:00+08:00", "endTime": "2026-10-16T09:00:05+08:00", "sampleCount": 5,
+      "depthFrom": 0.0, "depthTo": 0.1, "tsMs": 1792115769651, "count0": 125, "count0Raw": 125, "hdm": 10.5, "hdmRaw": 10.5, "doseRate": 0.12 }
+  ]
+}
+
+###

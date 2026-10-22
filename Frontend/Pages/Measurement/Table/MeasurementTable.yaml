@@ -1,5 +1,6 @@
+# Columns and sizes of the measurement table, used by both the Measurement and the Upload Data pages.
 columns:
-  - { id: number,        header: "No",         visible: true,  width: 0.6*, minWidth: 32,  alignment: right }
+  - { id: number,        header: "No",         visible: true,  width: 44,   minWidth: 36,  alignment: right }  # compact: fits 4 digits
   - { id: captureNumber, header: "Capture No", visible: false, width: Auto, minWidth: 90,  alignment: right }
   - { id: startTime,     header: "Start Time", visible: false, width: Auto, minWidth: 160, alignment: right, format: dateTime }
   - { id: endTime,       header: "End Time",   visible: false, width: Auto, minWidth: 160, alignment: right, format: dateTime }
@@ -8,7 +9,7 @@ columns:
   - { id: step,          header: "Step (cm)",  visible: true,  width: 1*,   minWidth: 52,  alignment: right, format: centimetres }
   - { id: sample,        header: "Sample",     visible: true,  width: 0.9*, minWidth: 52,  alignment: right }
   - { id: tsMs,          header: "Date",      visible: true,  width:  2.2*, minWidth: 64,  alignment: right, format: localTime }
-  - { id: count0,        header: "Shock per second",     visible: true,  width: 1*,   minWidth: 52,  alignment: right, format: decimal2 }
+  - { id: count0,        header: "CPS",        visible: true,  width: 1*,   minWidth: 52,  alignment: right, format: decimal2 }
   - { id: count0Raw,     header: "count0_raw", visible: false,  width: 1.1*, minWidth: 56,  alignment: right, format: decimal2 }
   - { id: hdm,           header: "hdm",        visible: false,  width: 1*,   minWidth: 48,  alignment: right, format: decimal2 }
   - { id: hdmRaw,        header: "hdm_raw",    visible: false,  width: 1*,   minWidth: 52,  alignment: right, format: decimal2 }

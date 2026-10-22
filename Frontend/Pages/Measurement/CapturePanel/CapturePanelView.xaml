@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Frontend.Pages.Measurement.CapturePanel"
              xmlns:calc="clr-namespace:Frontend.Calculation.Measurement">
-    <!-- Control row: control column (Starting Depth, Step, Start / Stop toggle — all the same width) | countdown | bar chart
+    <!-- Control row: control column (Starting Depth, Step, Threshold, Start / Stop toggle — all the same width) | countdown | bar chart
          (remaining width). "to" is calculated (from + step), so there is no To input. Depth edits, also during acquisition,
          apply from the next capture. The chart takes the remaining width (about 205 px at the smallest window).
          Labels and sizes: CapturePanel.yaml (application resources). -->
@@ -39,6 +39,11 @@
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
+            </Style>
+
+            <!-- Starting Depth, Step and Threshold: numbers are right-aligned in the box (labels stay where they are). -->
+            <Style x:Key="NumericInput" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="TextAlignment" Value="Right"/>
             </Style>
 
             <!-- One toggle: green "Start" while stopped, red "Stop" while measuring. Exactly as tall as the Starting Depth
@@ -97,7 +102,7 @@
                      LostFocus="DepthCommitted"
                      AutomationProperties.Name="Starting depth in metres">
                 <TextBox.Style>
-                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                    <Style TargetType="TextBox" BasedOn="{StaticResource NumericInput}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsNextFromInvalid}" Value="True">
                                 <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
@@ -112,9 +117,26 @@
                      LostFocus="DepthCommitted"
                      AutomationProperties.Name="Depth step in centimetres">
                 <TextBox.Style>
-                    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                    <Style TargetType="TextBox" BasedOn="{StaticResource NumericInput}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsStepInvalid}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
+            <!-- A completed row whose CPS is above this sounds the alarm (it never stops or changes the measurement). -->
+            <TextBlock Text="{StaticResource ThresholdLabel}" Style="{StaticResource FieldLabel}" FontSize="{StaticResource CaptureLabelFontSize}"
+                       Margin="{StaticResource ThresholdLabelMargin}"/>
+            <TextBox Text="{Binding Threshold, UpdateSourceTrigger=PropertyChanged}"
+                     LostFocus="ThresholdCommitted"
+                     ToolTip="An alarm sounds when a completed measurement's CPS is above this value. Leave empty for no alarm."
+                     AutomationProperties.Name="CPS alarm threshold">
+                <TextBox.Style>
+                    <Style TargetType="TextBox" BasedOn="{StaticResource NumericInput}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsThresholdInvalid}" Value="True">
                                 <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
                             </DataTrigger>
                         </Style.Triggers>
@@ -203,6 +225,6 @@
                              GridBrush="{StaticResource Line}"
                              AxisBrush="{StaticResource Muted}"
                              Foreground="{StaticResource LabelText}"
-                             AutomationProperties.Name="Bar chart of ts_ms by depth"/>
+                             AutomationProperties.Name="Bar chart of CPS by depth"/>
     </Grid>
 </UserControl>

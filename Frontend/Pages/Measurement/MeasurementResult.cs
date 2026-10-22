@@ -69,7 +69,7 @@ public sealed class MeasurementResult : ObservableObject
     // never exported — storage and CSV read Reading.TsMs.
     public long? DemoTsMs { get; set; }
 
-    // ts_ms shown in the table and chart: the device value, or the demo value when there is none.
+    // ts_ms shown in the table: the device value, or the demo value when there is none.
     public long? DisplayTsMs => Reading.TsMs ?? DemoTsMs;
 
     public bool IsDemoTsMs => Reading.TsMs is null && DemoTsMs is not null;
