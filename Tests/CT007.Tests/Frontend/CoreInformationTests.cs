@@ -25,12 +25,12 @@ public static class CoreInformationTests
         Assert.True(main.Core.HasDrillholeError, "red border");
         Assert.Equal(1, main.Toasts.Items.Count(t => t is { Kind: ToastKind.Error, Message: "Select a drillhole from the list." }), "one error toast");
         Assert.Equal(ToastService.ErrorDuration, main.Toasts.Items.First(t => t.Kind == ToastKind.Error).Duration, "error toast lasts 5 s");
-        Assert.True(main.IsCoreSelected, "stays on Core Information");
+        Assert.True(main.IsShown(main.Core), "stays on Core Information");
 
         main.Core.DrillholeSearch = "DH-001";
         await main.Core.WhenOptionsUpdated();
         main.Core.SaveCommand.Execute(null);
-        Assert.True(main.IsCoreSelected, "typed but unpicked text is not saved");
+        Assert.True(main.IsShown(main.Core), "typed but unpicked text is not saved");
         Assert.Equal(0, repository.SessionCount, "no session resolved");
     }
 
@@ -46,7 +46,7 @@ public static class CoreInformationTests
         main.Core.Notes = "  note  ";
         main.Core.SaveCommand.Execute(null);
 
-        Assert.True(main.IsMeasurementSelected, "navigated to Measurement");
+        Assert.True(main.IsShown(main.Measurement), "navigated to Measurement");
         await Assert.Eventually(() => repository.Session("DH-001") is not null, "session resolved");
         var session = repository.Session("DH-001")!;
         Assert.Equal(WindowsAccount.Current(), session.Operator, "Operator autofilled with the Windows account");
@@ -55,7 +55,7 @@ public static class CoreInformationTests
         Assert.Equal("2024", session.Project, "Campaign");
         Assert.Equal(1, repository.SessionCount, "one session");
 
-        main.ShowCoreCommand.Execute(null);
+        main.ShowPage(main.Core);
         await Make.Pick(main.Core, "DH-002");
         main.Core.Operator = " Bob ";
         main.Core.SaveCommand.Execute(null);
@@ -134,16 +134,15 @@ public static class CoreInformationTests
 
         for (var i = 0; i < 5; i++)
         {
-            main.ShowMeasurementCommand.Execute(null);
-            Assert.True(main.IsMeasurementSelected && !main.IsCoreSelected, "Measurement selected");
-            main.ShowCoreCommand.Execute(null);
-            Assert.True(main.IsCoreSelected && !main.IsMeasurementSelected, "Core selected");
+            main.ShowPage(main.Measurement);
+            Assert.True(main.IsShown(main.Measurement) && !main.IsShown(main.Core), "Measurement selected");
+            main.ShowPage(main.Core);
+            Assert.True(main.IsShown(main.Core) && !main.IsShown(main.Measurement), "Core selected");
         }
 
-        main.ToggleSidebarCommand.Execute(null);
-        Assert.Equal("Expand sidebar", main.SidebarToggleLabel, "collapsed");
-        main.ToggleSidebarCommand.Execute(null);
-        Assert.Equal("Collapse sidebar", main.SidebarToggleLabel, "expanded");
+        Assert.Equal(
+            "Core Information|Measurement|Monitoring|Upload Data|Data Viewer",
+            string.Join("|", main.Pages.Select(p => p.Title)), "sidebar order");
 
         var start = backend.Calls("/");
         await Task.Delay(500);

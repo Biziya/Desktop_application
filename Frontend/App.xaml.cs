@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Windows;
 using Frontend.Config;
 using Frontend.Pages;
+using Frontend.Shared.Help;
 using Velopack;
 
 namespace Frontend;
@@ -23,7 +24,7 @@ public partial class App : Application
         app.Run();
     }
 
-    // Load YAML configuration (application metadata, page sections) and the backend API settings before showing
+    // Load YAML configuration (application metadata, page sections, data retention, Help text) and the backend API settings before showing
     // MainWindow; a configuration error is shown and the app closes instead of opening half-configured.
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -34,6 +35,8 @@ public partial class App : Application
         {
             ApplicationSettings.Load(AppContext.BaseDirectory).AddTo(Resources);
             PageSettings.AddTo(Resources, AppContext.BaseDirectory);
+            DataRetentionSettings.Load(AppContext.BaseDirectory).AddTo(Resources);
+            HelpSettings.Load(AppContext.BaseDirectory).AddTo(Resources);
 
             // MainViewModel reads ApiSettings.LoadConfigured() (APP_ENV, .env.<APP_ENV>, API_* variables).
             window = new MainWindow();

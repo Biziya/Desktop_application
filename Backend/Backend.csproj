@@ -6,6 +6,9 @@
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The SQL Server connection string is a secret: dotnet user-secrets (development) or the
+         ConnectionStrings__DefaultConnection environment variable (deployment). Never in appsettings.json. -->
+    <UserSecretsId>ct007-backend-5b1c6f0e</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

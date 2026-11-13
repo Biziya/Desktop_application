@@ -7,9 +7,8 @@
     <sys:Double x:Key="ControlHeight">40</sys:Double>
     <!-- Width of the blue bar beside the current page in the sidebar (its height is always the item's). -->
     <sys:Double x:Key="SidebarIndicatorWidth">5</sys:Double>
-    <!-- ===== Palette (after the Shopeers reference): white sidebar and cards on a light grey page, one blue accent. ===== -->
-    <!-- Body text (near-black slate). The key name is historical. -->
-    <SolidColorBrush x:Key="Navy" Color="#1F2937"/>
+    <!-- ===== Palette: white sidebar and cards on a light grey page, one blue accent. ===== -->
+    <SolidColorBrush x:Key="TextPrimary" Color="#1F2937"/>
     <SolidColorBrush x:Key="Blue" Color="#2563EB"/>
     <SolidColorBrush x:Key="Muted" Color="#6B7280"/>
     <!-- Form and status labels: between Muted and body text. -->
@@ -44,11 +43,28 @@
 
     <CornerRadius x:Key="ControlRadius">8</CornerRadius>
     <CornerRadius x:Key="CardRadius">12</CornerRadius>
+    <!-- Outline icons on a 24 x 24 grid, drawn with Stroke (see the NavigationItem template in MainWindow.xaml). -->
     <Geometry x:Key="CoreIcon">M4,2 L16,2 20,6 20,22 4,22 Z M16,2 L16,6 20,6 M8,10 L16,10 M8,14 L16,14 M8,18 L13,18</Geometry>
     <Geometry x:Key="MeasurementIcon">M4,20 L4,12 7,12 7,20 Z M10,20 L10,4 13,4 13,20 Z M16,20 L16,8 19,8 19,20 Z</Geometry>
+    <Geometry x:Key="MonitoringIcon">M2,12 L6,12 9,4 15,20 18,12 22,12</Geometry>
+    <Geometry x:Key="DataViewerIcon">M4,5 A8,3 0 1 0 20,5 A8,3 0 1 0 4,5 Z M4,5 L4,19 A8,3 0 0 0 20,19 L20,5 M4,12 A8,3 0 0 0 20,12</Geometry>
+    <Geometry x:Key="HelpIcon">M2,12 A10,10 0 1 0 22,12 A10,10 0 1 0 2,12 Z M9.2,9.2 A2.9,2.9 0 1 1 13.4,11.8 C12.4,12.3 12,13 12,14 M12,17.4 L12,17.6</Geometry>
+    <Geometry x:Key="BellIcon">M6,16 L6,10 A6,6 0 0 1 18,10 L18,16 20,18 4,18 Z M10,21 A2,2 0 0 0 14,21</Geometry>
+    <Geometry x:Key="BellOffIcon">M6,16 L6,10 A6,6 0 0 1 18,10 L18,16 20,18 4,18 Z M10,21 A2,2 0 0 0 14,21 M3,3 L21,21</Geometry>
+    <Geometry x:Key="CloseIcon">M6,6 L18,18 M18,6 L6,18</Geometry>
     <Geometry x:Key="UploadIcon">M12,15 L12,3 M7,8 L12,3 17,8 M4,15 L4,21 20,21 20,15</Geometry>
+    <Geometry x:Key="ImportIcon">M12,3 L12,15 M7,10 L12,15 17,10 M4,15 L4,21 20,21 20,15</Geometry>
+    <Geometry x:Key="CheckIcon">M4,12 L9,17 20,6</Geometry>
     <Geometry x:Key="ChevronDownIcon">M1,1 L5,5 9,1</Geometry>
+    <!-- Filled glyphs (Fill, not Stroke). -->
+    <Geometry x:Key="PlayIcon">M6,4 L20,12 6,20 Z</Geometry>
+    <Geometry x:Key="StopIcon">M5,5 L19,5 19,19 5,19 Z</Geometry>
     <BooleanToVisibilityConverter x:Key="BoolVisibility"/>
+    <infra:InverseBoolVisibilityConverter x:Key="InverseBoolVisibility"/>
+    <infra:NonEmptyVisibilityConverter x:Key="NonEmptyVisibility"/>
+    <infra:NonEmptyVisibilityConverter x:Key="ZeroLengthVisibility" Invert="True"/>
+    <infra:ZeroVisibilityConverter x:Key="ZeroVisibility"/>
+    <infra:ResourceKeyConverter x:Key="ResourceKey"/>
 
     <!-- Application icon: the shapes of Icons/icon.svg (64 x 64), drawn natively because WPF does not render SVG files. -->
     <DrawingImage x:Key="AppIcon">
@@ -77,7 +93,7 @@
     <Style x:Key="AppWindow" TargetType="Window">
         <Setter Property="FontFamily" Value="Segoe UI"/>
         <Setter Property="FontSize" Value="14"/>
-        <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
         <Setter Property="Background" Value="{StaticResource Canvas}"/>
         <Setter Property="UseLayoutRounding" Value="True"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -111,6 +127,71 @@
         <Setter Property="Margin" Value="0,0,0,16"/>
     </Style>
 
+    <!-- ===== Page header: every page opens with its title, its actions and Help on the right. ===== -->
+    <Style x:Key="PageHeader" TargetType="Grid">
+        <Setter Property="Margin" Value="0,0,0,16"/>
+        <Setter Property="MinHeight" Value="{StaticResource ControlHeight}"/>
+    </Style>
+    <Style x:Key="PageTitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <!-- Card heading row: title on the left, a short count or note on the right. -->
+    <Style x:Key="CardTitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <!-- Shown in place of an empty list or table. -->
+    <Style x:Key="EmptyStateText" TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+        <Setter Property="TextAlignment" Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="24"/>
+    </Style>
+
+    <!-- Status chip: small rounded label. Set Tag to a StatusTone (Neutral, Info, Success, Warning, Danger). -->
+    <Style x:Key="StatusChip" TargetType="Border">
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="8,2"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Background" Value="{StaticResource Canvas}"/>
+        <Setter Property="TextElement.Foreground" Value="{StaticResource LabelText}"/>
+        <Setter Property="TextElement.FontSize" Value="12"/>
+        <Setter Property="TextElement.FontWeight" Value="SemiBold"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="Info">
+                <Setter Property="Background" Value="{StaticResource SoftBlue}"/>
+                <Setter Property="TextElement.Foreground" Value="{StaticResource Blue}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="Success">
+                <Setter Property="Background" Value="{StaticResource SuccessSurface}"/>
+                <Setter Property="TextElement.Foreground" Value="{StaticResource Success}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="Warning">
+                <Setter Property="Background" Value="{StaticResource WarningSurface}"/>
+                <Setter Property="TextElement.Foreground" Value="{StaticResource Warning}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="Danger">
+                <Setter Property="Background" Value="{StaticResource DangerSurface}"/>
+                <Setter Property="TextElement.Foreground" Value="{StaticResource Danger}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Inline notice inside a page (not a toast): warning tone, left accent bar. -->
+    <Style x:Key="WarningBanner" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource WarningSurface}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Warning}"/>
+        <Setter Property="BorderThickness" Value="4,0,0,0"/>
+        <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}"/>
+        <Setter Property="Padding" Value="14,10"/>
+        <Setter Property="Margin" Value="0,0,0,16"/>
+        <Setter Property="TextElement.Foreground" Value="{StaticResource Warning}"/>
+    </Style>
+
     <!-- ===== Inputs: 40 px, white, light border, 8 px corners; darker border on hover, blue on focus. ===== -->
     <!-- Text boxes and dropdowns share Height (ControlHeight), left padding (11), font, 1 px border and corners,
          so a dropdown next to a text box lines up exactly. Multi-line boxes (Notes) set their own Height. -->
@@ -121,7 +202,7 @@
              so it can never be squeezed or clipped by the fixed 40 px height. -->
         <Setter Property="Padding" Value="11,0"/>
         <Setter Property="Margin" Value="0,7,0,0"/>
-        <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
         <Setter Property="Background" Value="{StaticResource Surface}"/>
         <Setter Property="BorderBrush" Value="{StaticResource InputBorder}"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -214,7 +295,7 @@
     </Style>
     <Style TargetType="ComboBoxItem">
         <Setter Property="Padding" Value="10,7"/>
-        <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="Cursor" Value="Hand"/>
@@ -246,7 +327,7 @@
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="Margin" Value="0,7,0,0"/>
         <Setter Property="Padding" Value="11,0,36,0"/>
-        <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
         <Setter Property="Background" Value="{StaticResource Surface}"/>
         <Setter Property="BorderBrush" Value="{StaticResource InputBorder}"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -337,7 +418,7 @@
                                 <Border x:Name="Feedback" CornerRadius="{StaticResource ControlRadius}" Background="White" Opacity="0" IsHitTestVisible="False"/>
                                 <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True"/>
-                                <Border x:Name="FocusRing" CornerRadius="6" BorderBrush="{StaticResource Navy}" BorderThickness="1" Margin="3" Visibility="Collapsed" IsHitTestVisible="False"/>
+                                <Border x:Name="FocusRing" CornerRadius="6" BorderBrush="{StaticResource TextPrimary}" BorderThickness="1" Margin="3" Visibility="Collapsed" IsHitTestVisible="False"/>
                             </Grid>
                         </Border>
                         <!-- Hover ring overlays the outer edge, so it never changes the button's size or moves its content. -->
@@ -349,7 +430,7 @@
                             <Setter TargetName="Feedback" Property="Opacity" Value="0.13"/>
                             <Setter TargetName="HoverRing" Property="Visibility" Value="Visible"/>
                         </Trigger>
-                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="Feedback" Property="Background" Value="{StaticResource Navy}"/><Setter TargetName="Feedback" Property="Opacity" Value="0.12"/></Trigger>
+                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="Feedback" Property="Background" Value="{StaticResource TextPrimary}"/><Setter TargetName="Feedback" Property="Opacity" Value="0.12"/></Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/></Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Frame" Property="Opacity" Value="0.45"/>
@@ -363,7 +444,7 @@
     </Style>
     <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="{StaticResource Surface}"/>
-        <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
         <Setter Property="BorderBrush" Value="{StaticResource InputBorder}"/>
         <Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{StaticResource HoverSurface}"/></Trigger></Style.Triggers>
     </Style>
@@ -372,6 +453,28 @@
         <Setter Property="Padding" Value="10,3"/>
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="VerticalAlignment" Value="Top"/>
+    </Style>
+    <!-- "? Help" at the right of every page header. ApplicationCommands.Help is handled by MainWindow (F1 does the same). -->
+    <Style x:Key="HelpButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="Command" Value="ApplicationCommands.Help"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Margin" Value="10,0,0,0"/>
+        <Setter Property="ToolTip" Value="What each button on this page does (F1)"/>
+        <Setter Property="AutomationProperties.Name" Value="Help"/>
+        <Setter Property="ContentTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource HelpIcon}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0"
+                              StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Help" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
     <Style x:Key="DeleteButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Foreground" Value="{StaticResource Danger}"/>
@@ -410,7 +513,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Frame" Property="Background" Value="{StaticResource SidebarHover}"/>
-                            <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
                         </Trigger>
                         <!-- Current page (infra:SidebarItem.IsSelected, from MainViewModel): soft blue fill, blue icon and
                              semibold text, accent bar. Declared after the hover trigger so it wins over hover; it does not
@@ -428,11 +531,6 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-    </Style>
-    <Style x:Key="NavigationLabel" TargetType="TextBlock">
-        <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="Margin" Value="4,0,8,0"/>
-        <Setter Property="Visibility" Value="{Binding IsSidebarExpanded, Converter={StaticResource BoolVisibility}}"/>
     </Style>
     <!-- Borderless square icon button (sidebar collapse / expand): grey hover, blue focus ring. -->
     <Style x:Key="IconButton" TargetType="Button">
@@ -452,7 +550,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Frame" Property="Background" Value="{StaticResource SidebarHover}"/>
-                            <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Frame" Property="Background" Value="{StaticResource Line}"/>
@@ -503,11 +601,125 @@
             <DataTrigger Binding="{Binding Kind}" Value="Error"><Setter Property="Foreground" Value="{StaticResource Danger}"/><Setter Property="Text" Value="✕"/></DataTrigger>
         </Style.Triggers>
     </Style>
+    <!-- "Show" / "Hide" text toggle for an optional section (blue link style, focus ring). -->
+    <Style x:Key="DisclosureToggle" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{StaticResource Blue}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Content" Value="Show"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="Frame" Padding="8,4" CornerRadius="6" Background="Transparent" BorderBrush="Transparent" BorderThickness="1.5">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource SoftBlue}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Blue}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter Property="Content" Value="Hide"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
     <!-- Small borderless × (toast close, Drillhole clear): grey, darker on hover, blue focus ring. -->
     <Style x:Key="ClearButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
         <Setter Property="Width" Value="24"/>
         <Setter Property="Height" Value="24"/>
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="Content" Value="✕"/>
+    </Style>
+
+    <!-- ===== Read-only data tables (Monitoring): row lines only, grey header, soft-blue selection.
+         The Measurement table builds on these with its own YAML sizes (MeasurementGrid.xaml). ===== -->
+    <Style x:Key="DataTableHeader" TargetType="DataGridColumnHeader">
+        <Setter Property="Background" Value="{StaticResource SubtleSurface}"/>
+        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+    </Style>
+    <Style x:Key="DataTableCell" TargetType="DataGridCell">
+        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DataGridCell">
+                    <Border x:Name="Frame" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"
+                            BorderBrush="Transparent" BorderThickness="1">
+                        <ContentPresenter VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Blue}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{StaticResource SoftBlue}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="DataTableRow" TargetType="DataGridRow">
+        <Setter Property="BorderThickness" Value="0"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource HoverSurface}"/>
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{StaticResource SoftBlue}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="DataTable" TargetType="DataGrid">
+        <Setter Property="Background" Value="{StaticResource Surface}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="RowBackground" Value="{StaticResource Surface}"/>
+        <Setter Property="AlternatingRowBackground" Value="{StaticResource SubtleSurface}"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource Line}"/>
+        <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+        <Setter Property="HeadersVisibility" Value="Column"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="RowHeight" Value="36"/>
+        <Setter Property="AutoGenerateColumns" Value="False"/>
+        <Setter Property="CanUserAddRows" Value="False"/>
+        <Setter Property="CanUserDeleteRows" Value="False"/>
+        <Setter Property="CanUserReorderColumns" Value="False"/>
+        <Setter Property="CanUserResizeRows" Value="False"/>
+        <Setter Property="IsReadOnly" Value="True"/>
+        <Setter Property="SelectionMode" Value="Single"/>
+        <Setter Property="SelectionUnit" Value="FullRow"/>
+        <Setter Property="EnableRowVirtualization" Value="True"/>
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+        <Setter Property="ColumnHeaderStyle" Value="{StaticResource DataTableHeader}"/>
+        <Setter Property="CellStyle" Value="{StaticResource DataTableCell}"/>
+        <Setter Property="RowStyle" Value="{StaticResource DataTableRow}"/>
+    </Style>
+    <!-- Numeric columns: header and values right-aligned on the same edge. -->
+    <Style x:Key="NumberCell" TargetType="TextBlock">
+        <Setter Property="TextAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style x:Key="NumberHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource DataTableHeader}">
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
     </Style>
 </ResourceDictionary>

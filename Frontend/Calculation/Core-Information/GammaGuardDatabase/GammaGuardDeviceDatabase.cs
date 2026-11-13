@@ -15,9 +15,33 @@ public sealed record DetectorStatus(
 /// <summary>A serial seen in the newest samples, with its newest ts_ms.</summary>
 public sealed record RecentSerial(string Serial, long LastTsMs);
 
+/// <summary>A full detector_status row as the Monitoring page shows it. ResponseTime is null until the detector reports it.</summary>
+public sealed record DetectorStatusRow(
+    string Serial,
+    string? Name,
+    string? Mac,
+    string? Firmware,
+    int? DeviceType,
+    string? DeviceSessionId,
+    string? State,
+    long? ResponseTime,
+    long? LastSampleMs,
+    long? UpdatedMs);
+
+/// <summary>
+/// One Monitoring poll, read over a single read-only connection. <see cref="Samples"/> holds either the rows after the
+/// requested id (in id order) or, for the first read, the newest row of every detector.
+/// </summary>
+public sealed record MonitorSnapshot(
+    int SchemaVersion,
+    long MaxSampleId,
+    IReadOnlyList<DetectorStatusRow> Detectors,
+    IReadOnlyList<DeviceSample> Samples);
+
 /// <summary>
 /// The only code that reads the Gamma Guard database (samples, detector_status). Every call opens the file read-only
-/// through <see cref="SqliteFileCheck.OpenReadOnly"/> and closes it again: no writes, no PRAGMAs, no journal changes.
+/// through <see cref="SqliteFileCheck.OpenReadOnly"/> and closes it again: no writes and no journal changes (the only
+/// PRAGMA used is reading user_version).
 /// Sample reads go forward by samples.id (the table's key), so a poll touches only new rows, never the whole history.
 /// </summary>
 public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
@@ -69,6 +93,78 @@ public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
         command.CommandText = $"SELECT {SampleColumns} FROM samples WHERE id > $after AND serial = $serial ORDER BY id";
         command.Parameters.AddWithValue("$after", afterId);
         command.Parameters.AddWithValue("$serial", serial);
+        return ReadSamples(command, serial);
+    }
+
+    /// <summary>
+    /// Everything the Monitoring page needs for one poll. With <paramref name="afterId"/> null (first read after
+    /// connecting) the newest sample of every detector is returned; otherwise up to <paramref name="limit"/> samples
+    /// with id &gt; afterId, in id order. Ids are AUTOINCREMENT and every writer commits through SQLite's single write
+    /// lock, so a row with a smaller id can never appear later: reading by id never misses or repeats a row.
+    /// </summary>
+    public MonitorSnapshot ReadMonitorSnapshot(long? afterId, int limit)
+    {
+        using var connection = SqliteFileCheck.OpenReadOnly(Path);
+        using var command = connection.CreateCommand();
+
+        command.CommandText = "PRAGMA user_version";
+        var schema = Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+
+        command.CommandText = "SELECT COALESCE(MAX(id), 0) FROM samples";
+        var maxId = Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+
+        var detectors = ReadDetectorRows(command);
+
+        if (afterId is { } after)
+        {
+            command.CommandText = $"SELECT {SampleColumns} FROM samples WHERE id > $after ORDER BY id LIMIT $limit";
+            command.Parameters.AddWithValue("$after", after);
+            command.Parameters.AddWithValue("$limit", limit);
+        }
+        else
+        {
+            command.CommandText = $"SELECT {SampleColumns} FROM samples WHERE id IN (SELECT MAX(id) FROM samples GROUP BY serial) ORDER BY id";
+        }
+
+        return new MonitorSnapshot(schema, maxId, detectors, ReadSamples(command, ""));
+    }
+
+    // response_time arrived with schema 3; older files are still shown, without it.
+    private static List<DetectorStatusRow> ReadDetectorRows(SqliteCommand command)
+    {
+        try
+        {
+            return ReadDetectorRows(command, withResponseTime: true);
+        }
+        catch (SqliteException error) when (error.SqliteErrorCode == 1) // no such column
+        {
+            return ReadDetectorRows(command, withResponseTime: false);
+        }
+    }
+
+    private static List<DetectorStatusRow> ReadDetectorRows(SqliteCommand command, bool withResponseTime)
+    {
+        command.CommandText = $"SELECT {DetectorColumns}, {(withResponseTime ? "response_time" : "NULL")} FROM detector_status ORDER BY serial";
+        using var reader = command.ExecuteReader();
+        var rows = new List<DetectorStatusRow>();
+
+        while (reader.Read())
+        {
+            if (Text(reader, 0) is not { Length: > 0 } serial)
+            {
+                continue;
+            }
+
+            rows.Add(new DetectorStatusRow(
+                serial, Text(reader, 1), Text(reader, 2), Text(reader, 3), int.TryParse(Text(reader, 4), NumberStyles.Integer, CultureInfo.InvariantCulture, out var type) ? type : null,
+                Text(reader, 5), Text(reader, 6), Long(reader, 9), Long(reader, 7), Long(reader, 8)));
+        }
+
+        return rows;
+    }
+
+    private static List<DeviceSample> ReadSamples(SqliteCommand command, string fallbackSerial)
+    {
         using var reader = command.ExecuteReader();
         var rows = new List<DeviceSample>();
 
@@ -76,7 +172,7 @@ public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
         {
             rows.Add(new DeviceSample(
                 Long(reader, 0) ?? 0,
-                Text(reader, 1) ?? serial,
+                Text(reader, 1) ?? fallbackSerial,
                 Text(reader, 2),
                 Long(reader, 3),
                 Long(reader, 4),

@@ -1,8 +1,16 @@
-# SPP CT-007 — Measurement Studio
+# SPP CT007
+
+> **This file is the original design draft, kept for its reasoning.** The application as built differs: a WPF
+> frontend (`Frontend/`, hand-written MVVM, local SQLite `measurements.db`), an ASP.NET backend over HTTP
+> (`Backend/`, SQL Server), and the test harness in `Tests/CT007.Tests` (`dotnet run --project Tests/CT007.Tests`).
+> Pages: Core Information, Measurement, Monitoring (live CT008 detectors), Upload Data and Data Viewer (measurements
+> uploaded to the central database). Local measurements are kept 30 days (`Frontend/Config/data-retention.yaml`).
+> The name and version come from `Frontend/Config/application.yaml`. See `Frontend/README.md` and
+> `Backend/README.md` for the current behaviour.
 
 **Independent Windows Desktop Project — Continuous Measurement Selection, Synchronization, Processing, and Export**
 
-> **Status:** Architecture and requirements draft — design only, not an implemented system.  
+> **Status:** Architecture and requirements draft — design only (see the note above for what was built).  
 > **Device:** SPP CT-007 (device capabilities and SQLite schema to be verified)  
 > **Project scope:** Standalone new project; no connection to prior Acquire logging, drilling, or other applications.  
 > **Target platform:** Windows  
@@ -11,7 +19,7 @@
 
 ## 1. Project overview
 
-SPP CT-007 Measurement Studio is a new, standalone Windows desktop application for selecting useful measurement data from a device that **records continuously** and has **no Start/Stop controls**. A separate Bluetooth button provides a user-triggered event. The application uses that event to define a *logical capture window*: selection begins **3 seconds after the physical button press** and continues for a **configurable duration**. The application reads the corresponding records from the measurement device's **SQLite database on the same Windows PC**, converts them to structured tables, supports filtering/processing and review, and exports CSV (and potentially other formats later).
+SPP CT007 is a new, standalone Windows desktop application for selecting useful measurement data from a device that **records continuously** and has **no Start/Stop controls**. A separate Bluetooth button provides a user-triggered event. The application uses that event to define a *logical capture window*: selection begins **3 seconds after the physical button press** and continues for a **configurable duration**. The application reads the corresponding records from the measurement device's **SQLite database on the same Windows PC**, converts them to structured tables, supports filtering/processing and review, and exports CSV (and potentially other formats later).
 
 The SPP CT-007 measurement device continues running throughout this workflow; the desktop application does **not** start or stop its acquisition.
 

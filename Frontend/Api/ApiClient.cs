@@ -27,8 +27,10 @@ public sealed class ApiClient : IDisposable
     /// <summary>Raised after every request: true when any HTTP response arrived (even an error status).</summary>
     public event Action<bool>? Reached;
 
-    public Task<ApiResult<T>> GetAsync<T>(string path, CancellationToken cancellationToken) =>
-        SendAsync<T>(token => http.GetAsync(path, token), showProblemDetail: false, cancellationToken);
+    /// <param name="showProblemDetail">True when the endpoint's ProblemDetails text is written for users (see PostAsync);
+    /// otherwise an error answer becomes "Backend error &lt;status&gt;".</param>
+    public Task<ApiResult<T>> GetAsync<T>(string path, CancellationToken cancellationToken, bool showProblemDetail = false) =>
+        SendAsync<T>(token => http.GetAsync(path, token), showProblemDetail, cancellationToken);
 
     /// <summary>
     /// Posts <paramref name="body"/> as JSON. An error answer's ProblemDetails text (the backend's reason, written for

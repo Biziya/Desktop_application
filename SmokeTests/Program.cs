@@ -366,7 +366,7 @@ internal static class Program
         using (var main = new MainViewModel(new MemoryRepository(), settings with { StatusInterval = TimeSpan.FromMilliseconds(30) }, mainDevices, mainBackend,
                    MainBluetooth, mainCapture))
         {
-            Check(main.CurrentPage == main.Core && main.IsCoreSelected && !main.IsMeasurementSelected, "Sidebar: Core Information selected at start");
+            Check(main.CurrentPage == main.Core && main.IsShown(main.Core) && !main.IsShown(main.Measurement), "Sidebar: Core Information selected at start");
             await Until(() => Ids(main.Core).Length == 3 && main.Backend.State == BackendState.Online && main.Devices.BluetoothDevices.Count == 1);
             await Task.Delay(100);
             Check(main.Devices.Bluetooth.State == LocalState.NotSelected && bluetoothChecks <= 2, "App: no device selected and no connection checks until the user selects one");
@@ -377,10 +377,10 @@ internal static class Program
             await Pick(main.Core, "GTZO_0002_1"); main.Core.Notes = "retained";
             for (int i = 0; i < 5; i++)
             {
-                main.ShowMeasurementCommand.Execute(null);
-                Check(main.IsMeasurementSelected && !main.IsCoreSelected, "Sidebar: exactly Measurement selected");
-                main.ShowCoreCommand.Execute(null);
-                Check(main.IsCoreSelected && !main.IsMeasurementSelected, "Sidebar: exactly Core Information selected");
+                main.ShowPage(main.Measurement);
+                Check(main.IsShown(main.Measurement) && !main.IsShown(main.Core), "Sidebar: exactly Measurement selected");
+                main.ShowPage(main.Core);
+                Check(main.IsShown(main.Core) && !main.IsShown(main.Measurement), "Sidebar: exactly Core Information selected");
             }
             Check(main.CurrentPage == main.Core && main.Core.DrillholeId == "GTZO_0002_1" && main.Core.Notes == "retained", "Navigation retains form");
             var before = mainBackend.Calls("/");
@@ -403,24 +403,24 @@ internal static class Program
             main.ToggleSidebarCommand.Execute(null);
             Check(!main.IsSidebarExpanded && main.SidebarToggleLabel == "Expand sidebar", "Collapse sidebar");
             Check(main.CurrentPage == retainedCore && main.Core.Notes == "retained", "Collapse retains page/form");
-            main.ShowMeasurementCommand.Execute(null);
-            Check(!main.IsSidebarExpanded && main.CurrentPage == retainedMeasurement && main.IsMeasurementSelected,
+            main.ShowPage(main.Measurement);
+            Check(!main.IsSidebarExpanded && main.CurrentPage == retainedMeasurement && main.IsShown(main.Measurement),
                 "Navigation retains collapsed state and measurement instance");
             main.ToggleSidebarCommand.Execute(null);
             Check(main.IsSidebarExpanded && main.SidebarToggleLabel == "Collapse sidebar" && main.CurrentPage == retainedMeasurement &&
-                main.IsMeasurementSelected, "Expand retains selected page");
-            main.ShowCoreCommand.Execute(null);
+                main.IsShown(main.Measurement), "Expand retains selected page");
+            main.ShowPage(main.Core);
             main.Core.SaveCommand.Execute(null);   // Save & Continue navigates outside the sidebar
-            Check(main.CurrentPage == retainedMeasurement && main.IsMeasurementSelected && !main.IsCoreSelected,
+            Check(main.CurrentPage == retainedMeasurement && main.IsShown(main.Measurement) && !main.IsShown(main.Core),
                 "Sidebar follows navigation triggered outside it (Save & Continue)");
             // Bluetooth monitoring is informational: a failed check does not block Start, the trigger or the countdown.
             mainBtFails = true;
             await Until(() => main.Devices.Bluetooth.State == LocalState.Unavailable);
             main.Measurement.SetCore(core); main.Measurement.NextFrom = "150"; main.Measurement.Step = "50"; main.Measurement.ToggleMeasurementCommand.Execute(null);
             Check(main.Measurement.CanTrigger, "Start arms while the Bluetooth status is unavailable");
-            main.Measurement.TriggerCommand.Execute(null); main.ShowCoreCommand.Execute(null);
+            main.Measurement.TriggerCommand.Execute(null); main.ShowPage(main.Core);
             var navigationSession = main.Measurement.SessionId;
-            main.ShowMeasurementCommand.Execute(null); main.ShowCoreCommand.Execute(null);
+            main.ShowPage(main.Measurement); main.ShowPage(main.Core);
             Check(main.Measurement.IsCapturing && main.CurrentPage == retainedCore &&
                 main.Measurement.SessionId == navigationSession, "Navigation does not duplicate, reset or start a session");
             mainBtFails = false; mainBtConnected = false;
@@ -1987,6 +1987,10 @@ internal static class Program
     {
         public bool Confirm { get; set; }
         public bool ConfirmDelete() => Confirm;
+        public bool ConfirmRemoveImported() => Confirm;
+        public bool ConfirmUpload(int recordCount, string drillhole) => Confirm;
+        public string? PickCsvFile() => null;
+        public string? PickGammaGuardDatabase(string? initialDirectory) => null;
     }
     private sealed class MemoryRepository : IMeasurementRepository
     {

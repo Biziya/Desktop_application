@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Builds the SPP CT-007 Measurement Studio Windows installer with Velopack.
+    Builds the SPP CT007 Windows installer with Velopack.
 
 .DESCRIPTION
     Reads the application id, name and version from Frontend\Config\application.yaml, validates the production API

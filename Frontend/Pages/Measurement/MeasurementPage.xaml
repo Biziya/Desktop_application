@@ -3,20 +3,25 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:capture="clr-namespace:Frontend.Pages.Measurement.CapturePanel"
              xmlns:table="clr-namespace:Frontend.Pages.Measurement.Table">
-    <!-- Page composition only. The sections share this page's DataContext (MeasurementViewModel). Results, errors and
-         status changes are shown as toasts (MainWindow), not as text here. -->
+    <!-- The sections share this page's DataContext (MeasurementViewModel). Results, errors and status changes are
+         toasts (MainWindow). -->
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Style="{StaticResource Card}">
+        <Grid Style="{StaticResource PageHeader}">
+            <TextBlock Text="Measurement" Style="{StaticResource PageTitle}"/>
+            <Button Style="{StaticResource HelpButton}"/>
+        </Grid>
+
+        <Border Grid.Row="1" Style="{StaticResource Card}">
             <StackPanel>
                 <capture:CapturePanelView/>
 
-                <!-- The drillhole warning: shown while no drillhole is saved for measuring (also when none is selected,
-                     which leaves the table and chart empty). Text and size: DrillholeInformation.yaml. -->
+                <!-- Shown while no drillhole is saved for measuring. Text and size: DrillholeInformation.yaml. -->
                 <TextBlock Text="{StaticResource DrillholeWarningText}"
                            FontSize="{StaticResource DrillholeWarningFontSize}"
                            Foreground="{StaticResource Warning}"
@@ -26,6 +31,6 @@
             </StackPanel>
         </Border>
 
-        <table:MeasurementTableView Grid.Row="1"/>
+        <table:MeasurementTableView Grid.Row="2"/>
     </Grid>
 </UserControl>

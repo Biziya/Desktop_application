@@ -540,7 +540,7 @@ public static class StatusAndPresentationTests
     {
         var shipped = ApplicationSettings.Load(AppContext.BaseDirectory).Application;
         Assert.Equal("CT007.MeasurementStudio", shipped.Id, "id");
-        Assert.Equal("SPP CT-007 Measurement Studio", shipped.Name, "name");
+        Assert.Equal("SPP CT007", shipped.Name, "name");
 
         // Frontend.csproj compiles the same file's version into the assembly ("1.0.0+<commit>").
         var compiled = typeof(ApplicationSettings).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion;
@@ -550,10 +550,10 @@ public static class StatusAndPresentationTests
         var text = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, ApplicationSettings.File));
         var cases = new (string Name, string From, string To, string Expected)[]
         {
-            ("missing version", "  version: \"1.0.0\"\n", "", "version"),
-            ("not SemVer", "version: \"1.0.0\"", "version: \"1.0\"", "application.version: '1.0' is not a SemVer version"),
+            ("missing version", $"  version: \"{shipped.Version}\"\n", "", "version"),
+            ("not SemVer", $"version: \"{shipped.Version}\"", "version: \"1.0\"", "application.version: '1.0' is not a SemVer version"),
             ("invalid id", "id: \"CT007.MeasurementStudio\"", "id: \"CT007 Measurement\"", "application.id"),
-            ("empty name", "name: \"SPP CT-007 Measurement Studio\"", "name: \" \"", "application.name")
+            ("empty name", $"name: \"{shipped.Name}\"", "name: \" \"", "application.name")
         };
 
         foreach (var (name, from, to, expected) in cases)

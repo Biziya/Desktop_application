@@ -1,0 +1,241 @@
+<UserControl x:Class="Frontend.Pages.Monitoring.MonitoringPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- DataContext: MonitoringViewModel. Read-only view of the CT008 database. -->
+    <UserControl.Resources>
+        <Style x:Key="DetailLabel" TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,0,12,4"/>
+        </Style>
+        <Style x:Key="DetailValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,0,32,4"/>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+            <Grid Style="{StaticResource PageHeader}">
+                <TextBlock Text="Monitoring" Style="{StaticResource PageTitle}"/>
+                <Button Style="{StaticResource HelpButton}"/>
+            </Grid>
+
+            <Border Style="{StaticResource WarningBanner}">
+                <Border.Visibility>
+                    <Binding Path="ErrorText" Converter="{StaticResource NonEmptyVisibility}"/>
+                </Border.Visibility>
+                <TextBlock Text="{Binding ErrorText}" TextWrapping="Wrap"/>
+            </Border>
+
+            <Border Style="{StaticResource WarningBanner}">
+                <Border.Visibility>
+                    <Binding Path="WarningText" Converter="{StaticResource NonEmptyVisibility}"/>
+                </Border.Visibility>
+                <TextBlock Text="{Binding WarningText}" TextWrapping="Wrap"/>
+            </Border>
+
+            <!-- No database yet: say where to choose it. -->
+            <Border Style="{StaticResource Card}" Visibility="{Binding HasDatabase, Converter={StaticResource InverseBoolVisibility}}">
+                <StackPanel HorizontalAlignment="Center" Margin="0,24">
+                    <TextBlock Text="No CT008 database selected" Style="{StaticResource CardTitle}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Choose the database on Core Information, under Device Status. Monitoring starts as soon as it is available."
+                               Style="{StaticResource MutedText}" TextAlignment="Center" MaxWidth="420" Margin="0,6,0,16"/>
+                    <Button Content="Open Core Information" HorizontalAlignment="Center" Command="{Binding ShowCoreInformationCommand}"/>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Visibility="{Binding HasDatabase, Converter={StaticResource BoolVisibility}}">
+                <!-- Detectors -->
+                <Border Style="{StaticResource Card}" Padding="0">
+                    <StackPanel>
+                        <TextBlock Text="Detectors" Style="{StaticResource CardTitle}" Margin="20,16"/>
+                        <Grid>
+                            <DataGrid Style="{StaticResource DataTable}" ItemsSource="{Binding Engine.Detectors}" MaxHeight="420"
+                                      RowDetailsVisibilityMode="VisibleWhenSelected" AutomationProperties.Name="Detectors">
+                                <DataGrid.Columns>
+                                    <DataGridTemplateColumn Header="Detector" Width="1.4*" SortMemberPath="DisplayName">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Serial}" Style="{StaticResource MutedText}" FontSize="11"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding TypeName}" Width="1.1*"/>
+                                    <DataGridTemplateColumn Header="State" Width="0.9*" SortMemberPath="StateText">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Style="{StaticResource StatusChip}" Tag="{Binding Tone}" ToolTip="{Binding HeartbeatAge, StringFormat=Heartbeat {0} ago}">
+                                                    <TextBlock Text="{Binding StateText}"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Last reading" Binding="{Binding LastReadingAge}" Width="0.8*"/>
+                                    <DataGridTextColumn Header="CPM" Binding="{Binding Latest.Count0, StringFormat=0}" Width="0.8*"
+                                                        ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                    <DataGridTextColumn Header="Dose rate" Binding="{Binding Latest.DoseRate, StringFormat=0.###}" Width="0.9*"
+                                                        ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                    <DataGridTextColumn Header="Temp. (°C)" Binding="{Binding Latest.Temperature, StringFormat=0.0}" Width="0.9*"
+                                                        ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                    <DataGridTemplateColumn Header="Response" Width="0.9*" SortMemberPath="ResponseTimeText">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding ResponseTimeText}" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasResponseTimeWarning}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{StaticResource Warning}"/>
+                                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                    <Setter Property="ToolTip" Value="5-second samples need a 1 s response time"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Header="5-second sample" Width="2.3*" MinWidth="230" CanUserSort="False">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Button Content="Take sample" Style="{StaticResource SmallButton}" VerticalAlignment="Center"
+                                                            IsEnabled="{Binding CanSample}"
+                                                            Command="{Binding DataContext.SampleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip="Discard the next reading, then average the 5 after it"
+                                                            AutomationProperties.Name="{Binding Serial, StringFormat=Take 5-second sample for {0}}"/>
+                                                    <TextBlock Text="{Binding SampleStatus}" Style="{StaticResource MutedText}" FontSize="12"
+                                                               Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                                <DataGrid.RowDetailsTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="20,6,20,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="MAC" Style="{StaticResource DetailLabel}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Mac, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
+                                            <TextBlock Grid.Row="1" Text="Firmware" Style="{StaticResource DetailLabel}"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Firmware, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
+                                            <TextBlock Grid.Row="2" Text="Device session" Style="{StaticResource DetailLabel}"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DeviceSessionId, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
+                                            <TextBlock Grid.Column="2" Text="Reading time" Style="{StaticResource DetailLabel}"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding LatestTime}" Style="{StaticResource DetailValue}"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="2" Text="Sequence" Style="{StaticResource DetailLabel}"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Latest.Seq, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="2" Text="Heartbeat" Style="{StaticResource DetailLabel}"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding HeartbeatAge, StringFormat={}{0} ago}" Style="{StaticResource DetailValue}"/>
+                                            <TextBlock Grid.Column="4" Text="CPM raw" Style="{StaticResource DetailLabel}"/>
+                                            <TextBlock Grid.Column="5" Text="{Binding Latest.Count0Raw, StringFormat=0, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="4" Text="HDM" Style="{StaticResource DetailLabel}"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="5" Text="{Binding Latest.Hdm, StringFormat=0.###, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="4" Text="HDM raw" Style="{StaticResource DetailLabel}"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="5" Text="{Binding Latest.HdmRaw, StringFormat=0.###, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGrid.RowDetailsTemplate>
+                            </DataGrid>
+                            <TextBlock Text="Waiting for detectors. They appear here when a CT008 instance writes its status."
+                                       Style="{StaticResource EmptyStateText}" Margin="24,48,24,24"
+                                       Visibility="{Binding Engine.Detectors.Count, Converter={StaticResource ZeroVisibility}}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Completed 5-second samples -->
+                <Border Style="{StaticResource Card}" Padding="0">
+                    <StackPanel>
+                        <TextBlock Text="5-second samples" Style="{StaticResource CardTitle}" Margin="20,16"/>
+                        <Grid>
+                            <DataGrid Style="{StaticResource DataTable}" ItemsSource="{Binding Engine.Samples}" MaxHeight="320"
+                                      AutomationProperties.Name="5-second samples">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Taken" Binding="{Binding TakenAt, StringFormat=HH:mm:ss}" Width="0.8*"/>
+                                    <DataGridTextColumn Header="Detector" Binding="{Binding Serial}" Width="*"/>
+                                    <DataGridTemplateColumn Header="Readings" Width="0.8*" SortMemberPath="Readings">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Tag="Success">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border" BasedOn="{StaticResource StatusChip}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsComplete}" Value="False">
+                                                                    <Setter Property="Tag" Value="Warning"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding ReadingsText}"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Window" Binding="{Binding Window}" Width="1.8*"/>
+                                    <DataGridTextColumn Header="Coverage (s)" Binding="{Binding CoverageSeconds, StringFormat=0.0}" Width="0.8*"
+                                                        ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                    <DataGridTextColumn Header="CPM" Binding="{Binding Cpm, StringFormat=0.0}" Width="0.8*"
+                                                        ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                    <DataGridTextColumn Header="CPM raw" Binding="{Binding CpmRaw, StringFormat=0.0}" Width="0.8*"
+                                                        ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                    <DataGridTextColumn Header="Dose rate" Binding="{Binding DoseRate, StringFormat=0.###}" Width="0.8*"
+                                                        ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                    <DataGridTextColumn Header="Temp. (°C)" Binding="{Binding Temperature, StringFormat=0.0}" Width="0.8*"
+                                                        ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <TextBlock Text="Use Take sample on a detector to average its next 5 readings."
+                                       Style="{StaticResource EmptyStateText}" Margin="24,48,24,24"
+                                       Visibility="{Binding Engine.Samples.Count, Converter={StaticResource ZeroVisibility}}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Recent readings: diagnostic, collapsed by default. -->
+                <Border Style="{StaticResource Card}" Padding="0">
+                    <StackPanel>
+                        <Grid Margin="20,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Recent readings" Style="{StaticResource CardTitle}"/>
+                            <ToggleButton x:Name="ShowRecent" Grid.Column="1" Style="{StaticResource DisclosureToggle}"
+                                          AutomationProperties.Name="Show recent readings"/>
+                        </Grid>
+                        <DataGrid Style="{StaticResource DataTable}" ItemsSource="{Binding Engine.RecentReadings}" MaxHeight="360"
+                                  AutomationProperties.Name="Recent readings"
+                                  Visibility="{Binding IsChecked, ElementName=ShowRecent, Converter={StaticResource BoolVisibility}}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="0.7*"/>
+                                <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="0.8*"/>
+                                <DataGridTextColumn Header="Detector" Binding="{Binding Serial}" Width="*"/>
+                                <DataGridTextColumn Header="Seq" Binding="{Binding Seq}" Width="0.6*"/>
+                                <DataGridTextColumn Header="CPM" Binding="{Binding Cpm, StringFormat=0}" Width="0.7*" ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                <DataGridTextColumn Header="CPM raw" Binding="{Binding CpmRaw, StringFormat=0}" Width="0.7*" ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                <DataGridTextColumn Header="HDM" Binding="{Binding Hdm, StringFormat=0.###}" Width="0.7*" ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                <DataGridTextColumn Header="Dose rate" Binding="{Binding DoseRate, StringFormat=0.###}" Width="0.8*" ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                <DataGridTextColumn Header="Temp. (°C)" Binding="{Binding Temperature, StringFormat=0.0}" Width="0.8*" ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                <DataGridTextColumn Header="Device session" Binding="{Binding DeviceSessionId}" Width="1.2*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

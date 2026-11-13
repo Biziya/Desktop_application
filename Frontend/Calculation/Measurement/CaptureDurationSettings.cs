@@ -32,7 +32,10 @@ public sealed class CaptureDurationSettings(string? path)
             }
 
             using var document = JsonDocument.Parse(File.ReadAllText(path));
-            return document.RootElement.TryGetProperty("captureDurationSeconds", out var value) && value.TryGetInt32(out var seconds) &&
+            // A hand-edited file may hold any JSON: only an object with a whole number in range is used.
+            return document.RootElement is { ValueKind: JsonValueKind.Object } root &&
+                   root.TryGetProperty("captureDurationSeconds", out var value) &&
+                   value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var seconds) &&
                    IsValid(seconds) ? seconds : DefaultSeconds;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException)

@@ -43,8 +43,8 @@
 
             <!-- Starting Depth, Step and Threshold: compact inputs (after the Uiverse "coolinput"). The label (Tag, the same
                  text style as the Core Information labels) sits on the box's top border with the card's white behind it,
-                 so it takes no row of its own. Value text as in every text box (Navy, 14 px), right-aligned.
-                 Border: near-black (Navy) → gray on hover (InputHoverBorder, as the Drillhole box) → blue while focused
+                 so it takes no row of its own. Value text as in every text box (TextPrimary, 14 px), right-aligned.
+                 Border: near-black (TextPrimary) → gray on hover (InputHoverBorder, as the Drillhole box) → blue while focused
                  (the focus trigger is declared last, so it wins over hover). An invalid value (each box's DataTrigger,
                  declared later still) turns it red. Sizes: floatingInput in CapturePanel.yaml. -->
             <Style x:Key="FloatingLabelInput" TargetType="TextBox">
@@ -54,9 +54,9 @@
                 <Setter Property="FontSize" Value="{StaticResource FloatingInputFontSize}"/>
                 <Setter Property="TextAlignment" Value="Right"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
-                <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
                 <Setter Property="Background" Value="{StaticResource Surface}"/>
-                <Setter Property="BorderBrush" Value="{StaticResource Navy}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource TextPrimary}"/>
                 <Setter Property="BorderThickness" Value="{StaticResource FloatingInputBorderThickness}"/>
                 <Setter Property="Template">
                     <Setter.Value>
@@ -170,21 +170,53 @@
                     </Style>
                 </TextBox.Style>
             </TextBox>
-            <!-- A completed row whose CPS is above this sounds the alarm (it never stops or changes the measurement). -->
-            <TextBox Text="{Binding Threshold, UpdateSourceTrigger=PropertyChanged}" Tag="{StaticResource ThresholdLabel}"
-                     LostFocus="ThresholdCommitted"
-                     ToolTip="An alarm sounds when a completed measurement's CPS is above this value. Leave empty for no alarm."
-                     AutomationProperties.Name="CPS alarm threshold">
-                <TextBox.Style>
-                    <Style TargetType="TextBox" BasedOn="{StaticResource FloatingLabelInput}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsThresholdInvalid}" Value="True">
-                                <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBox.Style>
-            </TextBox>
+            <!-- A completed row whose CPS is above this sounds the alarm (it never stops or changes the measurement).
+                 The bell inside the box (left; the value is right-aligned) shows the alarm state and mutes the sound. -->
+            <Grid>
+                <TextBox Text="{Binding Threshold, UpdateSourceTrigger=PropertyChanged}" Tag="{StaticResource ThresholdLabel}"
+                         LostFocus="ThresholdCommitted"
+                         ToolTip="An alarm sounds when a completed measurement's CPS is above this value. Leave empty for no alarm."
+                         AutomationProperties.Name="CPS alarm threshold">
+                    <TextBox.Style>
+                        <Style TargetType="TextBox" BasedOn="{StaticResource FloatingLabelInput}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsThresholdInvalid}" Value="True">
+                                    <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+                <Button Style="{StaticResource IconButton}" Width="26" Height="26" Margin="6,0,0,5"
+                        HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                        Command="{Binding ToggleAlarmMuteCommand}"
+                        ToolTip="{Binding AlarmToolTip}"
+                        AutomationProperties.Name="{Binding AlarmToolTip}">
+                    <Path Width="15" Height="15" Stretch="Uniform" StrokeThickness="1.8"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
+                        <Path.Style>
+                            <Style TargetType="Path">
+                                <Setter Property="Data" Value="{StaticResource BellIcon}"/>
+                                <Setter Property="Stroke" Value="{StaticResource TextPrimary}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Alarm}" Value="{x:Static calc:AlarmState.Off}">
+                                        <Setter Property="Data" Value="{StaticResource BellOffIcon}"/>
+                                        <Setter Property="Stroke" Value="{StaticResource Muted}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Alarm}" Value="{x:Static calc:AlarmState.Muted}">
+                                        <Setter Property="Data" Value="{StaticResource BellOffIcon}"/>
+                                        <Setter Property="Stroke" Value="{StaticResource Warning}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Alarm}" Value="{x:Static calc:AlarmState.Triggered}">
+                                        <Setter Property="Stroke" Value="{StaticResource Danger}"/>
+                                        <Setter Property="Fill" Value="{StaticResource DangerSurface}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Path.Style>
+                    </Path>
+                </Button>
+            </Grid>
             <Button Style="{StaticResource StartStopButton}" Margin="{StaticResource StartStopButtonMargin}"
                     Command="{Binding ToggleMeasurementCommand}">
                 <!-- Runs stay on one line: other whitespace between them would show as a space. -->

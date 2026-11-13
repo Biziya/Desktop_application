@@ -7,10 +7,17 @@ namespace Frontend;
 
 public partial class MainWindow : Window
 {
-    private readonly MainViewModel viewModel = new();
+    private readonly MainViewModel viewModel;
 
     public MainWindow()
+        : this(new MainViewModel())
     {
+    }
+
+    /// <summary>The window around a given view model (view tests pass one built from fakes).</summary>
+    public MainWindow(MainViewModel viewModel)
+    {
+        this.viewModel = viewModel;
         InitializeComponent();
         DataContext = viewModel;
 
@@ -39,6 +46,8 @@ public partial class MainWindow : Window
             viewModel.Measurement.TriggerCommand.Execute(timestamp);
         }
     }
+
+    private void ShowHelp(object sender, ExecutedRoutedEventArgs e) => viewModel.ShowHelp();
 
     protected override void OnContextMenuOpening(ContextMenuEventArgs e)
     {

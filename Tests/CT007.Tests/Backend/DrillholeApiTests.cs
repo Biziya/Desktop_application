@@ -135,10 +135,15 @@ public static class DrillholeApiTests
         var paths = document.RootElement.GetProperty("paths");
 
         Assert.Sequence(new[] { "/api/core-information/bluetooth-device", "/api/core-information/drillholes", "/api/core-information/sqlite-database",
-                "/api/measurements/upload" },
+                "/api/measurements/upload", "/api/measurements/uploaded/drillholes", "/api/measurements/uploaded/records" },
             paths.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal), "paths");
 
-        // The Upload Data endpoint is covered by MeasurementUploadApiTests (BE-050…).
+        // The Upload Data endpoint is covered by MeasurementUploadApiTests (BE-050…), the Data Viewer ones by BE-DV-*.
+        foreach (var path in paths.EnumerateObject().Where(p => p.Name.StartsWith("/api/measurements/uploaded/", StringComparison.Ordinal)))
+        {
+            Assert.Sequence(new[] { "get" }, path.Value.EnumerateObject().Select(o => o.Name), $"{path.Name}: GET only (read-only)");
+        }
+
         foreach (var path in paths.EnumerateObject().Where(p => p.Name.StartsWith("/api/core-information/", StringComparison.Ordinal)))
         {
             Assert.Sequence(new[] { "get" }, path.Value.EnumerateObject().Select(o => o.Name), $"{path.Name}: GET only");

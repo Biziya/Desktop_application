@@ -1,0 +1,83 @@
+# Help panel text: opened with the Help button at the top right of every page, or with F1.
+# One entry per sidebar page; "page" must match the sidebar title exactly. Each item is one button or control on that
+# page and what it does. Edit the text freely; changes take effect after a restart.
+pages:
+  - page: Core Information
+    purpose: Choose the drillhole to measure and check that the detector and databases on this laptop are ready.
+    items:
+      - control: Drillhole
+        does: Type to search, then pick the drillhole. Drillholes you already measured are listed first.
+      - control: Project / Campaign
+        does: Filled in automatically from the drillhole list; they cannot be edited.
+      - control: Operator / Notes
+        does: Who measures and any remarks; both are saved with the measurements.
+      - control: Retry (drillholes)
+        does: Loads the drillhole list from the central database again; shown when it could not be loaded.
+      - control: Save & Continue
+        does: Saves the drillhole details and opens the Measurement page.
+      - control: Device Status
+        does: Shows whether the CT007 detector, the measurement database and the Gamma Guard (CT008) database are available.
+      - control: Retry (Device Status)
+        does: Checks that device or database again.
+      - control: Select Database / Change Database
+        does: Chooses the Gamma Guard (CT008) database file by hand, for example when it is not found automatically.
+
+  - page: Measurement
+    purpose: Measure the drillhole interval by interval and export the results.
+    items:
+      - control: Starting Depth (m)
+        does: Depth of the first interval. The next starting depth follows automatically.
+      - control: Step (cm)
+        does: Length of each interval.
+      - control: Threshold (CPS)
+        does: An alarm sounds when a completed interval's CPS is above this value. Leave it empty for no alarm.
+      - control: Bell
+        does: Shows the alarm state (off, on, muted or triggered). Click it to mute or unmute the alarm sound.
+      - control: Start / Stop
+        does: Starts measurement mode. While it runs, right-click anywhere in the window to capture one interval.
+      - control: Capture Countdown
+        does: Time left in the current capture. Click it to change the capture duration (2 to 10 seconds).
+      - control: New Measurement
+        does: Clears the table to start a new measurement of the same drillhole. Saved data is kept.
+      - control: Export CSV
+        does: Saves the table as a CSV file, which you can upload on the Upload Data page.
+      - control: Delete (✕)
+        does: Removes one row from the table and the local database, after confirmation.
+
+  - page: Monitoring
+    purpose: Live status and readings of every detector writing to the CT008 database.
+    items:
+      - control: Detector row
+        does: Click a row to see its MAC address, firmware, device session and raw values.
+      - control: Take sample
+        does: Ignores the next reading, then averages the 5 readings after it into one 5-second sample.
+      - control: State
+        does: Live, Stale (no reading for 5 seconds), No data or Disconnected.
+      - control: Response
+        does: The detector's response time. 5-second samples need 1 s; a warning appears otherwise.
+      - control: Recent readings
+        does: Click the arrow to show or hide the last readings received.
+      - control: Open Core Information
+        does: Shown when no CT008 database is selected; opens the page where you choose it.
+
+  - page: Upload Data
+    purpose: Send a CSV exported from the Measurement page to the central database.
+    items:
+      - control: Import CSV
+        does: Opens a CSV exported from the Measurement page. The file is only read, never changed.
+      - control: Upload Data
+        does: Stores the imported measurements in the central database. Uploading the same file twice stores it once.
+      - control: Delete (✕)
+        does: Removes a row from the import before uploading, for example a capture that was already uploaded.
+
+  - page: Data Viewer
+    purpose: View the measurements uploaded to the central database, by drillhole.
+    items:
+      - control: Drillhole
+        does: Type to search, then pick a drillhole. Only drillholes with uploaded measurements are listed.
+      - control: Project / Campaign
+        does: The project and campaign of the selected drillhole.
+      - control: Refresh
+        does: Loads the drillhole list and the measurements from the central database again.
+      - control: Table
+        does: Every uploaded measurement of the drillhole, sorted by depth, with the same columns as the Measurement page.

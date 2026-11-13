@@ -40,12 +40,13 @@ public sealed partial class ApplicationSettings
         return settings;
     }
 
-    /// <summary>The resources MainWindow.xaml and App use.</summary>
+    /// <summary>The resources MainWindow.xaml (title, sidebar, Help panel) and App use.</summary>
     public void AddTo(ResourceDictionary resources)
     {
         resources.Add("ApplicationName", Application.Name);
         resources.Add("ApplicationVersion", Application.Version);
         resources.Add("ApplicationTitle", $"{Application.Name} {Application.Version}");
+        resources.Add("ApplicationVersionLabel", $"Version {Application.Version}");
     }
 
     public sealed class ApplicationInfo

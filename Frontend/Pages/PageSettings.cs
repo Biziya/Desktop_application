@@ -4,12 +4,13 @@ using Frontend.Pages.CoreInformation.DeviceStatus;
 using Frontend.Pages.CoreInformation.DrillholeInformation;
 using Frontend.Pages.Measurement.CapturePanel;
 using Frontend.Pages.Measurement.Table;
+using Frontend.Pages.Monitoring;
 using Frontend.Shared.Infrastructure;
 
 namespace Frontend.Pages;
 
 /// <summary>
-/// Reads the four section YAML files (next to the executable) once at start-up and adds their values to
+/// Reads the section YAML files (next to the executable) once at start-up and adds their values to
 /// <paramref name="resources"/>, where the section views use them as {StaticResource …}. Edits take effect after a
 /// restart. Throws <see cref="InvalidDataException"/> naming the file and key of the first problem.
 /// </summary>
@@ -22,6 +23,7 @@ public static class PageSettings
         YamlSettings.Load<DeviceStatusSettings>(baseDirectory, DeviceStatusSettings.File).AddTo(settings);
         YamlSettings.Load<MeasurementTableSettings>(baseDirectory, MeasurementTableSettings.File).AddTo(settings);
         YamlSettings.Load<CapturePanelSettings>(baseDirectory, CapturePanelSettings.File).AddTo(settings);
+        MonitoringSettings.Load(baseDirectory).AddTo(settings);
         resources.MergedDictionaries.Add(settings);
     }
 }

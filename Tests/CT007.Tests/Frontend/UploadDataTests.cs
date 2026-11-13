@@ -482,11 +482,11 @@ public static class UploadDataTests
                 // Text as on Core Information: labels like the Drillhole label (FieldLabel), values like its text box.
                 Assert.Equal(((SolidColorBrush)Application.Current.FindResource("LabelText")).Color, ((SolidColorBrush)label.Foreground).Color, $"{box.Tag}: label colour");
                 Assert.Equal(FontWeights.SemiBold, label.FontWeight, $"{box.Tag}: label weight");
-                Assert.Equal(((SolidColorBrush)Application.Current.FindResource("Navy")).Color, ((SolidColorBrush)box.Foreground).Color, $"{box.Tag}: value colour");
+                Assert.Equal(((SolidColorBrush)Application.Current.FindResource("TextPrimary")).Color, ((SolidColorBrush)box.Foreground).Color, $"{box.Tag}: value colour");
                 Assert.Equal(FontWeights.Normal, box.FontWeight, $"{box.Tag}: value weight");
                 // Border: near-black by default, gray on hover (as the Drillhole box), blue while focused (wins over hover).
                 Color Brush(string key) => ((SolidColorBrush)Application.Current.FindResource(key)).Color;
-                Assert.Equal(Brush("Navy"), ((SolidColorBrush)frame.BorderBrush).Color, $"{box.Tag}: default border");
+                Assert.Equal(Brush("TextPrimary"), ((SolidColorBrush)frame.BorderBrush).Color, $"{box.Tag}: default border");
                 var triggers = box.Style.BasedOn!.Triggers.OfType<Trigger>().ToList();
                 Assert.Equal(Brush("InputHoverBorder"), ((SolidColorBrush)((Setter)triggers.Single(t => t.Property == UIElement.IsMouseOverProperty).Setters[0]).Value).Color,
                     $"{box.Tag}: hover border");
@@ -496,7 +496,7 @@ public static class UploadDataTests
                 await Task.Delay(20);
                 Assert.True(box.IsKeyboardFocusWithin, $"{box.Tag}: focused");
                 Assert.Equal(Brush("Blue"), ((SolidColorBrush)frame.BorderBrush).Color, $"{box.Tag}: focused border");
-                Assert.Equal(((SolidColorBrush)Application.Current.FindResource("Navy")).Color, ((SolidColorBrush)box.Foreground).Color, $"{box.Tag}: value colour when focused");
+                Assert.Equal(((SolidColorBrush)Application.Current.FindResource("TextPrimary")).Color, ((SolidColorBrush)box.Foreground).Color, $"{box.Tag}: value colour when focused");
             }
 
             var gap = boxes[1].TranslatePoint(new Point(0, 0), panel).Y - boxes[0].TranslatePoint(new Point(0, boxes[0].ActualHeight), panel).Y;
@@ -586,21 +586,7 @@ public static class UploadDataTests
 
     // ---------- helpers ----------
 
-    private static bool resourcesLoaded;
-
-    // The app's resources (Theme.xaml + the section YAML files), as App.OnStartup loads them, for view tests.
-    private static void WpfResources()
-    {
-        if (resourcesLoaded)
-        {
-            return;
-        }
-
-        var app = Application.Current ?? new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-        app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Frontend;component/Shared/Styles/Theme.xaml") });
-        Frontend.Pages.PageSettings.AddTo(app.Resources, AppContext.BaseDirectory);
-        resourcesLoaded = true;
-    }
+    private static void WpfResources() => Wpf.EnsureResources();
 
     private static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
     {

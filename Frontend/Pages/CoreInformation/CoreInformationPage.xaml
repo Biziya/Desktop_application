@@ -3,9 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:drillhole="clr-namespace:Frontend.Pages.CoreInformation.DrillholeInformation"
              xmlns:device="clr-namespace:Frontend.Pages.CoreInformation.DeviceStatus">
-    <!-- Page composition only. Both sections share this page's DataContext (CoreInformationViewModel). -->
+    <!-- Both sections share this page's DataContext (CoreInformationViewModel). -->
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
+            <Grid Style="{StaticResource PageHeader}">
+                <TextBlock Text="Core Information" Style="{StaticResource PageTitle}"/>
+                <Button Style="{StaticResource HelpButton}"/>
+            </Grid>
             <drillhole:DrillholeInformationView/>
             <device:DeviceStatusView/>
         </StackPanel>

@@ -42,6 +42,17 @@ If Swagger shows `Fetch error – Not Found`, an old build is running: stop it, 
 
 All three endpoints are grouped under the **Core Information** tag in Swagger.
 
+## SQL Server connection string
+
+The connection string contains a password, so it is not stored in `appsettings.json` (that value is empty on
+purpose). Set it one of these ways:
+
+- Development, per Windows user:
+  `dotnet user-secrets set ConnectionStrings:DefaultConnection "Data Source=…;Initial Catalog=…;User ID=…;Password=…;TrustServerCertificate=True;" --project Backend`
+- Deployment: the environment variable `ConnectionStrings__DefaultConnection` on the server.
+
+Without it, the drillhole and upload endpoints fail with a message that says what to set.
+
 ## Measurement upload API (Upload Data page)
 
 `POST /api/measurements/upload` (tag **Measurement**) stores one measurement session imported from a CSV in the
@@ -102,6 +113,21 @@ allowed to create tables. It creates `dbo.CT007_MEASUREMENT_UPLOAD` (one row per
 metadata, user names, time, record count) and `dbo.CT007_MEASUREMENT_UPLOAD_RECORD` (the rows, with original
 timestamps, depths, computed `STEP_CM`, `TS_MS` and device values; `COUNT0` = CPS). It is safe to run again. The
 backend's login then needs `SELECT` and `INSERT` on both tables. Until the script has run, uploads answer 503.
+
+## Uploaded data API (Data Viewer page)
+
+Read-only, tag **Measurement**: SELECT only, over the same two tables as the upload.
+
+| Endpoint | Response |
+|---|---|
+| `GET /api/measurements/uploaded/drillholes` | `[{ "holeId", "projectCode", "campaign", "uploadCount", "recordCount", "lastUploadedAt" }]`, by Hole ID; project and campaign come from the drillhole's latest upload |
+| `GET /api/measurements/uploaded/records?drillhole=DH-001` | `[{ "sessionId", "captureNumber", "startTime", "endTime", "sampleCount", "depthFrom", "depthTo", "tsMs", "count0", "count0Raw", "hdm", "hdmRaw", "doseRate", "uploadId", "operator", "uploadedAt" }]`, by depth, at most 10,000 rows. `400` without a drillhole (or one longer than 100 characters) |
+
+Both answer `503` with *"The upload tables have not been created on the central database yet"* until
+`001_CreateMeasurementUploadTables.sql` has run (SQL error 208), and `503` *"The measurement database is unavailable"*
+for any other SQL Server failure (logged; no details in the answer). The backend login needs `SELECT` on both tables.
+`Database/Migrations/002_IndexUploadDrillhole.sql` (optional, safe to run again) adds an index on `DRILLHOLE` for these
+queries.
 
 ## Windows requirements (Bluetooth API)
 
