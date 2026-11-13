@@ -1,4 +1,4 @@
-# Continuous testing for CT007 Measurement Studio (frontend WPF + backend ASP.NET Core). Never deploys or releases.
+# Continuous testing for SPP CT007 (frontend WPF + backend ASP.NET Core). Never deploys or releases.
 # One test harness (Tests/CT007.Tests) covers FE, BE, INT and E2E tests, so a single Windows job builds once and runs the
 # change-selected set (Tests/regression/impact-map.json). Docs: qa/ci/.
 name: Tests

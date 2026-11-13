@@ -1,4 +1,4 @@
-# Windows installer guide — SPP CT-007 Measurement Studio
+# Windows installer guide — SPP CT007
 
 How to build the Windows installer for the WPF frontend (`Frontend/`) with [Velopack](https://velopack.io), and how to
 check an installed copy. The installer contains the **frontend only**; the ASP.NET Core backend (`Backend/`) is
@@ -18,9 +18,9 @@ deployed separately and is not changed by anything in this guide.
 ```yaml
 application:
   id: "CT007.MeasurementStudio"        # Velopack package id - never change it after release, updates follow it
-  name: "SPP CT-007 Measurement Studio" # window title, installer title, assembly product name
+  name: "SPP CT007" # window title, installer title, assembly product name
   version: "1.0.0"                      # SemVer; the only place the version is written
-  description: "CT-007 Measurement Desktop Application"
+  description: "SPP CT007 measurement desktop application"
 ```
 
 - **To release a new version, change `version` here only.** `Frontend.csproj` reads the file at build time, so
@@ -28,7 +28,7 @@ application:
   `vpk`. There is no other hard-coded version.
 - The file is copied next to `Frontend.exe` and read at start-up. A missing file, missing key, invalid id or a
   version that is not SemVer stops the app with a message naming the file and key.
-- The window title shows `name` and `version`, e.g. `SPP CT-007 Measurement Studio 1.0.0`.
+- The window title shows `name` and `version`, e.g. `SPP CT007 1.0.0`.
 
 ### Frontend API connection (`.env`)
 
@@ -140,7 +140,7 @@ Read the values from `application.yaml` (the script does this for you) and pass 
 vpk pack `
     --packId CT007.MeasurementStudio `
     --packVersion 1.0.0 `
-    --packTitle "SPP CT-007 Measurement Studio" `
+    --packTitle "SPP CT007" `
     --packDir .\publish `
     --mainExe Frontend.exe `
     --icon .\Frontend\Icons\icon.ico `
@@ -151,7 +151,7 @@ vpk pack `
 | Option | Value | Source |
 |---|---|---|
 | `--packId` | `CT007.MeasurementStudio` | `application.id` |
-| `--packTitle` | `SPP CT-007 Measurement Studio` | `application.name` |
+| `--packTitle` | `SPP CT007` | `application.name` |
 | `--packVersion` | `1.0.0` | `application.version` |
 | `--mainExe` | `Frontend.exe` | project output name |
 | `--icon` | `Frontend\Icons\icon.ico` | same icon as the exe |
@@ -188,8 +188,8 @@ On a second Windows 10 (2004+) / 11 x64 computer:
 1. **Install.** Copy `CT007.MeasurementStudio-win-Setup.exe` and run it. It installs to
    `%LocalAppData%\CT007.MeasurementStudio\` and starts the app.
 2. **Start.** Close the app and start it again from the Desktop or Start-menu shortcut
-   *SPP CT-007 Measurement Studio*.
-3. **Name and version.** The window title reads `SPP CT-007 Measurement Studio 1.0.0` (the YAML values). Also
+   *SPP CT007*.
+3. **Name and version.** The window title reads `SPP CT007 1.0.0` (the YAML values). Also
    *Settings → Apps → Installed apps* shows the same name and version.
 4. **API configuration.** After the first start,
    `%LocalAppData%\CT007_Measurement_Studio\Config\.env.production` exists with the content of
@@ -208,7 +208,7 @@ On a second Windows 10 (2004+) / 11 x64 computer:
    (`%LocalAppData%\CT007_Measurement_Studio\measurements.db`, created on first start), the Gamma Guard database
    and the paired CT-007 Bluetooth device. Take a test measurement and confirm it appears in the table after a
    restart.
-8. **Uninstall.** *Settings → Apps → Installed apps → SPP CT-007 Measurement Studio → Uninstall*. This removes
+8. **Uninstall.** *Settings → Apps → Installed apps → SPP CT007 → Uninstall*. This removes
    `%LocalAppData%\CT007.MeasurementStudio\`. User data in `%LocalAppData%\CT007_Measurement_Studio\`
    (`measurements.db`, `Config\.env.production`) is kept on purpose; delete that folder manually for a clean machine.
 

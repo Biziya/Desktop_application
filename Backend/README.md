@@ -114,6 +114,21 @@ metadata, user names, time, record count) and `dbo.CT007_MEASUREMENT_UPLOAD_RECO
 timestamps, depths, computed `STEP_CM`, `TS_MS` and device values; `COUNT0` = CPS). It is safe to run again. The
 backend's login then needs `SELECT` and `INSERT` on both tables. Until the script has run, uploads answer 503.
 
+## Uploaded data API (Data Viewer page)
+
+Read-only, tag **Measurement**: SELECT only, over the same two tables as the upload.
+
+| Endpoint | Response |
+|---|---|
+| `GET /api/measurements/uploaded/drillholes` | `[{ "holeId", "projectCode", "campaign", "uploadCount", "recordCount", "lastUploadedAt" }]`, by Hole ID; project and campaign come from the drillhole's latest upload |
+| `GET /api/measurements/uploaded/records?drillhole=DH-001` | `[{ "sessionId", "captureNumber", "startTime", "endTime", "sampleCount", "depthFrom", "depthTo", "tsMs", "count0", "count0Raw", "hdm", "hdmRaw", "doseRate", "uploadId", "operator", "uploadedAt" }]`, by depth, at most 10,000 rows. `400` without a drillhole (or one longer than 100 characters) |
+
+Both answer `503` with *"The upload tables have not been created on the central database yet"* until
+`001_CreateMeasurementUploadTables.sql` has run (SQL error 208), and `503` *"The measurement database is unavailable"*
+for any other SQL Server failure (logged; no details in the answer). The backend login needs `SELECT` on both tables.
+`Database/Migrations/002_IndexUploadDrillhole.sql` (optional, safe to run again) adds an index on `DRILLHOLE` for these
+queries.
+
 ## Windows requirements (Bluetooth API)
 
 - The project targets `net10.0-windows10.0.19041.0`, which pulls in the Windows SDK projection

@@ -1,4 +1,4 @@
-# API connection configuration — SPP CT-007 Measurement Studio
+# API connection configuration — SPP CT007
 
 The WPF frontend (`Frontend/`) talks to the ASP.NET Core backend over HTTP. The backend address, request timeout
 and reachability-check interval come from **one `.env` file**, chosen by how the application was built:

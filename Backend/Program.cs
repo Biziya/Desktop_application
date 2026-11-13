@@ -16,6 +16,9 @@ builder.Services.AddSingleton<SqliteDatabaseRepository>(); // Singleton keeps th
 // Upload Data page
 builder.Services.AddScoped<IMeasurementUploadRepository, MeasurementUploadRepository>();
 
+// Data Viewer page (read-only)
+builder.Services.AddScoped<IUploadedMeasurementRepository, UploadedMeasurementRepository>();
+
 var app = builder.Build();
 
 app.UseSwagger(); // Serves /swagger/v1/swagger.json

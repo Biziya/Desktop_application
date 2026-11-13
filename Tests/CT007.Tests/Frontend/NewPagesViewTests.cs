@@ -1,10 +1,9 @@
 using Frontend.Config;
 using Frontend.Pages.Monitoring;
-using Frontend.Pages.SavedData;
 
 namespace Ct007.Tests.FrontendTests;
 
-/// <summary>FE-UI: the Monitoring and Saved Data pages lay out with live data and without binding errors.</summary>
+/// <summary>FE-UI: the Monitoring page lays out with live data and without binding errors (Data Viewer: FE-DV-04).</summary>
 public static class NewPagesViewTests
 {
     private const long Now = 1_760_600_000_000;
@@ -39,43 +38,36 @@ public static class NewPagesViewTests
         await empty.PollOnceAsync();
         Assert.Sequence(Array.Empty<string>(), await Wpf.Render(new MonitoringPage { DataContext = empty }, "monitoring-empty"), "binding errors (empty)");
     }
+}
 
-    [Test("FE-UI-02", "Saved Data page renders sessions, records and raw samples without binding errors")]
-    public static async Task SavedDataPageRenders()
+/// <summary>FE-UI-03: the whole window: fixed sidebar (order, name, version), Help panel and the alarm bell.</summary>
+public static class MainWindowViewTests
+{
+    [Test("FE-UI-03", "Main window renders the sidebar, the Help panel and the alarm bell without binding errors")]
+    public static async Task MainWindowRenders()
     {
         Wpf.EnsureResources();
         using var folder = new TestFolder();
-        var path = folder.Path("measurements.db");
-        var repository = new SqliteMeasurementRepository(path);
-        var start = DateTimeOffset.Now.AddHours(-3);
+        var main = new MainViewModel(new MemoryRepository(folder.Path("m.db")),
+            new ApiSettings("http://stub.test", TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(5)),
+            Make.Devices(folder.Path("gg.sqlite")), new StubBackend(), bluetoothDevices: () => [],
+            captureService: new ControlledMeasurements(), dialogs: new FakeDialogs(),
+            helpSettings: Frontend.Shared.Help.HelpSettings.Load(AppContext.BaseDirectory));
+        main.Measurement.Threshold = "150";
 
-        foreach (var (drillhole, captures) in new[] { ("GTZO_0042_1", 12), ("GTZO_0043_1", 4), ("KHAN_0007_2", 7) })
+        var errors = await Wpf.RenderWindow(new Frontend.MainWindow(main), "main-measurement-help", beforeCapture: () =>
         {
-            var session = await repository.ResolveSessionAsync(Make.Session(drillhole) with { CreatedAt = start });
-            await repository.SaveAsync(session, Enumerable.Range(1, captures).Select(i => Make.Row(session.Id, i, 1000 + i * 250L, start: start.AddMinutes(i))).ToList(), null);
-        }
+            main.ShowPage(main.Measurement);
+            main.ShowHelp();
+        });
+        Assert.Sequence(Array.Empty<string>(), errors, "binding errors (Measurement + Help)");
+        Assert.Equal(AlarmState.Armed, main.Measurement.Alarm, "bell armed");
 
-        using (var connection = new SqliteConnection($"Data Source={path};Pooling=False"))
-        {
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = """
-                INSERT INTO CaptureSamples (record_id, source_id, serial, seq, ts_ms, count0, count0_raw, hdm, dose_rate, temperature)
-                SELECT r.id, r.id * 10 + n.k, 'MR-24017', n.k, 1760600000000 + n.k * 1000, 600 + n.k, 610 + n.k, 1.2, 0.11, 21.5
-                FROM MeasurementRecords r, (SELECT 1 AS k UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5) n
-                """;
-            command.ExecuteNonQuery();
-        }
-
-        var settings = new DataRetentionSettings { Enabled = true, RetentionDays = 30, CheckIntervalHours = 24 };
-        var vm = new SavedDataViewModel(new SavedDataQueries(path), settings.Description);
-        await vm.RefreshAsync();
-        vm.SelectedSession = vm.Sessions.First();
-        await Assert.Eventually(() => vm.Records.Count > 0, "records load");
-        vm.SelectedRecord = vm.Records[1];
-        await Assert.Eventually(() => vm.RawSamples.Count == 5, "raw samples load");
-
-        var errors = await Wpf.Render(new SavedDataPage { DataContext = vm }, "saved-data");
-        Assert.Sequence(Array.Empty<string>(), errors, "binding errors");
+        main = new MainViewModel(new MemoryRepository(folder.Path("m2.db")),
+            new ApiSettings("http://stub.test", TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(5)),
+            Make.Devices(folder.Path("gg.sqlite")), new StubBackend(), bluetoothDevices: () => [],
+            captureService: new ControlledMeasurements(), dialogs: new FakeDialogs());
+        errors = await Wpf.RenderWindow(new Frontend.MainWindow(main), "main-core");
+        Assert.Sequence(Array.Empty<string>(), errors, "binding errors (Core Information)");
     }
 }

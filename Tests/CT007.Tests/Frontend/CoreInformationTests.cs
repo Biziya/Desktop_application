@@ -140,10 +140,9 @@ public static class CoreInformationTests
             Assert.True(main.IsShown(main.Core) && !main.IsShown(main.Measurement), "Core selected");
         }
 
-        main.ToggleSidebarCommand.Execute(null);
-        Assert.Equal("Expand sidebar", main.SidebarToggleLabel, "collapsed");
-        main.ToggleSidebarCommand.Execute(null);
-        Assert.Equal("Collapse sidebar", main.SidebarToggleLabel, "expanded");
+        Assert.Equal(
+            "Core Information|Measurement|Monitoring|Upload Data|Data Viewer",
+            string.Join("|", main.Pages.Select(p => p.Title)), "sidebar order");
 
         var start = backend.Calls("/");
         await Task.Delay(500);

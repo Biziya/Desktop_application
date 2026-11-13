@@ -183,13 +183,13 @@ public static class MonitoringTests
         path = "C:/ct008-log.sqlite";
         await vm.PollOnceAsync();
         Assert.Equal(MonitoringViewModel.ConnectionState.Connected, vm.Connection, "connected");
-        Assert.Contains("schema v3", vm.ConnectionDetail, "schema shown");
+        Assert.Equal("", vm.ErrorText, "no error text while connected");
         Assert.Equal(1, vm.Engine.Detectors.Count, "detector shown");
 
         fail = true;
         await vm.PollOnceAsync();
         Assert.Equal(MonitoringViewModel.ConnectionState.Error, vm.Connection, "error state");
-        Assert.Contains("database is locked", vm.ConnectionDetail, "error message shown");
+        Assert.Contains("database is locked", vm.ErrorText, "error message shown");
         Assert.Equal(1, vm.Engine.Detectors.Count, "rows kept while retrying");
 
         fail = false;

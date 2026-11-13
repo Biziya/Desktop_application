@@ -21,6 +21,7 @@ public static class Wpf
         var app = Application.Current ?? new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Frontend;component/Shared/Styles/Theme.xaml") });
         Frontend.Pages.PageSettings.AddTo(app.Resources, AppContext.BaseDirectory);
+        Frontend.Config.ApplicationSettings.Load(AppContext.BaseDirectory).AddTo(app.Resources);
         resourcesLoaded = true;
     }
 
@@ -28,29 +29,33 @@ public static class Wpf
     /// Shows <paramref name="content"/> in an off-screen window of the given size and returns the binding errors WPF
     /// reported while it laid out. With CT007_SCREENSHOTS set to a folder, the window is also saved there as PNG.
     /// </summary>
-    public static async Task<IReadOnlyList<string>> Render(FrameworkElement content, string name, double width = 1100, double height = 820)
+    public static Task<IReadOnlyList<string>> Render(FrameworkElement content, string name, double width = 1100, double height = 820)
+    {
+        EnsureResources();
+        return RenderWindow(new Window { Content = content, Style = (Style)Application.Current.FindResource("AppWindow") }, name, width, height);
+    }
+
+    /// <summary>As <see cref="Render"/>, for a whole window (e.g. MainWindow); the window is closed afterwards.</summary>
+    public static async Task<IReadOnlyList<string>> RenderWindow(Window window, string name, double width = 1320, double height = 870, Action? beforeCapture = null)
     {
         EnsureResources();
         var errors = new BindingErrors();
         PresentationTraceSources.Refresh();
         PresentationTraceSources.DataBindingSource.Listeners.Add(errors);
         PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Error;
-
-        var window = new Window
-        {
-            Content = content,
-            Width = width,
-            Height = height,
-            ShowActivated = false,
-            WindowStyle = WindowStyle.None,
-            Left = -20_000,
-            Style = (Style)Application.Current.FindResource("AppWindow")
-        };
+        window.Width = width;
+        window.Height = height;
+        window.ShowActivated = false;
+        window.WindowStyle = WindowStyle.None;
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        window.Left = -20_000;
 
         try
         {
             window.Show();
             await Task.Delay(150);
+            beforeCapture?.Invoke();
+            await Task.Delay(50);
             window.UpdateLayout();
 
             if (Environment.GetEnvironmentVariable("CT007_SCREENSHOTS") is { Length: > 0 } folder)

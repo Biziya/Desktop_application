@@ -40,11 +40,13 @@ public sealed class TestBackend : IAsyncDisposable
     /// <paramref name="settings"/>).</param>
     /// <param name="port">0 for a free port; a fixed port lets a test start the backend where the client already points.</param>
     /// <param name="uploads">Measurement upload storage; null registers the real MeasurementUploadRepository.</param>
+    /// <param name="uploaded">Data Viewer reads; null registers the real UploadedMeasurementRepository.</param>
     /// <param name="authenticatedUser">Signs every request in as this user, as Windows authentication in the hosting would;
     /// null leaves requests anonymous (the backend has no authentication of its own).</param>
     public static async Task<TestBackend> StartAsync(IDrillholeRepository? repository = null,
         IDictionary<string, string?>? settings = null, int port = 0, string environment = "Production",
-        IMeasurementUploadRepository? uploads = null, string? authenticatedUser = null)
+        IMeasurementUploadRepository? uploads = null, string? authenticatedUser = null,
+        IUploadedMeasurementRepository? uploaded = null)
     {
         var contentRoot = Directory.CreateTempSubdirectory("ct007-backend-").FullName;
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -82,6 +84,15 @@ public sealed class TestBackend : IAsyncDisposable
         else
         {
             builder.Services.AddSingleton(uploads);
+        }
+
+        if (uploaded is null)
+        {
+            builder.Services.AddScoped<IUploadedMeasurementRepository, UploadedMeasurementRepository>();
+        }
+        else
+        {
+            builder.Services.AddSingleton(uploaded);
         }
 
         var app = builder.Build();
