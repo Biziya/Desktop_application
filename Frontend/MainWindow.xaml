@@ -1,31 +1,50 @@
-<Window x:Class="Frontend.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
- xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:core="clr-namespace:Frontend.Pages.CoreInformation"
- xmlns:measurement="clr-namespace:Frontend.Pages.Measurement" xmlns:upload="clr-namespace:Frontend.Pages.UploadData" xmlns:infra="clr-namespace:Frontend.Shared.Infrastructure" Style="{StaticResource AppWindow}" Title="{StaticResource ApplicationTitle}"
- Width="1320" Height="870" MinWidth="960" MinHeight="650" WindowStartupLocation="CenterScreen"
- Icon="Icons/icon.ico">
+<Window x:Class="Frontend.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:core="clr-namespace:Frontend.Pages.CoreInformation"
+        xmlns:measurement="clr-namespace:Frontend.Pages.Measurement"
+        xmlns:monitoring="clr-namespace:Frontend.Pages.Monitoring"
+        xmlns:saved="clr-namespace:Frontend.Pages.SavedData"
+        xmlns:upload="clr-namespace:Frontend.Pages.UploadData"
+        xmlns:infra="clr-namespace:Frontend.Shared.Infrastructure"
+        Style="{StaticResource AppWindow}"
+        Title="{StaticResource ApplicationTitle}"
+        Width="1320" Height="870" MinWidth="960" MinHeight="650"
+        WindowStartupLocation="CenterScreen"
+        Icon="Icons/icon.ico">
     <Window.Resources>
         <DataTemplate DataType="{x:Type core:CoreInformationViewModel}"><core:CoreInformationPage/></DataTemplate>
         <DataTemplate DataType="{x:Type measurement:MeasurementViewModel}"><measurement:MeasurementPage/></DataTemplate>
+        <DataTemplate DataType="{x:Type monitoring:MonitoringViewModel}"><monitoring:MonitoringPage/></DataTemplate>
+        <DataTemplate DataType="{x:Type saved:SavedDataViewModel}"><saved:SavedDataPage/></DataTemplate>
         <DataTemplate DataType="{x:Type upload:UploadDataViewModel}"><upload:UploadDataPage/></DataTemplate>
     </Window.Resources>
+
     <Grid>
-        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <!-- Sidebar (after the reference): white panel with a hairline divider against the grey pages; brand icon
-             top-left (click it to collapse/expand), navigation, and the backend Online/Offline indicator at the bottom. -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar: 224 px, 72 px collapsed (the app icon toggles it). -->
         <Border Background="{StaticResource SidebarBackground}" BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,1,0">
             <Border.Style>
                 <Style TargetType="Border">
                     <Setter Property="Width" Value="224"/>
-                    <Style.Triggers><DataTrigger Binding="{Binding IsSidebarExpanded}" Value="False"><Setter Property="Width" Value="72"/></DataTrigger></Style.Triggers>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsSidebarExpanded}" Value="False">
+                            <Setter Property="Width" Value="72"/>
+                        </DataTrigger>
+                    </Style.Triggers>
                 </Style>
             </Border.Style>
-            <!-- 14 px padding: the selected item's accent bar sits in it, flush with the sidebar edge. -->
+            <!-- The 14 px side padding holds the selected item's accent bar, flush with the sidebar edge. -->
             <DockPanel Margin="14,18,14,16">
-                <!-- Brand row. The blue SPP CT-007 icon is the sidebar toggle (the sidebar, not the window): it stays in the
-                     40 px icon column, so it is visible and clickable both expanded and collapsed. Hover tint, keyboard
-                     focus ring (Tab, then Enter/Space) and the tooltip come from IconButton / the bound label. -->
                 <Grid DockPanel.Dock="Top">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="40"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
                     <Button Style="{StaticResource IconButton}" Width="40" Height="40" VerticalAlignment="Center"
                             Command="{Binding ToggleSidebarCommand}"
                             ToolTip="{Binding SidebarToggleLabel}"
@@ -41,9 +60,7 @@
                 </Grid>
                 <Border DockPanel.Dock="Top" Height="1" Margin="0,16,0,12" Background="{StaticResource Line}"/>
 
-                <!-- Backend API reachability (not the Bluetooth device): green Online, yellow Offline, grey while checking.
-                     Left-aligned under the navigation icons, dot and text 8 px apart. Collapsed, only the dot stays;
-                     the tooltip always gives the status. -->
+                <!-- Backend API reachability: green Online, yellow Offline, grey while checking. Collapsed, only the dot stays. -->
                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Left" Margin="15,0,0,0"
                             Background="Transparent" ToolTip="{Binding Backend.Tooltip}" AutomationProperties.Name="{Binding Backend.Tooltip}">
                     <Ellipse Width="9" Height="9" VerticalAlignment="Center">
@@ -62,38 +79,37 @@
                                Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolVisibility}}"/>
                 </StackPanel>
 
-                <StackPanel>
-                    <Button Style="{StaticResource NavigationButton}" infra:SidebarItem.IsSelected="{Binding IsCoreSelected}" Command="{Binding ShowCoreCommand}" ToolTip="Core Information" AutomationProperties.Name="Core Information">
-                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="40"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <Path Data="{StaticResource CoreIcon}" Width="16" Height="19" Stretch="Uniform" StrokeThickness="1.5" StrokeLineJoin="Round"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                            <TextBlock Grid.Column="1" Text="Core Information" Style="{StaticResource NavigationLabel}"/>
-                        </Grid>
-                    </Button>
-                    <Button Style="{StaticResource NavigationButton}" infra:SidebarItem.IsSelected="{Binding IsMeasurementSelected}" Command="{Binding ShowMeasurementCommand}" ToolTip="Measurement" AutomationProperties.Name="Measurement">
-                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="40"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <Path Data="{StaticResource MeasurementIcon}" Width="17" Height="18" Stretch="Uniform"
-                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                            <TextBlock Grid.Column="1" Text="Measurement" Style="{StaticResource NavigationLabel}"/>
-                        </Grid>
-                    </Button>
-                    <Button Style="{StaticResource NavigationButton}" infra:SidebarItem.IsSelected="{Binding IsUploadDataSelected}" Command="{Binding ShowUploadDataCommand}" ToolTip="Upload Data" AutomationProperties.Name="Upload Data">
-                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="40"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <Path Data="{StaticResource UploadIcon}" Width="16" Height="18" Stretch="Uniform" StrokeThickness="1.5" StrokeLineJoin="Round"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                            <TextBlock Grid.Column="1" Text="Upload Data" Style="{StaticResource NavigationLabel}"/>
-                        </Grid>
-                    </Button>
-                </StackPanel>
+                <ItemsControl ItemsSource="{Binding Pages}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource NavigationButton}"
+                                    infra:SidebarItem.IsSelected="{Binding IsSelected}"
+                                    Command="{Binding DataContext.ShowPageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}"
+                                    ToolTip="{Binding Title}"
+                                    AutomationProperties.Name="{Binding Title}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="40"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Path Data="{Binding IconKey, Converter={StaticResource ResourceKey}}" Width="17" Height="18" Stretch="Uniform"
+                                          StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" Margin="4,0,8,0"
+                                               Visibility="{Binding DataContext.IsSidebarExpanded, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolVisibility}}"/>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </DockPanel>
         </Border>
-        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" Margin="24"/>
 
-        <!-- Toasts for every page: top-right of the window's content area (beside the sidebar, in the window's own grid,
-             so they follow resizing, sidebar collapse and page switches), 16 px from the top and right edges, stacked
-             downwards 8 px apart. They take no layout space and the empty area around them is not hit-testable, so they
-             never move the page or block clicks elsewhere. Info and success close after 3 s, errors after 5 s; × closes
-             one now. -->
+        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" Margin="24" Focusable="False"/>
+
+        <!-- Toasts: top-right of the content area, stacked 8 px apart. They take no layout space and never block clicks
+             outside themselves. -->
         <ItemsControl Grid.Column="1" ItemsSource="{Binding Toasts.Items}" Focusable="False"
                       HorizontalAlignment="Right" VerticalAlignment="Top" Width="360" MaxWidth="360" Margin="0,16,16,0">
             <ItemsControl.ItemTemplate>

@@ -121,7 +121,7 @@ public sealed class UploadDataViewModel : ObservableObject
         }
     }
 
-    public string UploadLabel => IsUploading ? "Uploading…" : IsUploaded ? "✓   Uploaded" : "↑   Upload Data";
+    public string UploadLabel => IsUploading ? "Uploading…" : IsUploaded ? "Uploaded" : "Upload Data";
 
     private bool CanUpload => HasImport && Results.Count > 0 && !IsUploading && !IsUploaded;
 

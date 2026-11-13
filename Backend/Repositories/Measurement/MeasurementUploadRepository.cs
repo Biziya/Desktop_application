@@ -44,8 +44,11 @@ public sealed class MeasurementUploadRepository(IConfiguration configuration) : 
     // Unique key violations (2627 constraint, 2601 index): a concurrent upload stored the same captures first.
     private static readonly int[] UniqueViolations = [2627, 2601];
 
-    private readonly string _connectionString = configuration.GetConnectionString("DefaultConnection")
-        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+    private readonly string _connectionString = configuration.GetConnectionString("DefaultConnection") is { Length: > 0 } configured
+        ? configured
+        : throw new InvalidOperationException(
+            "Connection string 'DefaultConnection' is not configured. Set the ConnectionStrings__DefaultConnection environment " +
+            "variable, or run: dotnet user-secrets set ConnectionStrings:DefaultConnection \"...\" (Backend README).");
 
     public async Task<MeasurementUploadResponse> SaveAsync(
         MeasurementUploadRequest request, string fingerprint, string? verifiedUploader, CancellationToken cancellationToken)

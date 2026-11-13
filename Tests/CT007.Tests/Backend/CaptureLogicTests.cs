@@ -59,7 +59,7 @@ public static class CaptureLogicTests
         });
 
         Assert.Equal(4, summary.SampleCount, "every accepted sample counts");
-        Assert.Near(15, summary.Count0, 1e-12, "count0 mean over 10 and 20");
+        Assert.Near(15 / 60.0, summary.Count0, 1e-12, "count0 mean over 10 and 20 shocks/min, in shocks per second");
         Assert.Near(0.15, summary.DoseRate, 1e-12, "dose_rate mean of 0.1 and 0.2");
         Assert.True(summary.Temperature is null, "no finite temperature → null");
         Assert.True(summary.Hdm is null, "field never provided → null");

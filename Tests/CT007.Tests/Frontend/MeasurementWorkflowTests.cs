@@ -225,7 +225,7 @@ public static class MeasurementWorkflowTests
                 d => d.CompleteWith(Samples.Capture(d.LastStart, d.LastDuration, 5, Three(d.LastStart))));
             var row = page.ViewModel.Results.Single();
             Assert.Equal("3 of 5", row.SampleDisplay, "Sample column");
-            Assert.Near(20, row.Reading.Count0, 1e-12, "average of the received samples");
+            Assert.Near(20 / 60.0, row.Reading.Count0, 1e-12, "average of the received samples, in shocks per second");
             Assert.True(page.Toasted(ToastKind.Warning, "Incomplete capture: 3 of 5 samples received. The result averages the 3 received."),
                 "incomplete warning");
             Assert.Equal("10.25", page.ViewModel.NextFrom, "depth advances");

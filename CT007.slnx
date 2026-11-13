@@ -4,5 +4,4 @@
   </Folder>
   <Project Path="Backend/Backend.csproj" />
   <Project Path="Frontend/Frontend.csproj" />
-  <Project Path="SmokeTests/SmokeTests.csproj" />
 </Solution>

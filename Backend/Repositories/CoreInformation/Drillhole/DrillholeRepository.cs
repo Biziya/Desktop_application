@@ -14,8 +14,11 @@ public sealed class DrillholeRepository(IConfiguration configuration) : IDrillho
         FROM ZOOVCH_COLLAR_LIST;
         """;
 
-    private readonly string _connectionString = configuration.GetConnectionString("DefaultConnection")
-        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+    private readonly string _connectionString = configuration.GetConnectionString("DefaultConnection") is { Length: > 0 } configured
+        ? configured
+        : throw new InvalidOperationException(
+            "Connection string 'DefaultConnection' is not configured. Set the ConnectionStrings__DefaultConnection environment " +
+            "variable, or run: dotnet user-secrets set ConnectionStrings:DefaultConnection \"...\" (Backend README).");
 
     public async Task<IReadOnlyList<DrillholeResponse>> GetAllAsync(CancellationToken cancellationToken)
     {

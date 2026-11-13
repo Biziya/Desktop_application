@@ -1,0 +1,6 @@
+# Automatic removal of old measurements from this laptop's measurements.db.
+# A drillhole session is removed, with all its captures and raw samples, when it has had no capture for
+# retentionDays. The session open on the Measurement page is never removed. Changes take effect after a restart.
+enabled: true
+retentionDays: 30           # whole days, 1 or more
+checkIntervalHours: 24      # how often the check runs while the app is open (it also runs at start-up)

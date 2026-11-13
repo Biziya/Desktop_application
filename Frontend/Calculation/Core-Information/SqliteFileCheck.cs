@@ -15,7 +15,7 @@ public static class SqliteFileCheck
     /// <summary>
     /// The one way this app opens a database it must not change (the Gamma Guard database; the status check of its
     /// own): Mode=ReadOnly (never creates the file, never writes), no pooling (the file is not kept open afterwards),
-    /// a short busy timeout, and no PRAGMA of any kind — journal settings stay as the owner set them.
+    /// a short busy timeout, and no PRAGMA that sets anything — journal settings stay as the owner set them.
     /// </summary>
     public static SqliteConnection OpenReadOnly(string path)
     {

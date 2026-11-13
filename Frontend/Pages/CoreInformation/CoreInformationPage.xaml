@@ -3,9 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:drillhole="clr-namespace:Frontend.Pages.CoreInformation.DrillholeInformation"
              xmlns:device="clr-namespace:Frontend.Pages.CoreInformation.DeviceStatus">
-    <!-- Page composition only. Both sections share this page's DataContext (CoreInformationViewModel). -->
+    <!-- Both sections share this page's DataContext (CoreInformationViewModel). -->
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
+            <StackPanel Margin="0,0,0,16">
+                <TextBlock Text="Core Information" Style="{StaticResource PageTitle}"/>
+                <TextBlock Text="Choose the drillhole to measure and check the detector and databases on this laptop."
+                           Style="{StaticResource PageSubtitle}"/>
+            </StackPanel>
             <drillhole:DrillholeInformationView/>
             <device:DeviceStatusView/>
         </StackPanel>

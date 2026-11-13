@@ -1,8 +1,15 @@
 # SPP CT-007 — Measurement Studio
 
+> **This file is the original design draft, kept for its reasoning.** The application as built differs: a WPF
+> frontend (`Frontend/`, hand-written MVVM, local SQLite `measurements.db`), an ASP.NET backend over HTTP
+> (`Backend/`, SQL Server), and the test harness in `Tests/CT007.Tests` (`dotnet run --project Tests/CT007.Tests`).
+> Pages: Core Information, Measurement, Monitoring (live CT008 detectors), Saved Data (local measurements, 30-day
+> retention set in `Frontend/Config/data-retention.yaml`) and Upload Data. See `Frontend/README.md` and
+> `Backend/README.md` for the current behaviour.
+
 **Independent Windows Desktop Project — Continuous Measurement Selection, Synchronization, Processing, and Export**
 
-> **Status:** Architecture and requirements draft — design only, not an implemented system.  
+> **Status:** Architecture and requirements draft — design only (see the note above for what was built).  
 > **Device:** SPP CT-007 (device capabilities and SQLite schema to be verified)  
 > **Project scope:** Standalone new project; no connection to prior Acquire logging, drilling, or other applications.  
 > **Target platform:** Windows  

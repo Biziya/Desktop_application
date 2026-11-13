@@ -43,8 +43,8 @@
 
             <!-- Starting Depth, Step and Threshold: compact inputs (after the Uiverse "coolinput"). The label (Tag, the same
                  text style as the Core Information labels) sits on the box's top border with the card's white behind it,
-                 so it takes no row of its own. Value text as in every text box (Navy, 14 px), right-aligned.
-                 Border: near-black (Navy) → gray on hover (InputHoverBorder, as the Drillhole box) → blue while focused
+                 so it takes no row of its own. Value text as in every text box (TextPrimary, 14 px), right-aligned.
+                 Border: near-black (TextPrimary) → gray on hover (InputHoverBorder, as the Drillhole box) → blue while focused
                  (the focus trigger is declared last, so it wins over hover). An invalid value (each box's DataTrigger,
                  declared later still) turns it red. Sizes: floatingInput in CapturePanel.yaml. -->
             <Style x:Key="FloatingLabelInput" TargetType="TextBox">
@@ -54,9 +54,9 @@
                 <Setter Property="FontSize" Value="{StaticResource FloatingInputFontSize}"/>
                 <Setter Property="TextAlignment" Value="Right"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
-                <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
                 <Setter Property="Background" Value="{StaticResource Surface}"/>
-                <Setter Property="BorderBrush" Value="{StaticResource Navy}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource TextPrimary}"/>
                 <Setter Property="BorderThickness" Value="{StaticResource FloatingInputBorderThickness}"/>
                 <Setter Property="Template">
                     <Setter.Value>

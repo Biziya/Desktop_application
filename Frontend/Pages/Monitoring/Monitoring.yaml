@@ -1,0 +1,5 @@
+# Monitoring page (CT008 live database). Changes take effect after a restart.
+pollIntervalMs: 1000        # how often the database is read; CT008 commits once a second, so faster gains nothing
+staleAfterMs: 5000          # a detector whose heartbeat is older than this is shown as Stale
+recentReadingsShown: 50     # rows kept in the Recent readings table
+samplesShown: 100           # completed 5-second samples kept on screen (memory only, cleared on restart)

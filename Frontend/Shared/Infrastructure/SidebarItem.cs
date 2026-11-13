@@ -5,7 +5,7 @@ namespace Frontend.Shared.Infrastructure;
 /// <summary>
 /// Marks a sidebar navigation button as the page currently shown. A typed bool attached property, so the button
 /// template can use a plain property trigger (no relative-source data binding inside the template, and no string
-/// "True" compared with an untyped Tag). Bound one-way to MainViewModel.IsCoreSelected / IsMeasurementSelected.
+/// "True" compared with an untyped Tag). Bound one-way to NavigationItem.IsSelected.
 /// </summary>
 public static class SidebarItem
 {

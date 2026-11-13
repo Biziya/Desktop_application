@@ -9,7 +9,7 @@
         <!-- Implicit table styles, scoped to this section. -->
         <Style TargetType="DataGrid">
             <Setter Property="Background" Value="{StaticResource Surface}"/>
-            <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="RowBackground" Value="{StaticResource Surface}"/>
             <Setter Property="AlternatingRowBackground" Value="{StaticResource SubtleSurface}"/>
@@ -32,7 +32,7 @@
 
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="{StaticResource Canvas}"/>
-            <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
             <Setter Property="Padding" Value="{StaticResource TableHeaderPadding}"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="FontSize" Value="{StaticResource TableHeaderFontSize}"/>
@@ -59,7 +59,7 @@
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="{StaticResource SoftBlue}"/>
-                    <Setter Property="Foreground" Value="{StaticResource Navy}"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>

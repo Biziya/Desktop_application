@@ -108,7 +108,49 @@ Sidebar → **Upload Data** (`Pages/UploadData/`): **Import CSV** → review →
 - **Import.** A Windows file dialog picks a `.csv`. The file is opened read-only and shared (it can stay open in Excel) and is never written. `MeasurementCsvReader.cs` (no UI) finds columns by header name, so column order does not matter and unknown columns are ignored; it handles quoted commas, doubled quotes, line breaks inside cells, CRLF or LF, and a BOM, and removes the `'` the exporter puts in front of text starting with = + - @. Required columns: Capture No, Start Time, End Time, Sample, session_id. A problem stops the import with a 5 s error toast naming the row and line (for example `Row 2 (line 3): count0 'abc' is not a number.`); the previous import stays. Metadata must be the same on every row (one exported session per file). Rows are sorted and numbered like the Measurement page.
 - **Older CSV files.** Files exported before this version have no `from_m` / `to_m` / `step_m` and no Created Username. They import (depth cells empty, Created Username **Not available** — never guessed) with a warning, but cannot be uploaded because the central database needs depths: export them again from the Measurement page. The oldest exports (no metadata columns) import the same way and show Not available for the metadata.
 - **Review.** Measurement Information shows Drillhole, Project, Campaign, Operator and Notes from the CSV, **Filename** (the imported file's name with `.csv`, never its path), **Created At** (the measurement session's creation time from the CSV's `Created At` column, shown in local time `yyyy-MM-dd HH:mm:ss`; older files show Not available — never the file date or the current time) and **Uploading User** — this Windows account (`DOMAIN\user`, or the user name for a local account; `Shared/Infrastructure/WindowsAccount.cs`, the same helper Core Information uses for Operator). Created Username is still read from the CSV and sent with the upload, but not shown. The layout is one Grid: file and session on the left, drillhole on the right, Notes wrapping up to three lines (full text in the tooltip); long values end in "…" with the full value as tooltip. The table is the Measurement page's (`Table/MeasurementGrid.xaml`, columns, formats and widths from `MeasurementTable.yaml`) with a total. Values cannot be edited; ✕ removes a row after a confirmation, from this import only (not the file, not the database), and renumbers the rest.
-- **Upload.** Checked first: rows left, Drillhole and Operator present, every row has depths. After a confirmation the rows are posted to `POST /api/measurements/upload` (Backend/README.md) without blocking the window; the button shows "Uploading…" and cannot be clicked again. Success: 3 s toast with the number stored, the button becomes "✓ Uploaded" and stays disabled (and rows can no longer be removed) until another file is imported. Failure: 5 s error toast with the backend's reason; everything is kept and Upload can be retried — safe even after a timeout, because the backend recognises a dataset it already stored (then a 3 s warning says it was already uploaded and nothing was added).
+- **Upload.** Checked first: rows left, Drillhole and Operator present, every row has depths. After a confirmation the rows are posted to `POST /api/measurements/upload` (Backend/README.md) without blocking the window; the button shows "Uploading…" and cannot be clicked again. Success: 3 s toast with the number stored, the button becomes "Uploaded" (with a check icon) and stays disabled (and rows can no longer be removed) until another file is imported. Failure: 5 s error toast with the backend's reason; everything is kept and Upload can be retried — safe even after a timeout, because the backend recognises a dataset it already stored (then a 3 s warning says it was already uploaded and nothing was added).
+
+## Monitoring page
+
+Sidebar → **Monitoring** (`Pages/Monitoring/`): live status of every detector writing to the CT008 database, ported from
+EIC's CT008 Monitor (handover of 23 Oct 2026, `SHIBA/`).
+
+- **Which database.** The one Core Information → Device Status uses (found automatically or chosen with Select
+  Database). Changing it there switches Monitoring too. Without one, the page says where to choose it.
+- **Read-only.** Every poll opens the file with `Mode=ReadOnly` (`SqliteFileCheck.OpenReadOnly`), reads, and closes it:
+  it never writes, never changes `journal_mode` and never creates a missing file. New rows are read by
+  `id > cursor ORDER BY id`, never by timestamp; a database whose ids went backwards (recreated) is followed.
+- **When it polls.** Every `pollIntervalMs` (`Monitoring.yaml`, 1 s) while the page is shown, or while a 5-second
+  sample is running. The read runs off the UI thread. Coming back to the page starts from the newest data again.
+- **States.** Logging, No data (logging but no reading for `staleAfterMs`), Stale (heartbeat older than `staleAfterMs`,
+  5 s), Disconnected (never stale), or the state as CT008 wrote it. Select a row for MAC, firmware, device session and
+  raw values.
+- **5-second sample.** *Take sample* discards the next reading (its second began before the click) and averages the 5
+  after it; results show coverage (about 5.0 s), readings and means. Incomplete after 12 s. Kept in memory only (the
+  newest `samplesShown`), cleared when the app closes.
+- **Warning.** A live detector whose response time is known and not 1 s is named in a banner: 5-second samples assume
+  1 s.
+- Code: `MonitorEngine.cs` (rules, no UI, no I/O), `MonitoringViewModel.cs` (polling, connection state),
+  `GammaGuardDeviceDatabase.ReadMonitorSnapshot` (one read-only snapshot per poll). Tests: `FE-MON-*`, `FE-UI-01`.
+
+## Saved Data page and retention
+
+Sidebar → **Saved Data** (`Pages/SavedData/`): what this laptop has stored in `measurements.db`, read-only.
+
+- Sessions (one per drillhole) with capture count and last capture, newest first; search by drillhole, project or
+  operator; period filter. Selecting a session shows its captures by depth, 200 per page; selecting a capture shows
+  the raw device samples stored with it. Changes are made on the Measurement page.
+- **Retention** (`Config/data-retention.yaml`, read at start-up):
+  ```yaml
+  enabled: true
+  retentionDays: 30
+  checkIntervalHours: 24
+  ```
+  At start-up and then every `checkIntervalHours`, sessions whose newest capture (or creation, without captures) is
+  older than `retentionDays` are deleted with their records, raw samples and depth progress, in one transaction
+  (`Pages/Measurement/DataRetention.cs`). Whole sessions only, so a drillhole never loses part of its captures; the
+  session open on the Measurement page is always kept. A toast says how many were removed. Only `measurements.db` is
+  touched, never the CT008 database. Tests: `FE-RET-*`, `FE-SAV-*`, `FE-UI-02`.
 
 ## Bar chart and demo ts_ms
 
@@ -274,7 +316,7 @@ Frontend/
 ├── App.xaml + App.xaml.cs
 ├── AssemblyInfo.cs
 └── Frontend.csproj
-SmokeTests/
+SmokeTests/  (out of date and not in CT007.slnx; use Tests/CT007.Tests)
 ├── SmokeTests.csproj
 └── Program.cs
 ```
@@ -333,13 +375,8 @@ Toasts / drillhole selection / capture duration revision: same environment and m
 
 Compact table / toast position revision: table multipliers back to 1.0, star column widths (minimums checked by a smoke test to fit the narrowest layout), toasts moved top-right. XAML parses and every resource resolves; smoke tests pass. Not compiled or run on Windows here.
 
-Run the updated smoke tests on Windows:
-
-```powershell
-dotnet run --project SmokeTests/SmokeTests.csproj
-```
-
-They cover arming without capture; Idle/duplicate triggers; elapsed ring progress; repeat captures; exact millisecond start/end values and separate completion; cancellation in Capturing and Processing; rapid rearm; late cancelled results; service failure; stable identifiers; reorder/delete/export; navigation/sidebar state; five-second duration; closure and cancellation; session IDs per Start and across navigation; CSV column order, precision and session column; stored No after reorder; no duplicate saves; save-failure reporting; SQLite session isolation, precision, nulls, delete and restart restore. They do not substitute for real mouse/UI tests.
+The smoke tests (`SmokeTests/`) are out of date and no longer in `CT007.slnx`; their checks now live in
+`Tests/CT007.Tests` (`dotnet run --project Tests/CT007.Tests`). They covered arming without capture; Idle/duplicate triggers; elapsed ring progress; repeat captures; exact millisecond start/end values and separate completion; cancellation in Capturing and Processing; rapid rearm; late cancelled results; service failure; stable identifiers; reorder/delete/export; navigation/sidebar state; five-second duration; closure and cancellation; session IDs per Start and across navigation; CSV column order, precision and session column; stored No after reorder; no duplicate saves; save-failure reporting; SQLite session isolation, precision, nulls, delete and restart restore. They do not substitute for real mouse/UI tests.
 
 Manual Windows checks:
 

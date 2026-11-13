@@ -42,6 +42,17 @@ If Swagger shows `Fetch error – Not Found`, an old build is running: stop it, 
 
 All three endpoints are grouped under the **Core Information** tag in Swagger.
 
+## SQL Server connection string
+
+The connection string contains a password, so it is not stored in `appsettings.json` (that value is empty on
+purpose). Set it one of these ways:
+
+- Development, per Windows user:
+  `dotnet user-secrets set ConnectionStrings:DefaultConnection "Data Source=…;Initial Catalog=…;User ID=…;Password=…;TrustServerCertificate=True;" --project Backend`
+- Deployment: the environment variable `ConnectionStrings__DefaultConnection` on the server.
+
+Without it, the drillhole and upload endpoints fail with a message that says what to set.
+
 ## Measurement upload API (Upload Data page)
 
 `POST /api/measurements/upload` (tag **Measurement**) stores one measurement session imported from a CSV in the

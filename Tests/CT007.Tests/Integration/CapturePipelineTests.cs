@@ -91,7 +91,7 @@ public static class CapturePipelineTests
 
         var row = pipeline.ViewModel.Results.Single();
         Assert.Equal(5, row.SampleCount, "samples");
-        Assert.Near(30, row.Reading.Count0, 1e-12, "count0 mean");
+        Assert.Near(30 / 60.0, row.Reading.Count0, 1e-12, "count0 mean, in shocks per second");
         Assert.Near(0.3, row.Reading.DoseRate, 1e-12, "dose_rate mean");
         Assert.Near(23, row.Temperature, 1e-12, "temperature mean of the 4 valid values");
         Assert.Equal(T + 1000, row.Reading.TsMs, "ts_ms of the first sample");
