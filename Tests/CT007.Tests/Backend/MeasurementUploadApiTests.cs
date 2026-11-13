@@ -224,7 +224,6 @@ public static class MeasurementUploadApiTests
 
         const string Drop = """
             IF OBJECT_ID('dbo.SPPCT007_BEK_Upload') IS NOT NULL DROP PROCEDURE dbo.SPPCT007_BEK_Upload;
-            IF TYPE_ID('dbo.SPPCT007_BEK_RECORD') IS NOT NULL DROP TYPE dbo.SPPCT007_BEK_RECORD;
             IF OBJECT_ID('dbo.SPPCT007_BEK_UPLOAD_SEQ') IS NOT NULL DROP SEQUENCE dbo.SPPCT007_BEK_UPLOAD_SEQ;
             IF OBJECT_ID('dbo.SPPCT007_BEK') IS NOT NULL DROP TABLE dbo.SPPCT007_BEK;
             """;

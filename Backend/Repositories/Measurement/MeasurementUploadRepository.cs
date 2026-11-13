@@ -6,7 +6,7 @@ namespace Backend.Repositories.Measurement;
 
 /// <summary>
 /// Stores uploads in the SPP CT007 table through <see cref="SppCt007Database.UploadProcedure"/>: one call per upload,
-/// with every row in a table-valued parameter. The procedure checks for duplicates and inserts in one transaction.
+/// with every row in one JSON parameter (@RecordsJson). The procedure checks for duplicates and inserts in one transaction.
 /// </summary>
 public sealed class MeasurementUploadRepository(IConfiguration configuration) : IMeasurementUploadRepository
 {
@@ -39,9 +39,7 @@ public sealed class MeasurementUploadRepository(IConfiguration configuration) : 
         parameters.Add("@UploadingUsername", SqlDbType.NVarChar, MeasurementUploadRequest.MaxNameLength).Value = info.UploadingUsername!.Trim();
         parameters.Add("@VerifiedUploader", SqlDbType.NVarChar, MeasurementUploadRequest.MaxNameLength).Value = Nullable(verifiedUploader);
 
-        var records = parameters.Add("@Records", SqlDbType.Structured);
-        records.TypeName = SppCt007Database.RecordType;
-        records.Value = SppCt007Database.ToRecordTable(request.Records!);
+        parameters.Add("@RecordsJson", SqlDbType.NVarChar, -1).Value = SppCt007Database.ToRecordsJson(request.Records!);
 
         try
         {

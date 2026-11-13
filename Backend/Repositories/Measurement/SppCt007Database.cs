@@ -1,4 +1,5 @@
-using System.Data;
+using System.Text;
+using System.Text.Json;
 using Backend.Models.Measurement;
 using Microsoft.Data.SqlClient;
 
@@ -12,64 +13,74 @@ namespace Backend.Repositories.Measurement;
 public static class SppCt007Database
 {
     public const string Table = "dbo.SPPCT007_BEK";
-    public const string RecordType = "dbo.SPPCT007_BEK_RECORD";
     public const string UploadProcedure = "dbo.SPPCT007_BEK_Upload";
     public const string Role = "SPPCT007_APP";
 
     /// <summary>The migration script's file name (under Database/Migrations).</summary>
     public const string MigrationScript = "001_CreateSppCt007.sql";
 
-    /// <summary>The columns of <see cref="RecordType"/>, in its order.</summary>
-    public static readonly IReadOnlyList<(string Name, Type Type)> RecordColumns =
+    /// <summary>
+    /// The keys of one row in the procedure's @RecordsJson, in order. They must match the procedure's OPENJSON WITH
+    /// paths exactly (JSON keys are case-sensitive).
+    /// </summary>
+    public static readonly IReadOnlyList<string> RecordKeys =
     [
-        ("CAPTURE_NO", typeof(int)),
-        ("ROW_NO", typeof(int)),
-        ("START_TIME", typeof(DateTimeOffset)),
-        ("END_TIME", typeof(DateTimeOffset)),
-        ("SAMPLE_COUNT", typeof(int)),
-        ("DEPTH_FROM_M", typeof(decimal)),
-        ("DEPTH_TO_M", typeof(decimal)),
-        ("TS_MS", typeof(long)),
-        ("COUNT0", typeof(double)),
-        ("COUNT0_RAW", typeof(double)),
-        ("HDM", typeof(double)),
-        ("HDM_RAW", typeof(double)),
-        ("DOSE_RATE", typeof(double)),
+        "CAPTURE_NO", "ROW_NO", "START_TIME", "END_TIME", "SAMPLE_COUNT", "DEPTH_FROM_M", "DEPTH_TO_M",
+        "TS_MS", "COUNT0", "COUNT0_RAW", "HDM", "HDM_RAW", "DOSE_RATE",
     ];
 
-    // 208 invalid object name (table), 2812 stored procedure not found, 2715 type not found (the TVP's record type).
-    private static readonly int[] MissingObjectErrors = [208, 2812, 2715];
+    // 208 invalid object name (table or sequence), 2812 stored procedure not found.
+    private static readonly int[] MissingObjectErrors = [208, 2812];
 
-    /// <summary>The table, the insert procedure or the record type does not exist yet.</summary>
+    /// <summary>The table or the insert procedure does not exist yet.</summary>
     public static bool IsMissingObject(SqlException error) => error.Errors.Cast<SqlError>().Any(e => MissingObjectErrors.Contains(e.Number));
 
     /// <summary>
-    /// The rows of a validated upload as the table-valued parameter: <see cref="RecordColumns"/> in order, ROW_NO from 1 in
-    /// request order, DBNull for missing device values.
+    /// The rows of a validated upload as the procedure's @RecordsJson: a JSON array, one object per row with
+    /// <see cref="RecordKeys"/>; ROW_NO from 1 in request order; times in ISO 8601 with their offset and all 7 decimals;
+    /// numbers written exactly (round-trip); missing device values as null.
     /// </summary>
-    public static DataTable ToRecordTable(IReadOnlyList<MeasurementUploadRecord> records)
+    public static string ToRecordsJson(IReadOnlyList<MeasurementUploadRecord> records)
     {
-        var table = new DataTable();
+        using var buffer = new MemoryStream();
 
-        foreach (var (name, type) in RecordColumns)
+        using (var json = new Utf8JsonWriter(buffer))
         {
-            table.Columns.Add(name, type);
+            json.WriteStartArray();
+
+            for (var i = 0; i < records.Count; i++)
+            {
+                var r = records[i];
+                json.WriteStartObject();
+                json.WriteNumber("CAPTURE_NO", r.CaptureNumber!.Value);
+                json.WriteNumber("ROW_NO", i + 1);
+                json.WriteString("START_TIME", r.StartTime!.Value.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
+                json.WriteString("END_TIME", r.EndTime!.Value.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
+                json.WriteNumber("SAMPLE_COUNT", r.SampleCount!.Value);
+                json.WriteNumber("DEPTH_FROM_M", r.DepthFrom!.Value);
+                json.WriteNumber("DEPTH_TO_M", r.DepthTo!.Value);
+                Number(json, "TS_MS", r.TsMs);
+                Number(json, "COUNT0", r.Count0);
+                Number(json, "COUNT0_RAW", r.Count0Raw);
+                Number(json, "HDM", r.Hdm);
+                Number(json, "HDM_RAW", r.HdmRaw);
+                Number(json, "DOSE_RATE", r.DoseRate);
+                json.WriteEndObject();
+            }
+
+            json.WriteEndArray();
         }
 
-        table.BeginLoadData();
-
-        for (var i = 0; i < records.Count; i++)
-        {
-            var r = records[i];
-            table.Rows.Add(
-                r.CaptureNumber!.Value, i + 1, r.StartTime!.Value, r.EndTime!.Value, r.SampleCount!.Value,
-                r.DepthFrom!.Value, r.DepthTo!.Value,
-                Value(r.TsMs), Value(r.Count0), Value(r.Count0Raw), Value(r.Hdm), Value(r.HdmRaw), Value(r.DoseRate));
-        }
-
-        table.EndLoadData();
-        return table;
+        return Encoding.UTF8.GetString(buffer.ToArray());
     }
 
-    private static object Value<T>(T? value) where T : struct => value.HasValue ? value.Value : DBNull.Value;
+    private static void Number(Utf8JsonWriter json, string key, long? value)
+    {
+        if (value is { } number) json.WriteNumber(key, number); else json.WriteNull(key);
+    }
+
+    private static void Number(Utf8JsonWriter json, string key, double? value)
+    {
+        if (value is { } number) json.WriteNumber(key, number); else json.WriteNull(key);
+    }
 }

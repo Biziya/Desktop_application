@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Ct007.Tests.BackendTests;
 
-/// <summary>BE-DB: the SPP CT007 table, its record type, insert procedure and permissions (no SQL Server needed).</summary>
+/// <summary>BE-DB: the SPP CT007 table, its JSON insert procedure and permissions (no SQL Server needed).</summary>
 public static class SppCt007DatabaseTests
 {
     private static readonly DateTimeOffset Start = new(2026, 11, 13, 9, 0, 0, TimeSpan.FromHours(8));
@@ -20,23 +20,30 @@ public static class SppCt007DatabaseTests
         new(capture, Start.AddMinutes(capture), Start.AddMinutes(capture).AddSeconds(5), 5, capture * 0.1m, capture * 0.1m + 0.1m,
             null, 120.5, 121, hdm, null, 0.12);
 
-    [Test("BE-DB-01", "The table-valued parameter has the record type's columns in order, row numbers from 1 and DBNull for missing values")]
-    public static void RecordTable()
+    [Test("BE-DB-01", "@RecordsJson: one object per row with the procedure's keys in order, row numbers from 1, exact times and numbers, null for missing values")]
+    public static void RecordsJson()
     {
-        var table = SppCt007Database.ToRecordTable([Record(7, hdm: 10.5), Record(3, hdm: null)]);
+        var precise = new DateTimeOffset(2026, 11, 13, 9, 0, 0, TimeSpan.FromHours(8)).AddTicks(1234567);
+        var json = SppCt007Database.ToRecordsJson([Record(7, hdm: 10.5) with { StartTime = precise, TsMs = 1_763_000_000_123 }, Record(3, hdm: null)]);
+        using var document = JsonDocument.Parse(json);
+        var rows = document.RootElement;
 
-        Assert.Sequence(SppCt007Database.RecordColumns.Select(c => c.Name), table.Columns.Cast<System.Data.DataColumn>().Select(c => c.ColumnName), "column order");
-        Assert.Sequence(SppCt007Database.RecordColumns.Select(c => c.Type), table.Columns.Cast<System.Data.DataColumn>().Select(c => c.DataType), "column types");
-        Assert.Equal(2, table.Rows.Count, "rows");
-        Assert.Equal(7, (int)table.Rows[0]["CAPTURE_NO"], "capture kept");
-        Assert.Sequence(new[] { 1, 2 }, table.Rows.Cast<System.Data.DataRow>().Select(r => (int)r["ROW_NO"]), "row numbers in request order");
-        Assert.Equal(0.8m, (decimal)table.Rows[0]["DEPTH_TO_M"], "depth");
-        Assert.Equal(Start.AddMinutes(3), (DateTimeOffset)table.Rows[1]["START_TIME"], "time with offset");
-        Assert.True(table.Rows[1]["HDM"] is DBNull && table.Rows[0]["TS_MS"] is DBNull, "missing values are DBNull");
-        Assert.Equal(10.5, (double)table.Rows[0]["HDM"], "value kept");
+        Assert.Equal(JsonValueKind.Array, rows.ValueKind, "array");
+        Assert.Equal(2, rows.GetArrayLength(), "rows");
+        Assert.Sequence(SppCt007Database.RecordKeys, rows[0].EnumerateObject().Select(p => p.Name), "keys in order (case-sensitive)");
+        Assert.Equal(7, rows[0].GetProperty("CAPTURE_NO").GetInt32(), "capture kept");
+        Assert.Sequence(new[] { 1, 2 }, rows.EnumerateArray().Select(r => r.GetProperty("ROW_NO").GetInt32()), "row numbers in request order");
+        Assert.Equal("2026-11-13T09:00:00.1234567+08:00", rows[0].GetProperty("START_TIME").GetString(), "time with all decimals and its offset");
+        Assert.Equal(0.8m, rows[0].GetProperty("DEPTH_TO_M").GetDecimal(), "depth");
+        Assert.Equal(1_763_000_000_123L, rows[0].GetProperty("TS_MS").GetInt64(), "device timestamp");
+        Assert.Equal(10.5, rows[0].GetProperty("HDM").GetDouble(), "value kept");
+        Assert.True(rows[1].GetProperty("HDM").ValueKind == JsonValueKind.Null && rows[1].GetProperty("TS_MS").ValueKind == JsonValueKind.Null,
+            "missing values are null");
+        Assert.Equal(0.1 + 0.2, JsonDocument.Parse(SppCt007Database.ToRecordsJson([Record(1, hdm: 0.1 + 0.2)])).RootElement[0].GetProperty("HDM").GetDouble(),
+            "doubles round-trip exactly");
     }
 
-    [Test("BE-DB-02", "The migration script creates the objects the backend calls, the record type matches the TVP, and the app role gets EXECUTE on the insert and SELECT only")]
+    [Test("BE-DB-02", "The script creates the table and the insert procedure the backend calls, its OPENJSON keys match the JSON, and the app role gets EXECUTE and SELECT only")]
     public static void ScriptMatchesBackend()
     {
         var script = Script();
@@ -44,11 +51,9 @@ public static class SppCt007DatabaseTests
         foreach (var expected in new[]
         {
             $"CREATE TABLE {SppCt007Database.Table} (",
-            $"CREATE TYPE {SppCt007Database.RecordType} AS TABLE (",
             $"CREATE OR ALTER PROCEDURE {SppCt007Database.UploadProcedure}",
-            $"@Records           {SppCt007Database.RecordType} READONLY",
+            "@RecordsJson       NVARCHAR(MAX)",
             $"GRANT EXECUTE ON OBJECT::{SppCt007Database.UploadProcedure} TO {SppCt007Database.Role};",
-            $"GRANT EXECUTE ON TYPE::{SppCt007Database.RecordType} TO {SppCt007Database.Role};",
             $"GRANT SELECT ON OBJECT::{SppCt007Database.Table} TO {SppCt007Database.Role};",
         })
         {
@@ -60,14 +65,10 @@ public static class SppCt007DatabaseTests
         Assert.False(Regex.IsMatch(statements, @"GRANT\s+(INSERT|UPDATE|DELETE|CONTROL|ALTER)", RegexOptions.IgnoreCase), "no direct write rights granted");
         Assert.False(Regex.IsMatch(statements, @"\b(UPDATE|DELETE)\s+(FROM\s+)?dbo\.SPPCT007", RegexOptions.IgnoreCase), "append-only: nothing updates or deletes rows");
 
-        var type = Regex.Match(script, $@"CREATE TYPE {Regex.Escape(SppCt007Database.RecordType)} AS TABLE \((?<body>.*?)\n\s*\);", RegexOptions.Singleline);
-        Assert.True(type.Success, "record type found");
-        var columns = type.Groups["body"].Value.Split('\n')
-            .Select(line => line.Trim())
-            .Where(line => line.Length > 0 && !line.StartsWith("--", StringComparison.Ordinal))
-            .Select(line => line.Split(' ', 2)[0])
-            .ToList();
-        Assert.Sequence(SppCt007Database.RecordColumns.Select(c => c.Name), columns, "record type columns = TVP columns, in order");
+        var openJson = Regex.Match(script, @"FROM OPENJSON\(@RecordsJson\)\s*WITH \((?<body>.*?)\n\s*\);", RegexOptions.Singleline);
+        Assert.True(openJson.Success, "OPENJSON block found");
+        var paths = Regex.Matches(openJson.Groups["body"].Value, @"'\$\.(?<key>[A-Z0-9_]+)'").Select(m => m.Groups["key"].Value).ToList();
+        Assert.Sequence(SppCt007Database.RecordKeys, paths, "OPENJSON paths = JSON keys the backend writes, in order");
     }
 
     [Test("BE-DB-03", "Upload before the SPP CT007 table exists: 503 saying the table has not been created, nothing stored, logged as a warning")]

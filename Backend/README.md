@@ -99,7 +99,7 @@ removes the already uploaded rows on the Upload Data page. Drillhole alone is no
 several sessions. The checks run under `UPDLOCK, HOLDLOCK`, so concurrent identical requests are serialised.
 
 **One call, one transaction.** The backend calls `dbo.SPPCT007_BEK_Upload` once per upload, with every row in a
-table-valued parameter (`dbo.SPPCT007_BEK_RECORD`). The procedure checks duplicates and inserts all rows with one
+JSON parameter (`@RecordsJson`, read with `OPENJSON`; needs compatibility level 130+). The procedure checks duplicates and inserts all rows with one
 set-based `INSERT … SELECT` inside one transaction (`XACT_ABORT ON`): any failure stores nothing.
 
 **Identity.** The backend has no authentication of its own. `createdUsername` and `uploadingUsername` are stored as
@@ -119,18 +119,17 @@ table part is skipped because the table exists):
 | `dbo.SPPCT007_BEK` | The table (already created): one row per measurement (capture), with the upload's information (drillhole, project, campaign, operator, notes, user names, `UPLOAD_ID`, `DATASET_HASH`, `UPLOADED_AT`) on each row; original timestamps, depths (m), computed `STEP_CM`, `TS_MS` and device values (`COUNT0` = CPS). |
 | `IX_SPPCT007_BEK_HASH`, `IX_SPPCT007_BEK_DRILLHOLE` | Indexes for the duplicate check and the Data Viewer. |
 | `dbo.SPPCT007_BEK_UPLOAD_SEQ` | Sequence giving each upload its `UPLOAD_ID`. |
-| `dbo.SPPCT007_BEK_RECORD` | Table type of the rows sent in one upload (holds no data). |
 | `dbo.SPPCT007_BEK_Upload` | Inserts an upload (answers `Stored`, `AlreadyUploaded` or `Conflict`). |
-| Role `SPPCT007_APP` | `EXECUTE` on the procedure and the type, `SELECT` on the table, nothing else. |
+| Role `SPPCT007_APP` | `EXECUTE` on the procedure and `SELECT` on the table, nothing else. The script adds `useracquire` (the backend's database user) to it. |
 
-**Permissions.** Give the backend its own SQL login and make it a member of `SPPCT007_APP` only (the commands are at the
-end of the script). It gets no `INSERT`, `UPDATE` or `DELETE` on the table: rows are written only by the procedure
+**Permissions.** The backend logs in as `useracquire`, which is a member of `SPPCT007_APP` only (no `db_datawriter` or
+`db_owner`). It gets no `INSERT`, `UPDATE` or `DELETE` on the table: rows are written only by the procedure
 (ownership chaining), and nothing updates or deletes rows. Check: as that login, a direct `INSERT INTO dbo.SPPCT007_BEK`
 must be denied. Use `Encrypt=True` in its connection string (`TrustServerCertificate=True` on dev only).
 
 The object names are also in `Repositories/Measurement/SppCt007Database.cs`; rename both together (test BE-DB-02 checks
 they match). Until the objects exist, uploads and the Data Viewer answer `503` *"The SPP CT007 table has not been
-created on the database yet"* (SQL errors 208, 2812 or 2715).
+created on the database yet"* (SQL errors 208 or 2812).
 
 ## Uploaded data API (Data Viewer page)
 
