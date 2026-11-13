@@ -82,3 +82,4 @@ public sealed class DrillholeCache(string databasePath)
         return connection;
     }
 }
+

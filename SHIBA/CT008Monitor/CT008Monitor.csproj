@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Proof of concept for the client application: reads the CT008 live SQLite database and shows
+       detector status and the latest data. Same .NET Framework and SQLite library as the CT008 app,
+       so it runs on the same PCs with nothing extra installed. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>CT008Monitor</RootNamespace>
+    <AssemblyName>CT008Monitor</AssemblyName>
+    <LangVersion>7.3</LangVersion>
+    <Nullable>disable</Nullable>
+    <Version>0.1.0</Version>
+    <Description>Reads the CT008 live SQLite database and displays detector status and latest data</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Configuration" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
+  </ItemGroup>
+
+</Project>
