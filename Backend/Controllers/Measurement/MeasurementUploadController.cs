@@ -58,6 +58,12 @@ public sealed class MeasurementUploadController(IMeasurementUploadRepository rep
                       $"{(captures.Count > 20 ? ", …" : "")}). Remove them and upload the rest. Nothing was stored.",
                 statusCode: StatusCodes.Status409Conflict);
         }
+        catch (UploadTablesMissingException ex)
+        {
+            logger.LogWarning(ex, "The SPP CT007 table or procedures are missing; run Database/Migrations/001_CreateSppCt007.sql.");
+            return Problem($"{UploadedMeasurementController.TablesMissingMessage} Nothing was stored.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
         catch (SqlException ex)
         {
             logger.LogError(ex, "Failed to store a measurement upload in SQL Server.");

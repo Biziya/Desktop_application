@@ -16,7 +16,7 @@ public sealed class UploadedMeasurementController(IUploadedMeasurementRepository
     public const int MaxRecords = 10_000;
 
     public const string TablesMissingMessage =
-        "The upload tables have not been created on the central database yet (Database/Migrations/001_CreateMeasurementUploadTables.sql).";
+        "The SPP CT007 table has not been created on the database yet (Database/Migrations/001_CreateSppCt007.sql).";
 
     public const string UnavailableMessage = "The measurement database is unavailable. Try again later.";
 
@@ -48,7 +48,7 @@ public sealed class UploadedMeasurementController(IUploadedMeasurementRepository
         }
         catch (UploadTablesMissingException error)
         {
-            logger.LogWarning(error, "Measurement upload tables are missing; run Database/Migrations/001.");
+            logger.LogWarning(error, "The SPP CT007 table or procedures are missing; run Database/Migrations/001_CreateSppCt007.sql.");
             return Problem(TablesMissingMessage, statusCode: StatusCodes.Status503ServiceUnavailable);
         }
         catch (SqlException error)

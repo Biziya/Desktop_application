@@ -146,8 +146,8 @@ Read-only; nothing on this laptop is shown here.
 - **Table**: the Measurement page's own `MeasurementGrid` (same columns, formats and widths from `MeasurementTable.yaml`)
   with `ShowDelete="False"`. Every uploaded row of the drillhole, by depth, numbered from 1; the header shows uploads,
   rows and the last upload time.
-- **States.** Backend offline (Retry; reloads when the backend comes back), upload tables not created yet (the backend
-  says so: `Database/Migrations/001` has not run), no uploads yet, no drillhole picked.
+- **States.** Backend offline (Retry; reloads when the backend comes back), SPP CT007 table not created yet (the backend
+  says so: `Database/Migrations/001_CreateSppCt007.sql` has not run), no uploads yet, no drillhole picked.
 - Reloads whenever the page is shown. Tests: `FE-DV-*`, `BE-DV-*`.
 
 ## Data retention (measurements.db)

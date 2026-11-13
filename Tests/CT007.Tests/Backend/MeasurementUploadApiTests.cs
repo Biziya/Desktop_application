@@ -182,7 +182,7 @@ public static class MeasurementUploadApiTests
         Assert.Equal("CORP\\administrator", repository.Uploads[1].Request.MeasurementInformation!.UploadingUsername, "declared name kept as declared");
     }
 
-    [Test("BE-056", "Upload SQL storage: session and records in one transaction, exact timestamps, no duplicates on retry, rollback on failure",
+    [Test("BE-056", "Upload SQL storage (single table, procedures): exact values, no duplicates on retry, conflicts, Data Viewer reads, rollback on failure",
         Category = "Sql")]
     public static async Task SqlStorage()
     {
@@ -210,55 +210,80 @@ public static class MeasurementUploadApiTests
             return await command.ExecuteScalarAsync();
         }
 
+        // The script is written for SSMS: batches separated by GO lines.
+        async Task RunScript(string script)
+        {
+            foreach (var batch in System.Text.RegularExpressions.Regex.Split(script, @"^\s*GO\s*$", System.Text.RegularExpressions.RegexOptions.Multiline))
+            {
+                if (!string.IsNullOrWhiteSpace(batch))
+                {
+                    await Sql(batch);
+                }
+            }
+        }
+
         const string Drop = """
-            IF OBJECT_ID('dbo.CT007_MEASUREMENT_UPLOAD_RECORD') IS NOT NULL DROP TABLE dbo.CT007_MEASUREMENT_UPLOAD_RECORD;
-            IF OBJECT_ID('dbo.CT007_MEASUREMENT_UPLOAD') IS NOT NULL DROP TABLE dbo.CT007_MEASUREMENT_UPLOAD;
+            IF OBJECT_ID('dbo.SPPCT007_BEK_Upload') IS NOT NULL DROP PROCEDURE dbo.SPPCT007_BEK_Upload;
+            IF TYPE_ID('dbo.SPPCT007_BEK_RECORD') IS NOT NULL DROP TYPE dbo.SPPCT007_BEK_RECORD;
+            IF OBJECT_ID('dbo.SPPCT007_BEK_UPLOAD_SEQ') IS NOT NULL DROP SEQUENCE dbo.SPPCT007_BEK_UPLOAD_SEQ;
+            IF OBJECT_ID('dbo.SPPCT007_BEK') IS NOT NULL DROP TABLE dbo.SPPCT007_BEK;
             """;
         await Sql(Drop);
-        var migration = File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "Database", "Migrations", "001_CreateMeasurementUploadTables.sql"));
-        await Sql(migration);
-        await Sql(migration); // safe to run again
+        var migration = File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "Database", "Migrations", SppCt007Database.MigrationScript));
+        await RunScript(migration);
+        await RunScript(migration); // safe to run again
 
         try
         {
-            var repository = new MeasurementUploadRepository(new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:DefaultConnection"] = connectionString }).Build());
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:DefaultConnection"] = connectionString }).Build();
+            var repository = new MeasurementUploadRepository(configuration);
             var request = Request(3);
 
-            var first = await repository.SaveAsync(request, request.Fingerprint(), "CORP\\verified", CancellationToken.None);
+            var first = await repository.SaveAsync(request, request.Fingerprint(), @"CORP\verified", CancellationToken.None);
             Assert.False(first.AlreadyUploaded, "stored");
             Assert.Equal(3, first.RecordCount, "record count");
-            Assert.Equal(3, (int)(await Sql($"SELECT COUNT(*) FROM dbo.CT007_MEASUREMENT_UPLOAD_RECORD WHERE UPLOAD_ID = {first.UploadId}"))!,
-                "records linked to their session");
+            Assert.Equal(3, (int)(await Sql($"SELECT COUNT(*) FROM dbo.SPPCT007_BEK WHERE UPLOAD_ID = {first.UploadId}"))!,
+                "rows carry their upload id");
             Assert.Equal(Start.AddMinutes(2).AddTicks(1234567),
-                (DateTimeOffset)(await Sql($"SELECT START_TIME FROM dbo.CT007_MEASUREMENT_UPLOAD_RECORD WHERE UPLOAD_ID = {first.UploadId} AND CAPTURE_NO = 2"))!,
+                (DateTimeOffset)(await Sql($"SELECT START_TIME FROM dbo.SPPCT007_BEK WHERE UPLOAD_ID = {first.UploadId} AND CAPTURE_NO = 2"))!,
                 "start time stored exactly (ticks and offset)");
-            Assert.Equal(1_760_600_000_002L, (long)(await Sql($"SELECT TS_MS FROM dbo.CT007_MEASUREMENT_UPLOAD_RECORD WHERE UPLOAD_ID = {first.UploadId} AND CAPTURE_NO = 2"))!,
+            Assert.Equal(1_760_600_000_002L, (long)(await Sql($"SELECT TS_MS FROM dbo.SPPCT007_BEK WHERE UPLOAD_ID = {first.UploadId} AND CAPTURE_NO = 2"))!,
                 "device timestamp stored");
-            Assert.Equal(25.0m, (decimal)(await Sql($"SELECT STEP_CM FROM dbo.CT007_MEASUREMENT_UPLOAD_RECORD WHERE UPLOAD_ID = {first.UploadId} AND CAPTURE_NO = 1"))!,
+            Assert.True(await Sql($"SELECT HDM_RAW FROM dbo.SPPCT007_BEK WHERE UPLOAD_ID = {first.UploadId} AND CAPTURE_NO = 2") is DBNull,
+                "missing device value stored as NULL");
+            Assert.Equal(25.0m, (decimal)(await Sql($"SELECT STEP_CM FROM dbo.SPPCT007_BEK WHERE UPLOAD_ID = {first.UploadId} AND CAPTURE_NO = 1"))!,
                 "step in cm from the interval");
-            Assert.Equal("CORP\\creator|CORP\\uploader|CORP\\verified",
-                (string)(await Sql($"SELECT CREATED_USERNAME + '|' + UPLOADING_USERNAME + '|' + UPLOADED_BY_VERIFIED FROM dbo.CT007_MEASUREMENT_UPLOAD WHERE UPLOAD_ID = {first.UploadId}"))!,
-                "user names");
+            Assert.Equal(@"DH-001|CORP\creator|CORP\uploader|CORP\verified",
+                (string)(await Sql($"SELECT TOP (1) DRILLHOLE + '|' + CREATED_USERNAME + '|' + UPLOADING_USERNAME + '|' + UPLOADED_BY_VERIFIED FROM dbo.SPPCT007_BEK WHERE UPLOAD_ID = {first.UploadId}"))!,
+                "upload information on each row");
 
             // A retry (e.g. after a client timeout) finds the stored dataset.
             var retry = await repository.SaveAsync(request, request.Fingerprint(), null, CancellationToken.None);
-            Assert.True(retry.AlreadyUploaded && retry.UploadId == first.UploadId, "retry: the earlier upload");
-            Assert.Equal(1, (int)(await Sql("SELECT COUNT(*) FROM dbo.CT007_MEASUREMENT_UPLOAD"))!, "one session");
-            Assert.Equal(3, (int)(await Sql("SELECT COUNT(*) FROM dbo.CT007_MEASUREMENT_UPLOAD_RECORD"))!, "no duplicate records");
+            Assert.True(retry.AlreadyUploaded && retry.UploadId == first.UploadId && retry.RecordCount == 3, "retry: the earlier upload");
+            Assert.Equal(3, (int)(await Sql("SELECT COUNT(*) FROM dbo.SPPCT007_BEK"))!, "no duplicate rows");
 
             // Overlapping captures of the same desktop session.
             var overlapping = Request(4);
             var conflict = await Assert.ThrowsAsync<MeasurementUploadConflictException>(
                 () => repository.SaveAsync(overlapping, overlapping.Fingerprint(), null, CancellationToken.None), "overlap");
             Assert.Sequence(new[] { 1, 2, 3 }, conflict.CaptureNumbers, "conflicting captures");
+            Assert.Equal(3, (int)(await Sql("SELECT COUNT(*) FROM dbo.SPPCT007_BEK"))!, "conflict: nothing inserted");
 
-            // A failure while inserting records rolls back the session row too.
-            await Sql("ALTER TABLE dbo.CT007_MEASUREMENT_UPLOAD_RECORD ADD CONSTRAINT CK_TEST_FAIL CHECK (CAPTURE_NO <> 3)");
+            // The Data Viewer procedures read what was stored.
+            var viewer = new UploadedMeasurementRepository(configuration);
+            var drillholes = await viewer.GetDrillholesAsync(CancellationToken.None);
+            Assert.Equal(1, drillholes.Count, "one drillhole");
+            var drillhole = drillholes[0];
+            Assert.True(drillhole is { HoleId: "DH-001", ProjectCode: "North Ridge", Campaign: "2024", UploadCount: 1, RecordCount: 3 }, "drillhole summary");
+            var rows = await viewer.GetRecordsAsync("DH-001", 2, CancellationToken.None);
+            Assert.Sequence(new[] { 1, 2 }, rows.Select(r => r.CaptureNumber), "records by depth, limited");
+
+            // A failing row rolls the whole upload back.
+            await Sql("ALTER TABLE dbo.SPPCT007_BEK ADD CONSTRAINT CK_TEST_FAIL CHECK (CAPTURE_NO <> 3)");
             var failing = Request(3, Guid.NewGuid());
             await Assert.ThrowsAsync<SqlException>(() => repository.SaveAsync(failing, failing.Fingerprint(), null, CancellationToken.None), "third record fails");
-            Assert.Equal(1, (int)(await Sql("SELECT COUNT(*) FROM dbo.CT007_MEASUREMENT_UPLOAD"))!, "rolled back: no session row");
-            Assert.Equal(3, (int)(await Sql("SELECT COUNT(*) FROM dbo.CT007_MEASUREMENT_UPLOAD_RECORD"))!, "rolled back: no partial records");
+            Assert.Equal(3, (int)(await Sql("SELECT COUNT(*) FROM dbo.SPPCT007_BEK"))!, "rolled back: no partial rows");
         }
         finally
         {

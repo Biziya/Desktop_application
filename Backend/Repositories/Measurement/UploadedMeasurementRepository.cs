@@ -3,43 +3,35 @@ using Microsoft.Data.SqlClient;
 
 namespace Backend.Repositories.Measurement;
 
-/// <summary>
-/// Reads dbo.CT007_MEASUREMENT_UPLOAD and dbo.CT007_MEASUREMENT_UPLOAD_RECORD (Database/Migrations/001). SELECT only.
-/// </summary>
+/// <summary>Reads the SPP CT007 table (<see cref="SppCt007Database.Table"/>) with parameterized SELECTs. Never writes.</summary>
 public sealed class UploadedMeasurementRepository(IConfiguration configuration) : IUploadedMeasurementRepository
 {
     // A drillhole uploaded several times may have had its project or campaign corrected in between: the latest wins.
-    private const string DrillholesQuery = """
-        SELECT u.DRILLHOLE,
-               latest.PROJECT,
-               latest.CAMPAIGN,
-               COUNT(*) AS UPLOADS,
-               SUM(u.RECORD_COUNT) AS RECORDS,
-               MAX(u.UPLOADED_AT) AS LAST_UPLOADED_AT
-        FROM dbo.CT007_MEASUREMENT_UPLOAD u
-        CROSS APPLY (
-            SELECT TOP (1) l.PROJECT, l.CAMPAIGN
-            FROM dbo.CT007_MEASUREMENT_UPLOAD l
-            WHERE l.DRILLHOLE = u.DRILLHOLE
-            ORDER BY l.UPLOADED_AT DESC, l.UPLOAD_ID DESC
-        ) latest
-        GROUP BY u.DRILLHOLE, latest.PROJECT, latest.CAMPAIGN
-        ORDER BY u.DRILLHOLE;
+    private const string DrillholesQuery = $"""
+        WITH totals AS (
+            SELECT DRILLHOLE, COUNT(DISTINCT UPLOAD_ID) AS UPLOADS, COUNT(*) AS RECORDS, MAX(UPLOADED_AT) AS LAST_UPLOADED_AT
+            FROM {SppCt007Database.Table}
+            GROUP BY DRILLHOLE
+        ), latest AS (
+            SELECT DRILLHOLE, PROJECT, CAMPAIGN,
+                   ROW_NUMBER() OVER (PARTITION BY DRILLHOLE ORDER BY UPLOADED_AT DESC, UPLOAD_ID DESC) AS N
+            FROM {SppCt007Database.Table}
+        )
+        SELECT t.DRILLHOLE, l.PROJECT, l.CAMPAIGN, t.UPLOADS, t.RECORDS, t.LAST_UPLOADED_AT
+        FROM totals t
+        JOIN latest l ON l.DRILLHOLE = t.DRILLHOLE AND l.N = 1
+        ORDER BY t.DRILLHOLE;
         """;
 
-    private const string RecordsQuery = """
-        SELECT TOP (@limit)
-               r.SOURCE_SESSION_ID, r.CAPTURE_NO, r.START_TIME, r.END_TIME, r.SAMPLE_COUNT,
-               r.DEPTH_FROM_M, r.DEPTH_TO_M, r.TS_MS, r.COUNT0, r.COUNT0_RAW, r.HDM, r.HDM_RAW, r.DOSE_RATE,
-               u.UPLOAD_ID, u.OPERATOR, u.UPLOADED_AT
-        FROM dbo.CT007_MEASUREMENT_UPLOAD_RECORD r
-        JOIN dbo.CT007_MEASUREMENT_UPLOAD u ON u.UPLOAD_ID = r.UPLOAD_ID
-        WHERE u.DRILLHOLE = @drillhole
-        ORDER BY r.DEPTH_FROM_M, r.DEPTH_TO_M, u.UPLOADED_AT, r.CAPTURE_NO;
+    private const string RecordsQuery = $"""
+        SELECT TOP (@Limit)
+               SOURCE_SESSION_ID, CAPTURE_NO, START_TIME, END_TIME, SAMPLE_COUNT,
+               DEPTH_FROM_M, DEPTH_TO_M, TS_MS, COUNT0, COUNT0_RAW, HDM, HDM_RAW, DOSE_RATE,
+               UPLOAD_ID, OPERATOR, UPLOADED_AT
+        FROM {SppCt007Database.Table}
+        WHERE DRILLHOLE = @Drillhole
+        ORDER BY DEPTH_FROM_M, DEPTH_TO_M, UPLOADED_AT, CAPTURE_NO;
         """;
-
-    // 208: invalid object name, i.e. the migration has not created the tables yet.
-    private const int InvalidObjectName = 208;
 
     private readonly string _connectionString = configuration.GetConnectionString("DefaultConnection") is { Length: > 0 } configured
         ? configured
@@ -59,8 +51,8 @@ public sealed class UploadedMeasurementRepository(IConfiguration configuration) 
     public Task<IReadOnlyList<UploadedRecordResponse>> GetRecordsAsync(string drillhole, int limit, CancellationToken cancellationToken) =>
         QueryAsync(RecordsQuery, parameters =>
         {
-            parameters.Add("@drillhole", System.Data.SqlDbType.NVarChar, 100).Value = drillhole;
-            parameters.Add("@limit", System.Data.SqlDbType.Int).Value = limit;
+            parameters.Add("@Drillhole", System.Data.SqlDbType.NVarChar, 100).Value = drillhole;
+            parameters.Add("@Limit", System.Data.SqlDbType.Int).Value = limit;
         }, reader => new UploadedRecordResponse(
             SessionId: reader.GetGuid(0),
             CaptureNumber: reader.GetInt32(1),
@@ -98,7 +90,7 @@ public sealed class UploadedMeasurementRepository(IConfiguration configuration) 
 
             return rows;
         }
-        catch (SqlException error) when (error.Number == InvalidObjectName)
+        catch (SqlException error) when (SppCt007Database.IsMissingObject(error))
         {
             throw new UploadTablesMissingException(error);
         }

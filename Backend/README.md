@@ -55,8 +55,8 @@ Without it, the drillhole and upload endpoints fail with a message that says wha
 
 ## Measurement upload API (Upload Data page)
 
-`POST /api/measurements/upload` (tag **Measurement**) stores one measurement session imported from a CSV in the
-central database (`ConnectionStrings:DefaultConnection`).
+`POST /api/measurements/upload` (tag **Measurement**) stores one measurement session imported from a CSV in the single SPP CT007 table
+`dbo.SPPCT007_BEK` (`ConnectionStrings:DefaultConnection`).
 
 ```json
 {
@@ -91,43 +91,58 @@ required; field lengths; 1–10,000 records; Capture No > 0 and unique; start/en
 sample count ≥ 0; depths 0–100,000 m with at most 3 decimals and `depthTo > depthFrom`; `tsMs` ≥ 0; finite numbers.
 
 **Duplicate prevention.** The server computes a SHA-256 fingerprint of the dataset (session id, metadata and every
-record; not the uploading user) and `DATASET_HASH` is unique, so a request repeated after a client timeout, or the same
-file uploaded again by anyone, returns the stored upload instead of inserting it twice. Independently,
+record; not the uploading user), stored as `DATASET_HASH` on every row. A request repeated after a client timeout, or the
+same file uploaded again by anyone, returns the stored upload instead of inserting it twice. Independently,
 `(SOURCE_SESSION_ID, CAPTURE_NO)` is unique, so a capture is stored once even if it arrives in another file (e.g. a later
 export of the same drillhole session that also contains new captures): that upload is refused with 409 and the user
 removes the already uploaded rows on the Upload Data page. Drillhole alone is not used, because one drillhole can have
-several sessions. Lookups run under `UPDLOCK, HOLDLOCK`, so concurrent identical requests are serialised.
+several sessions. The checks run under `UPDLOCK, HOLDLOCK`, so concurrent identical requests are serialised.
 
-**Transaction.** The session row and all its records are inserted in one transaction (parameterized SQL); any failure
-rolls everything back.
+**One call, one transaction.** The backend calls `dbo.SPPCT007_BEK_Upload` once per upload, with every row in a
+table-valued parameter (`dbo.SPPCT007_BEK_RECORD`). The procedure checks duplicates and inserts all rows with one
+set-based `INSERT … SELECT` inside one transaction (`XACT_ABORT ON`): any failure stores nothing.
 
 **Identity.** The backend has no authentication of its own. `createdUsername` and `uploadingUsername` are stored as
 *declared by the app* and are not treated as an authenticated identity. If the backend is hosted with Windows
 authentication (e.g. IIS / Negotiate), the authenticated name is stored separately in `UPLOADED_BY_VERIFIED`;
 otherwise that column is NULL.
 
-### Database migration (required once)
+### Database setup (by hand): `dbo.SPPCT007_BEK` on `ACQMN01_DEV`
 
-Run `Database/Migrations/001_CreateMeasurementUploadTables.sql` on the central database (`ACQMN01`) with an account
-allowed to create tables. It creates `dbo.CT007_MEASUREMENT_UPLOAD` (one row per upload: fingerprint, source session,
-metadata, user names, time, record count) and `dbo.CT007_MEASUREMENT_UPLOAD_RECORD` (the rows, with original
-timestamps, depths, computed `STEP_CM`, `TS_MS` and device values; `COUNT0` = CPS). It is safe to run again. The
-backend's login then needs `SELECT` and `INSERT` on both tables. Until the script has run, uploads answer 503.
+The backend never creates or changes database objects. It inserts only by calling `dbo.SPPCT007_BEK_Upload`, and reads
+`dbo.SPPCT007_BEK` with parameterized `SELECT`s for the Data Viewer table. The table already exists; add the rest by
+running `Database/Migrations/001_CreateSppCt007.sql` in SSMS (batches are separated by `GO`; safe to run again, and the
+table part is skipped because the table exists):
+
+| Object | Purpose |
+|---|---|
+| `dbo.SPPCT007_BEK` | The table (already created): one row per measurement (capture), with the upload's information (drillhole, project, campaign, operator, notes, user names, `UPLOAD_ID`, `DATASET_HASH`, `UPLOADED_AT`) on each row; original timestamps, depths (m), computed `STEP_CM`, `TS_MS` and device values (`COUNT0` = CPS). |
+| `IX_SPPCT007_BEK_HASH`, `IX_SPPCT007_BEK_DRILLHOLE` | Indexes for the duplicate check and the Data Viewer. |
+| `dbo.SPPCT007_BEK_UPLOAD_SEQ` | Sequence giving each upload its `UPLOAD_ID`. |
+| `dbo.SPPCT007_BEK_RECORD` | Table type of the rows sent in one upload (holds no data). |
+| `dbo.SPPCT007_BEK_Upload` | Inserts an upload (answers `Stored`, `AlreadyUploaded` or `Conflict`). |
+| Role `SPPCT007_APP` | `EXECUTE` on the procedure and the type, `SELECT` on the table, nothing else. |
+
+**Permissions.** Give the backend its own SQL login and make it a member of `SPPCT007_APP` only (the commands are at the
+end of the script). It gets no `INSERT`, `UPDATE` or `DELETE` on the table: rows are written only by the procedure
+(ownership chaining), and nothing updates or deletes rows. Check: as that login, a direct `INSERT INTO dbo.SPPCT007_BEK`
+must be denied. Use `Encrypt=True` in its connection string (`TrustServerCertificate=True` on dev only).
+
+The object names are also in `Repositories/Measurement/SppCt007Database.cs`; rename both together (test BE-DB-02 checks
+they match). Until the objects exist, uploads and the Data Viewer answer `503` *"The SPP CT007 table has not been
+created on the database yet"* (SQL errors 208, 2812 or 2715).
 
 ## Uploaded data API (Data Viewer page)
 
-Read-only, tag **Measurement**: SELECT only, over the same two tables as the upload.
+Read-only, tag **Measurement**: parameterized `SELECT`s on `dbo.SPPCT007_BEK`.
 
 | Endpoint | Response |
 |---|---|
 | `GET /api/measurements/uploaded/drillholes` | `[{ "holeId", "projectCode", "campaign", "uploadCount", "recordCount", "lastUploadedAt" }]`, by Hole ID; project and campaign come from the drillhole's latest upload |
 | `GET /api/measurements/uploaded/records?drillhole=DH-001` | `[{ "sessionId", "captureNumber", "startTime", "endTime", "sampleCount", "depthFrom", "depthTo", "tsMs", "count0", "count0Raw", "hdm", "hdmRaw", "doseRate", "uploadId", "operator", "uploadedAt" }]`, by depth, at most 10,000 rows. `400` without a drillhole (or one longer than 100 characters) |
 
-Both answer `503` with *"The upload tables have not been created on the central database yet"* until
-`001_CreateMeasurementUploadTables.sql` has run (SQL error 208), and `503` *"The measurement database is unavailable"*
-for any other SQL Server failure (logged; no details in the answer). The backend login needs `SELECT` on both tables.
-`Database/Migrations/002_IndexUploadDrillhole.sql` (optional, safe to run again) adds an index on `DRILLHOLE` for these
-queries.
+Both answer `503` with the "not created yet" text until the script has run, and `503` *"The measurement database is
+unavailable"* for any other SQL Server failure (logged; no details in the answer).
 
 ## Windows requirements (Bluetooth API)
 

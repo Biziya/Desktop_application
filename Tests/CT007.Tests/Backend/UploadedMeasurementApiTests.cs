@@ -54,7 +54,7 @@ public static class UploadedMeasurementApiTests
             var body = await response.Content.ReadAsStringAsync();
 
             Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode, "status");
-            Assert.Contains("have not been created on the central database yet", body, "tables missing text");
+            Assert.Contains(UploadedMeasurementController.TablesMissingMessage, body, "table missing text");
             Assert.False(body.Contains("Invalid object name", StringComparison.Ordinal), "no SQL details");
             Assert.True(backend.Logs.Entries.Any(e => e.Level == LogLevel.Warning && e.Category.EndsWith("UploadedMeasurementController", StringComparison.Ordinal)),
                 "warning logged");

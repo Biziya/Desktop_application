@@ -10,7 +10,7 @@ public sealed record UploadedDrillholeResponse(
     DateTimeOffset LastUploadedAt);
 
 /// <summary>
-/// One uploaded measurement row (dbo.CT007_MEASUREMENT_UPLOAD_RECORD) with the upload it came from. Count0 is CPS, as on
+/// One uploaded measurement row (dbo.SPPCT007_BEK) with the upload it came from. Count0 is CPS, as on
 /// the Measurement page; device values may be null.
 /// </summary>
 public sealed record UploadedRecordResponse(
