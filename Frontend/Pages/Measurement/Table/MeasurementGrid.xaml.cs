@@ -12,6 +12,11 @@ public partial class MeasurementGrid : UserControl
     public static readonly DependencyProperty EmptyTextProperty =
         DependencyProperty.Register(nameof(EmptyText), typeof(string), typeof(MeasurementGrid), new PropertyMetadata(""));
 
+    /// <summary>False hides the Delete column (read-only tables such as the Data Viewer).</summary>
+    public static readonly DependencyProperty ShowDeleteProperty =
+        DependencyProperty.Register(nameof(ShowDelete), typeof(bool), typeof(MeasurementGrid),
+            new PropertyMetadata(true, (grid, e) => ((MeasurementGrid)grid).DeleteColumn.Visibility = (bool)e.NewValue ? Visibility.Visible : Visibility.Collapsed));
+
     public MeasurementGrid()
     {
         InitializeComponent();
@@ -20,6 +25,15 @@ public partial class MeasurementGrid : UserControl
         // The grid's own item view follows whatever Results the DataContext provides, for as long as the grid exists.
         ((INotifyCollectionChanged)ResultsGrid.Items).CollectionChanged += OnResultsChanged;
     }
+
+    public bool ShowDelete
+    {
+        get => (bool)GetValue(ShowDeleteProperty);
+        set => SetValue(ShowDeleteProperty, value);
+    }
+
+    // Declared last in MeasurementGrid.xaml.
+    private DataGridColumn DeleteColumn => ResultsGrid.Columns[^1];
 
     /// <summary>Shown over the empty table.</summary>
     public string EmptyText

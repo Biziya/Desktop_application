@@ -10,11 +10,12 @@ using Frontend.Calculation.CoreInformation.MeasurementDatabase;
 using Frontend.Calculation.Measurement;
 using Frontend.Config;
 using Frontend.Pages.CoreInformation;
+using Frontend.Pages.DataViewer;
 using Frontend.Pages.Measurement;
 using Frontend.Pages.Measurement.CapturePanel;
 using Frontend.Pages.Monitoring;
-using Frontend.Pages.SavedData;
 using Frontend.Pages.UploadData;
+using Frontend.Shared.Help;
 using Frontend.Shared.Infrastructure;
 using Frontend.Windows.ConfirmationWindow;
 
@@ -27,14 +28,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly DataRetention? retention;
     private readonly CancellationTokenSource lifetime = new();
     private ObservableObject currentPage;
-    private bool isSidebarExpanded = true;
 
     public MainViewModel()
         : this(new SqliteMeasurementRepository(SqliteMeasurementRepository.DefaultPath), ApiSettings.LoadConfigured(),
             DeviceSettings.Load(DeviceSettings.DefaultPath),
             alarmSettings: Resource<CapturePanelSettings.AlarmSettings>(CapturePanelSettings.AlarmResource),
             monitoringSettings: Resource<MonitoringSettings>(MonitoringSettings.Resource),
-            retentionSettings: Resource<DataRetentionSettings>(DataRetentionSettings.Resource))
+            retentionSettings: Resource<DataRetentionSettings>(DataRetentionSettings.Resource),
+            helpSettings: Resource<HelpSettings>(HelpSettings.Resource))
     {
     }
 
@@ -45,6 +46,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     /// <param name="dialogs">Confirmations and file dialogs; null shows the real windows (tests pass a fake).</param>
     /// <param name="monitoringSettings">Monitoring.yaml; null uses the defaults.</param>
     /// <param name="retentionSettings">data-retention.yaml; null: old data is never deleted (tests).</param>
+    /// <param name="helpSettings">help.yaml; null: the Help panel is empty (tests).</param>
     public MainViewModel(
         IMeasurementRepository repository,
         ApiSettings apiSettings,
@@ -55,7 +57,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         CapturePanelSettings.AlarmSettings? alarmSettings = null,
         IDialogService? dialogs = null,
         MonitoringSettings? monitoringSettings = null,
-        DataRetentionSettings? retentionSettings = null)
+        DataRetentionSettings? retentionSettings = null,
+        HelpSettings? helpSettings = null)
     {
         dialogs ??= new DialogService();
 
@@ -109,10 +112,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             retention = new DataRetention(repository.DatabasePath, retentionSettings);
         }
 
-        SavedData = new SavedDataViewModel(
-            new SavedDataQueries(repository.DatabasePath),
-            retentionSettings?.Description ?? "Automatic deletion of old measurements is off.",
-            Toasts);
+        DataViewer = new DataViewerViewModel(new UploadedMeasurementsClient(api), Backend);
 
         // While measuring, the drillhole cannot be changed or cleared (Stop first).
         Measurement.PropertyChanged += (_, e) =>
@@ -131,14 +131,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             new NavigationItem("Core Information", "CoreIcon", Core),
             new NavigationItem("Measurement", "MeasurementIcon", Measurement),
             new NavigationItem("Monitoring", "MonitoringIcon", Monitoring),
-            new NavigationItem("Saved Data", "SavedDataIcon", SavedData),
-            new NavigationItem("Upload Data", "UploadIcon", UploadData)
+            new NavigationItem("Upload Data", "UploadIcon", UploadData),
+            new NavigationItem("Data Viewer", "DataViewerIcon", DataViewer)
         ];
         currentPage = Core;
         Pages[0].IsSelected = true;
 
-        ToggleSidebarCommand = new RelayCommand(_ => IsSidebarExpanded = !IsSidebarExpanded);
         ShowPageCommand = new RelayCommand(p => ShowPage((p as NavigationItem)?.Page ?? p as ObservableObject));
+        Help = new HelpPanel(helpSettings);
         Backend.Start();
         Devices.Start();
 
@@ -164,33 +164,20 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     /// <summary>Live CT008 detector status and 5-second samples.</summary>
     public MonitoringViewModel Monitoring { get; }
 
-    /// <summary>Browse the sessions and captures stored in measurements.db.</summary>
-    public SavedDataViewModel SavedData { get; }
-
     /// <summary>Import a measurement CSV, review it and upload it to the central database.</summary>
     public UploadDataViewModel UploadData { get; }
+
+    /// <summary>The measurements uploaded to the central database, by drillhole (read-only).</summary>
+    public DataViewerViewModel DataViewer { get; }
+
+    /// <summary>What each button of the current page does (Help button, F1).</summary>
+    public HelpPanel Help { get; }
 
     /// <summary>The sidebar, in display order.</summary>
     public IReadOnlyList<NavigationItem> Pages { get; }
 
     /// <summary>Shows a page; its parameter is a <see cref="NavigationItem"/> or a page view model.</summary>
     public RelayCommand ShowPageCommand { get; }
-
-    public RelayCommand ToggleSidebarCommand { get; }
-
-    public bool IsSidebarExpanded
-    {
-        get => isSidebarExpanded;
-        private set
-        {
-            if (Set(ref isSidebarExpanded, value))
-            {
-                Changed(nameof(SidebarToggleLabel));
-            }
-        }
-    }
-
-    public string SidebarToggleLabel => IsSidebarExpanded ? "Collapse sidebar" : "Expand sidebar";
 
     /// <summary>
     /// The page shown. The sidebar selection is derived from it (never a separate flag), so exactly one item is
@@ -213,6 +200,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 item.IsSelected = item.Page == value;
             }
 
+            Help?.Show(CurrentTitle);
+
             (previous as INavigationAware)?.OnHidden();
             (value as INavigationAware)?.OnShown();
         }
@@ -228,6 +217,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public bool IsShown(ObservableObject page) => CurrentPage == page;
 
+    /// <summary>Opens the Help panel for the page shown.</summary>
+    public void ShowHelp() => Help.Open(CurrentTitle);
+
+    private string CurrentTitle => Pages.FirstOrDefault(p => p.Page == CurrentPage)?.Title ?? "";
+
     public void Dispose()
     {
         lifetime.Cancel();
@@ -240,7 +234,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         api.Dispose();
     }
 
-    // At start-up and then every CheckInterval. The deletion runs off the UI thread; the toast and the refreshes run
+    // At start-up and then every CheckInterval. The deletion runs off the UI thread; the toast and the refresh run
     // back on it.
     private async Task RunRetentionAsync(DataRetention job, CancellationToken token)
     {
@@ -256,11 +250,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                     Toasts.Information(
                         $"Removed {removed} session{(removed == 1 ? "" : "s")} with no capture in the last {job.Settings.RetentionDays} days.");
                     _ = Core.RefreshMeasuredAsync();
-
-                    if (CurrentPage == SavedData)
-                    {
-                        SavedData.RefreshCommand.Execute(null);
-                    }
                 }
             }
             catch (OperationCanceledException)

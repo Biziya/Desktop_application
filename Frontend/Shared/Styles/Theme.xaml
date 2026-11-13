@@ -47,7 +47,11 @@
     <Geometry x:Key="CoreIcon">M4,2 L16,2 20,6 20,22 4,22 Z M16,2 L16,6 20,6 M8,10 L16,10 M8,14 L16,14 M8,18 L13,18</Geometry>
     <Geometry x:Key="MeasurementIcon">M4,20 L4,12 7,12 7,20 Z M10,20 L10,4 13,4 13,20 Z M16,20 L16,8 19,8 19,20 Z</Geometry>
     <Geometry x:Key="MonitoringIcon">M2,12 L6,12 9,4 15,20 18,12 22,12</Geometry>
-    <Geometry x:Key="SavedDataIcon">M4,5 A8,3 0 1 0 20,5 A8,3 0 1 0 4,5 Z M4,5 L4,19 A8,3 0 0 0 20,19 L20,5 M4,12 A8,3 0 0 0 20,12</Geometry>
+    <Geometry x:Key="DataViewerIcon">M4,5 A8,3 0 1 0 20,5 A8,3 0 1 0 4,5 Z M4,5 L4,19 A8,3 0 0 0 20,19 L20,5 M4,12 A8,3 0 0 0 20,12</Geometry>
+    <Geometry x:Key="HelpIcon">M2,12 A10,10 0 1 0 22,12 A10,10 0 1 0 2,12 Z M9.2,9.2 A2.9,2.9 0 1 1 13.4,11.8 C12.4,12.3 12,13 12,14 M12,17.4 L12,17.6</Geometry>
+    <Geometry x:Key="BellIcon">M6,16 L6,10 A6,6 0 0 1 18,10 L18,16 20,18 4,18 Z M10,21 A2,2 0 0 0 14,21</Geometry>
+    <Geometry x:Key="BellOffIcon">M6,16 L6,10 A6,6 0 0 1 18,10 L18,16 20,18 4,18 Z M10,21 A2,2 0 0 0 14,21 M3,3 L21,21</Geometry>
+    <Geometry x:Key="CloseIcon">M6,6 L18,18 M18,6 L6,18</Geometry>
     <Geometry x:Key="UploadIcon">M12,15 L12,3 M7,8 L12,3 17,8 M4,15 L4,21 20,21 20,15</Geometry>
     <Geometry x:Key="ImportIcon">M12,3 L12,15 M7,10 L12,15 17,10 M4,15 L4,21 20,21 20,15</Geometry>
     <Geometry x:Key="CheckIcon">M4,12 L9,17 20,6</Geometry>
@@ -123,16 +127,15 @@
         <Setter Property="Margin" Value="0,0,0,16"/>
     </Style>
 
-    <!-- ===== Page header: every page opens with a title, a one-line description and its actions on the right. ===== -->
+    <!-- ===== Page header: every page opens with its title, its actions and Help on the right. ===== -->
     <Style x:Key="PageHeader" TargetType="Grid">
         <Setter Property="Margin" Value="0,0,0,16"/>
+        <Setter Property="MinHeight" Value="{StaticResource ControlHeight}"/>
     </Style>
     <Style x:Key="PageTitle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="22"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-    </Style>
-    <Style x:Key="PageSubtitle" TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
-        <Setter Property="Margin" Value="0,2,0,0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <!-- Card heading row: title on the left, a short count or note on the right. -->
     <Style x:Key="CardTitle" TargetType="TextBlock">
@@ -451,6 +454,28 @@
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="VerticalAlignment" Value="Top"/>
     </Style>
+    <!-- "? Help" at the right of every page header. ApplicationCommands.Help is handled by MainWindow (F1 does the same). -->
+    <Style x:Key="HelpButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="Command" Value="ApplicationCommands.Help"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Margin" Value="10,0,0,0"/>
+        <Setter Property="ToolTip" Value="What each button on this page does (F1)"/>
+        <Setter Property="AutomationProperties.Name" Value="Help"/>
+        <Setter Property="ContentTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource HelpIcon}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0"
+                              StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Help" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
     <Style x:Key="DeleteButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Foreground" Value="{StaticResource Danger}"/>
         <Setter Property="Background" Value="Transparent"/>
@@ -614,7 +639,7 @@
         <Setter Property="Content" Value="✕"/>
     </Style>
 
-    <!-- ===== Read-only data tables (Monitoring, Saved Data): row lines only, grey header, soft-blue selection.
+    <!-- ===== Read-only data tables (Monitoring): row lines only, grey header, soft-blue selection.
          The Measurement table builds on these with its own YAML sizes (MeasurementGrid.xaml). ===== -->
     <Style x:Key="DataTableHeader" TargetType="DataGridColumnHeader">
         <Setter Property="Background" Value="{StaticResource SubtleSurface}"/>

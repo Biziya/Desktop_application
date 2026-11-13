@@ -6,11 +6,10 @@
     <!-- Both sections share this page's DataContext (CoreInformationViewModel). -->
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
-            <StackPanel Margin="0,0,0,16">
+            <Grid Style="{StaticResource PageHeader}">
                 <TextBlock Text="Core Information" Style="{StaticResource PageTitle}"/>
-                <TextBlock Text="Choose the drillhole to measure and check the detector and databases on this laptop."
-                           Style="{StaticResource PageSubtitle}"/>
-            </StackPanel>
+                <Button Style="{StaticResource HelpButton}"/>
+            </Grid>
             <drillhole:DrillholeInformationView/>
             <device:DeviceStatusView/>
         </StackPanel>

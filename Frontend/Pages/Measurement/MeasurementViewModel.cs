@@ -44,6 +44,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     private readonly CpsAlarm alarm;
     private string threshold;
     private double? thresholdCps;
+    private bool isAlarmMuted;
+    private bool isAlarmTriggered;
 
     // Database writes run one after another, in the order they were requested. Never faults.
     private Task persistence = Task.CompletedTask;
@@ -100,6 +102,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
         NewMeasurementCommand = new RelayCommand(_ => NewMeasurement(), _ => !IsMeasurementModeActive && session is not null);
 
+        ToggleAlarmMuteCommand = new RelayCommand(_ => IsAlarmMuted = !IsAlarmMuted);
+
         Results.CollectionChanged += (_, change) =>
         {
             AssignDemoTsMs(change.NewItems);
@@ -122,6 +126,9 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     /// <summary>Closes the current drillhole: the next Save &amp; Continue opens the session of the drillhole entered then.</summary>
     public RelayCommand NewMeasurementCommand { get; }
+
+    /// <summary>The bell beside Threshold: mutes or unmutes the alarm sound.</summary>
+    public RelayCommand ToggleAlarmMuteCommand { get; }
 
     /// <summary>
     /// DEMO / PREVIEW MODE: rows without a device ts_ms get a random one so the table can be previewed.
@@ -242,6 +249,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             {
                 thresholdCps = CpsAlarm.TryParseThreshold(value, out var parsed) ? parsed : null;
                 Changed(nameof(IsThresholdInvalid));
+                IsAlarmTriggered = false;
+                AlarmChanged();
             }
         }
     }
@@ -250,6 +259,50 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     public bool IsThresholdInvalid => threshold.Trim().Length > 0 && thresholdCps is null;
 
     public const string ThresholdError = "Threshold: enter a CPS value of 0 or more (at most 2 decimals), or leave it empty for no alarm.";
+
+    /// <summary>
+    /// Mutes the alarm sound only: rows above the threshold still turn the bell red. Kept in memory, so the app always
+    /// starts with the sound on.
+    /// </summary>
+    public bool IsAlarmMuted
+    {
+        get => isAlarmMuted;
+        set
+        {
+            if (Set(ref isAlarmMuted, value))
+            {
+                AlarmChanged();
+            }
+        }
+    }
+
+    /// <summary>The last completed row was above the threshold. Cleared by the next row below it, a threshold change or
+    /// a new measurement.</summary>
+    public bool IsAlarmTriggered
+    {
+        get => isAlarmTriggered;
+        private set
+        {
+            if (Set(ref isAlarmTriggered, value))
+            {
+                AlarmChanged();
+            }
+        }
+    }
+
+    /// <summary>What the bell beside Threshold shows.</summary>
+    public AlarmState Alarm => thresholdCps is null ? AlarmState.Off
+        : IsAlarmTriggered ? AlarmState.Triggered
+        : IsAlarmMuted ? AlarmState.Muted
+        : AlarmState.Armed;
+
+    public string AlarmToolTip => Alarm switch
+    {
+        AlarmState.Off => "No alarm: enter a CPS threshold.",
+        AlarmState.Triggered => $"The last measurement was above {CpsAlarm.FormatThreshold(thresholdCps!.Value)} CPS.{(IsAlarmMuted ? " Sound muted; click to unmute." : " Click to mute.")}",
+        AlarmState.Muted => "Alarm sound muted. Click to unmute.",
+        _ => $"Alarm sounds above {CpsAlarm.FormatThreshold(thresholdCps!.Value)} CPS. Click to mute."
+    };
 
     /// <summary>Called when the user leaves the Threshold box: invalid text gets an error toast (no alarm until fixed).</summary>
     public void CommitThreshold()
@@ -409,12 +462,19 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
+    private void AlarmChanged()
+    {
+        Changed(nameof(Alarm));
+        Changed(nameof(AlarmToolTip));
+    }
+
     // Empties the table and the depth inputs; nothing stored is deleted.
     private void ClearSession()
     {
         session = null;
         nextCapture = 1;
         Results.Clear();
+        IsAlarmTriggered = false;
         Changed(nameof(SessionId));
         SetDepthInputs("", "");
     }
@@ -688,7 +748,12 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             AddSorted(row);
 
             // Once per completed row, on the CPS the table shows; the sound plays without waiting.
-            alarm.Check(row.Reading.Count0, thresholdCps);
+            IsAlarmTriggered = CpsAlarm.Exceeds(row.Reading.Count0, thresholdCps);
+
+            if (!IsAlarmMuted)
+            {
+                alarm.Check(row.Reading.Count0, thresholdCps);
+            }
 
             if (row.IsIncomplete)
             {

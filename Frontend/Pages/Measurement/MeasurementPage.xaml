@@ -12,10 +12,10 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Margin="0,0,0,16">
+        <Grid Style="{StaticResource PageHeader}">
             <TextBlock Text="Measurement" Style="{StaticResource PageTitle}"/>
-            <TextBlock Text="Start, then right-click anywhere in the window to capture each interval." Style="{StaticResource PageSubtitle}"/>
-        </StackPanel>
+            <Button Style="{StaticResource HelpButton}"/>
+        </Grid>
 
         <Border Grid.Row="1" Style="{StaticResource Card}">
             <StackPanel>

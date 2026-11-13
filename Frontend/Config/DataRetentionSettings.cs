@@ -21,11 +21,6 @@ public sealed class DataRetentionSettings
 
     public TimeSpan CheckInterval => TimeSpan.FromHours(CheckIntervalHours);
 
-    /// <summary>The sentence the Saved Data page shows under its tables.</summary>
-    public string Description => Enabled
-        ? $"Sessions with no capture in the last {RetentionDays} day{(RetentionDays == 1 ? "" : "s")} are deleted automatically."
-        : "Automatic deletion of old measurements is off (Config/data-retention.yaml).";
-
     public static DataRetentionSettings Load(string baseDirectory)
     {
         var settings = YamlSettings.Load<DataRetentionSettings>(baseDirectory, File);

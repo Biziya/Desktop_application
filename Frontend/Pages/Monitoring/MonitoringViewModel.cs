@@ -26,10 +26,8 @@ public sealed class MonitoringViewModel : ObservableObject, INavigationAware, ID
     private bool isShown;
     private bool disposed;
     private ConnectionState connection = ConnectionState.NoDatabase;
-    private string connectionText = "No database";
-    private string connectionDetail = "";
+    private string errorText = "";
     private string warningText = "";
-    private DateTimeOffset? lastPoll;
 
     public enum ConnectionState
     {
@@ -61,14 +59,11 @@ public sealed class MonitoringViewModel : ObservableObject, INavigationAware, ID
         this.clock = clock ?? (() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         interval = TimeSpan.FromMilliseconds(settings.PollIntervalMs);
         Engine = new MonitorEngine(settings);
-        ReconnectCommand = new RelayCommand(_ => Reconnect());
         SampleCommand = new RelayCommand(p => StartSample(p as DetectorRow));
         ShowCoreInformationCommand = new RelayCommand(_ => showCoreInformation());
     }
 
     public MonitorEngine Engine { get; }
-
-    public RelayCommand ReconnectCommand { get; }
 
     public RelayCommand SampleCommand { get; }
 
@@ -81,7 +76,6 @@ public sealed class MonitoringViewModel : ObservableObject, INavigationAware, ID
         {
             if (Set(ref connection, value))
             {
-                Changed(nameof(ConnectionTone));
                 Changed(nameof(HasDatabase));
             }
         }
@@ -89,19 +83,8 @@ public sealed class MonitoringViewModel : ObservableObject, INavigationAware, ID
 
     public bool HasDatabase => Connection != ConnectionState.NoDatabase;
 
-    public StatusTone ConnectionTone => Connection switch
-    {
-        ConnectionState.Connected => StatusTone.Success,
-        ConnectionState.Error => StatusTone.Danger,
-        ConnectionState.Connecting => StatusTone.Info,
-        _ => StatusTone.Neutral
-    };
-
-    /// <summary>Short status for the chip: "Connected", "Connecting", "Read error", "No database".</summary>
-    public string ConnectionText { get => connectionText; private set => Set(ref connectionText, value); }
-
-    /// <summary>Path, schema version and last poll time; or the error message.</summary>
-    public string ConnectionDetail { get => connectionDetail; private set => Set(ref connectionDetail, value); }
+    /// <summary>Why the database could not be read; empty while reads succeed.</summary>
+    public string ErrorText { get => errorText; private set => Set(ref errorText, value); }
 
     /// <summary>Response-time warning for the banner; empty when there is nothing to warn about.</summary>
     public string WarningText { get => warningText; private set => Set(ref warningText, value); }
@@ -122,13 +105,6 @@ public sealed class MonitoringViewModel : ObservableObject, INavigationAware, ID
     }
 
     public void OnHidden() => isShown = false;
-
-    public void Reconnect()
-    {
-        Engine.Reset();
-        connectedPath = null;
-        _ = PollOnceAsync();
-    }
 
     /// <summary>
     /// Reads the database once and applies the result. A poll already in progress is reused, so reads never overlap.
@@ -152,8 +128,7 @@ public sealed class MonitoringViewModel : ObservableObject, INavigationAware, ID
             }
 
             Connection = ConnectionState.NoDatabase;
-            ConnectionText = "No database";
-            ConnectionDetail = "";
+            ErrorText = "";
             Engine.Tick(clock());
             UpdateWarning();
             return;
@@ -164,8 +139,6 @@ public sealed class MonitoringViewModel : ObservableObject, INavigationAware, ID
             Engine.Reset();
             connectedPath = path;
             Connection = ConnectionState.Connecting;
-            ConnectionText = "Connecting";
-            ConnectionDetail = path;
         }
 
         var after = Engine.Cursor;
@@ -174,24 +147,21 @@ public sealed class MonitoringViewModel : ObservableObject, INavigationAware, ID
         {
             var snapshot = await Task.Run(() => read(path, after, MaxSamplesPerPoll));
 
-            // A reconnect or a database change while reading: this result belongs to the old state.
+            // The database changed (or the page reset) while reading: this result belongs to the old state.
             if (disposed || connectedPath != path || Engine.Cursor != after)
             {
                 return;
             }
 
             Engine.Apply(snapshot, clock());
-            lastPoll = DateTimeOffset.Now;
             Connection = ConnectionState.Connected;
-            ConnectionText = "Connected";
-            ConnectionDetail = $"{path}  ·  schema v{snapshot.SchemaVersion}  ·  updated {lastPoll:HH:mm:ss}";
+            ErrorText = "";
         }
         catch (Exception error)
         {
             // A locked file, a missing table or a file that moved: show it and try again on the next poll.
             Connection = ConnectionState.Error;
-            ConnectionText = "Read error";
-            ConnectionDetail = $"{error.Message} Retrying every {interval.TotalSeconds:0.#} s.";
+            ErrorText = $"Cannot read the CT008 database: {error.Message} Retrying every {interval.TotalSeconds:0.#} s.";
             Engine.Tick(clock());
         }
 

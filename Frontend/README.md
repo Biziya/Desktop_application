@@ -1,4 +1,4 @@
-# SPP CT-007 Measurement Studio
+# SPP CT007
 
 WPF / .NET 10 application. Captures read real CT007-M samples from the local Gamma Guard SQLite database (read-only); there is no simulated acquisition path. Measurement rows are stored in a local SQLite database (`Microsoft.Data.Sqlite`, the only NuGet dependency).
 
@@ -71,7 +71,7 @@ How the table shows each column — order, header, visibility, width (star share
 
 **Device values.** ts_ms, count0, count0_raw, hdm, hdm_raw and dose_rate come from the accepted Gamma Guard samples (`DeviceReading` on `CaptureData`); raw and processed values stay separate fields. **Sample** shows "accepted of expected" (e.g. "3 of 5") for an incomplete capture; CSV keeps the accepted count. Rows stored before this version keep blank device values — nothing is invented.
 
-The table builds these columns in `Table/MeasurementTableView.xaml.cs` before the Delete column. All visible columns use star widths (`MeasurementTable.yaml`, in the proportions of the earlier compact layout), so they always share the table width — no horizontal scrolling with the sidebar expanded or collapsed, and at every window size down to the 960 px minimum (minimum widths 576 px + 64 px Delete fit the ~650 px available there). Headers wrap onto two lines when a column is narrow; a value wider than its column ends in "…" and the full value is its tooltip, so nothing is cut off silently. The horizontal scrollbar stays enabled only as a safety net and is not needed in any supported layout; vertical scrolling is unchanged. Vertical grid lines separate every column and continue through the header, in the same `Line` brush as the row lines.
+The table builds these columns in `Table/MeasurementTableView.xaml.cs` before the Delete column. All visible columns use star widths (`MeasurementTable.yaml`, in the proportions of the earlier compact layout), so they always share the table width — no horizontal scrolling at every window size down to the 960 px minimum (minimum widths 576 px + 64 px Delete fit the ~650 px available there). Headers wrap onto two lines when a column is narrow; a value wider than its column ends in "…" and the full value is its tooltip, so nothing is cut off silently. The horizontal scrollbar stays enabled only as a safety net and is not needed in any supported layout; vertical scrolling is unchanged. Vertical grid lines separate every column and continue through the header, in the same `Line` brush as the row lines.
 
 **Cell display** (`Table/MeasurementCellFormat.cs`, set per column with `format` in `MeasurementTable.yaml`; table only): ts_ms (Unix milliseconds, UTC) is shown as this computer's local time `yyyy-MM-dd HH:mm:ss` (empty when missing, the raw number if out of range); count0, count0_raw, hdm, hdm_raw and dose_rate show at most two decimals (1.777777 → 1.78, 5 → 5, 1.5 → 1.5; empty when null). Body cells are right-aligned (set per column with `Alignment`); headers stay centred. Models, calculations, SQLite and CSV keep the full-precision values and Unix milliseconds. From/To keep their millimetre precision (up to three decimals in metres), since rounding would misstate the interval. ts_ms has the widest share of the table; at the narrowest window it may end in "…" with the full value as tooltip.
 
@@ -123,23 +123,35 @@ EIC's CT008 Monitor (handover of 23 Oct 2026, `SHIBA/`).
 - **When it polls.** Every `pollIntervalMs` (`Monitoring.yaml`, 1 s) while the page is shown, or while a 5-second
   sample is running. The read runs off the UI thread. Coming back to the page starts from the newest data again.
 - **States.** Logging, No data (logging but no reading for `staleAfterMs`), Stale (heartbeat older than `staleAfterMs`,
-  5 s), Disconnected (never stale), or the state as CT008 wrote it. Select a row for MAC, firmware, device session and
-  raw values.
+  5 s), Disconnected (never stale), or the state as CT008 wrote it. Clicking a row shows its MAC, firmware, device
+  session and raw values.
 - **5-second sample.** *Take sample* discards the next reading (its second began before the click) and averages the 5
   after it; results show coverage (about 5.0 s), readings and means. Incomplete after 12 s. Kept in memory only (the
   newest `samplesShown`), cleared when the app closes.
 - **Warning.** A live detector whose response time is known and not 1 s is named in a banner: 5-second samples assume
   1 s.
+- **Errors.** A database that cannot be read (locked, moved, missing table) shows one banner with the reason; reading is
+  retried every poll. There is no connection chip or Reconnect button: the page follows Core Information.
 - Code: `MonitorEngine.cs` (rules, no UI, no I/O), `MonitoringViewModel.cs` (polling, connection state),
   `GammaGuardDeviceDatabase.ReadMonitorSnapshot` (one read-only snapshot per poll). Tests: `FE-MON-*`, `FE-UI-01`.
 
-## Saved Data page and retention
+## Data Viewer page
 
-Sidebar → **Saved Data** (`Pages/SavedData/`): what this laptop has stored in `measurements.db`, read-only.
+Sidebar → **Data Viewer** (`Pages/DataViewer/`): the measurements uploaded to the central database (Upload Data page),
+read through the backend (`GET api/measurements/uploaded/drillholes` and `…/records?drillhole=`, Backend/README.md).
+Read-only; nothing on this laptop is shown here.
 
-- Sessions (one per drillhole) with capture count and last capture, newest first; search by drillhole, project or
-  operator; period filter. Selecting a session shows its captures by depth, 200 per page; selecting a capture shows
-  the raw device samples stored with it. Changes are made on the Measurement page.
+- **Drillhole card**, laid out like Core Information: a searchable Drillhole box (only drillholes with uploads; type part
+  of a Hole ID), read-only Project and Campaign (from the latest upload), and Refresh.
+- **Table**: the Measurement page's own `MeasurementGrid` (same columns, formats and widths from `MeasurementTable.yaml`)
+  with `ShowDelete="False"`. Every uploaded row of the drillhole, by depth, numbered from 1; the header shows uploads,
+  rows and the last upload time.
+- **States.** Backend offline (Retry; reloads when the backend comes back), upload tables not created yet (the backend
+  says so: `Database/Migrations/001` has not run), no uploads yet, no drillhole picked.
+- Reloads whenever the page is shown. Tests: `FE-DV-*`, `BE-DV-*`.
+
+## Data retention (measurements.db)
+
 - **Retention** (`Config/data-retention.yaml`, read at start-up):
   ```yaml
   enabled: true
@@ -150,7 +162,17 @@ Sidebar → **Saved Data** (`Pages/SavedData/`): what this laptop has stored in 
   older than `retentionDays` are deleted with their records, raw samples and depth progress, in one transaction
   (`Pages/Measurement/DataRetention.cs`). Whole sessions only, so a drillhole never loses part of its captures; the
   session open on the Measurement page is always kept. A toast says how many were removed. Only `measurements.db` is
-  touched, never the CT008 database. Tests: `FE-RET-*`, `FE-SAV-*`, `FE-UI-02`.
+  touched, never the CT008 database. Tests: `FE-RET-*`.
+
+## Sidebar, Help and version
+
+- The sidebar is always open: icon and title for Core Information, Measurement, Monitoring, Upload Data and Data Viewer
+  (in that order, `MainViewModel.Pages`). The app name and **Version** at the bottom come from `Config/application.yaml`
+  (`name`, `version`), which also sets the window title, the assembly and the installer. Raise `version` there for a
+  release: minor for a new feature or page, patch for fixes.
+- **Help** (top right of every page, or F1) opens a panel beside the page listing what each button and control of that
+  page does; Esc or × closes it, and it follows navigation. The text is `Config/help.yaml` (one section per sidebar
+  title, checked strictly at start-up; edit without rebuilding). Tests: `FE-HELP-*`, `FE-UI-03`.
 
 ## Bar chart and demo ts_ms
 
@@ -161,6 +183,10 @@ Sidebar → **Saved Data** (`Pages/SavedData/`): what this laptop has stored in 
 
 - **Threshold (CPS)** sits below Step (same width and style; Starting Depth, Step and Threshold values are right-aligned). It starts with `alarm.defaultThreshold` from `CapturePanel.yaml` (150) and can be edited at any time; empty means no alarm. Valid: a number ≥ 0 with at most two decimals (the CPS column's precision), point or comma as separator. Invalid text gets a red border and an error toast when the box is left; it never blocks Start.
 - After each completed capture, the new row's CPS (the same value the table and chart show) is compared once: **above** the threshold sounds the alarm, equal or below does not. The tone (two short beeps, frequency and length in the YAML) is generated in memory and played asynchronously (`Shared/Infrastructure/AlarmTone.cs`), so acquisition, the countdown, the row and the depth advance are unaffected; a new alarm is not started while one is still sounding, and Stop resets the alarm state (`Calculation/Measurement/CpsAlarm.cs`). A missing audio device is ignored.
+- **Bell** inside the Threshold box (left; the value is right-aligned): grey and crossed out when there is no valid
+  threshold, dark when armed, amber and crossed out when muted, red after a row above the threshold (cleared by the next
+  row below it, a threshold change or New Measurement). Clicking it mutes or unmutes the sound only; the red state is
+  still shown. Mute is not saved, so the app always starts with the sound on. Tests: `FE-ALM-*`.
 
 ## Icon
 
@@ -189,7 +215,7 @@ The frontend no longer calls `/api/core-information/bluetooth-device` or `/api/c
 - **Drillhole cache.** `DrillholeCache` keeps the last good `/drillholes` list (holeId, projectCode, campaign) in its own `DrillholeCache` table in the app's SQLite file — no IndexedDB, and separate from `MeasurementSessions`/`MeasurementRecords` (nothing joins them). On start the cached list is shown at once, then the backend is asked in the background. Only a successful response with at least one drillhole replaces the cache, in one transaction (delete + insert, all or nothing). A failure, timeout, invalid JSON or empty answer keeps the cache and shows "Showing the saved drillhole list. Could not refresh: …" with Retry. The selection and unsaved form values are never touched. With no cache and no backend the box is empty and the message says no drillholes are available, with Retry.
 - **Groups in the dropdown.** **Measured drillholes** come first: drillholes that have saved measurement rows, newest first by the latest capture Start Time (`IMeasurementRepository.LoadMeasuredDrillholesAsync`, not table order). The group is hidden when there is no history, comes back after a restart, and is refreshed after every successful save (`MeasurementViewModel.MeasurementsSaved`). **All drillholes** follows with the rest, A–Z. Each drillhole appears once. A measured drillhole missing from the current API/cache list is not offered (an already picked one keeps its details, with the "not in the latest list" note). Headings are not selectable, focusable or highlighted, and a thin line separates the groups. Search filters both groups and keeps a heading only while its group has matches. Mouse, arrow keys and Enter work as before, and picking still fills Project and Campaign.
 - **Dropdown performance (many drillholes).** The cause of the freeze was the list being rebuilt item by item on the UI thread for every keystroke and pick (one collection notification per drillhole) into a dropdown whose popup did not virtualize. Now: the list is prepared once per load off the UI thread (`DrillholeCatalog`: index by Hole ID, A–Z order, one reusable entry object per drillhole); typing is debounced (150 ms) and filtered on the thread pool; every request has a version, so a slower, older result can never replace a newer one; only the difference is applied to the bound collection (a few inserts/removes keep the selection; a large change is one Reset via `BulkObservableCollection`); a refresh with identical data changes nothing. The ComboBox uses a recycling `VirtualizingStackPanel` with item scrolling (`CanContentScroll`, also when grouping), so only visible rows get controls; the popup is limited to 280 px and scrolls. All matches stay listed (no truncation). Measured: 20,000 drillholes load in about 0.2 s; a keystroke costs the UI thread under 0.1 ms; seven fast keystrokes cause one list update.
-- **Sidebar indicator** (bottom of the sidebar, both pages): grey "Checking…" until the first answer, green **Online** when the backend answered (also with an HTTP error status, which is shown on the affected field instead), yellow **Offline** on refusal, network failure or timeout. Collapsed, the dot stays and the tooltip gives the status, URL and last check time. It reflects the backend only and is independent of the local Device Status (a disconnected CT-007 still shows Online; Offline never changes the device rows).
+- **Sidebar indicator** (bottom of the sidebar, both pages): grey "Checking…" until the first answer, green **Online** when the backend answered (also with an HTTP error status, which is shown on the affected field instead), yellow **Offline** on refusal, network failure or timeout. The tooltip gives the status, URL and last check time; the app version is shown below it. It reflects the backend only and is independent of the local Device Status (a disconnected CT-007 still shows Online; Offline never changes the device rows).
 - **Polling.** There is no health endpoint, so `BackendConnection` sends a HEAD request to the base URL every `statusIntervalSeconds` (any HTTP answer, even 404/405, means reachable; nothing is downloaded). Every other request also updates Online/Offline, and the drillhole list is never downloaded just to check connectivity. Checks never overlap (a running one is reused), the loop starts once and stops when the window closes. Navigation does not create new monitors.
 - **Loading and recovery.** The drillhole list shows its own loading / empty / error message and a Retry button. When the backend comes back Online it loads again automatically if it had failed. Form values and measurements are never cleared by a failure, and no path, device or drillhole is ever made up.
 
@@ -214,7 +240,7 @@ Calculation/
 
 ## Toasts, drillhole selection and capture duration
 
-- **Toasts** (`Shared/Infrastructure/ToastService.cs`, shown by MainWindow top-right over both pages: 16 px from the top and right edges of the content area beside the sidebar, stacked downwards 8 px apart; part of the window, so they follow resizing, sidebar collapse and page switches). Success, information and warning toasts last 3 s; errors — validation and failed operations — 5 s; × closes one at once. They take no layout space and the empty area around them is not clickable, so they never move the page or block it. A toast identical to one already shown is not added again. White card with a coloured bar and glyph: green success, blue information, amber warning, red error.
+- **Toasts** (`Shared/Infrastructure/ToastService.cs`, shown by MainWindow top-right over both pages: 16 px from the top and right edges of the content area beside the sidebar, stacked downwards 8 px apart; part of the window, so they follow resizing and page switches). Success, information and warning toasts last 3 s; errors — validation and failed operations — 5 s; × closes one at once. They take no layout space and the empty area around them is not clickable, so they never move the page or block it. A toast identical to one already shown is not added again. White card with a coloured bar and glyph: green success, blue information, amber warning, red error.
   - **Results:** Measurement deleted (only after the database delete succeeded), CSV exported.
   - **Connection changes** (`ViewModels/StatusAnnouncements.cs`), once per transition, never per check: "Backend offline …" / "Backend online again." (the backend, as the sidebar dot) and "Measurement database …", "Gamma Guard database …" (the local Device Status rows). Start-up results are not announced, except an offline backend. **Bluetooth:** after a device is selected, its first confirmed state is announced once, then each change — "CT007-M-A1 (Bluetooth) connected." / "… disconnected." (3 s) and a failed check "… status unavailable — reason" (5 s error); an unchanged state says nothing.
   - **Validation errors (5 s):** Save & Continue without a drillhole (the Drillhole box also gets a red border); Start with a missing/invalid depth; leaving a depth box with invalid text (the box border is red while it is invalid); an invalid capture duration; changing the drillhole while measuring.
@@ -231,7 +257,7 @@ Calculation/
 
 - The Bluetooth Trigger indicator is no longer shown. The trigger itself (right-click in the main window while armed) is unchanged.
 - All buttons share the base button template in `Shared/Styles/Theme.xaml`: hovering an enabled button draws a 2 px navy outer ring as an overlay, so size and content never move. Pressed (darker fill), keyboard focus (inner ring) and disabled (faded, no ring) remain distinct.
-- **Look (after the Shopeers reference).** White sidebar with a hairline divider on a light grey page (`Canvas`); white section cards with hairline borders and 12 px corners; 40 px inputs and dropdowns with light borders, 8 px corners, a darker border on hover and blue on focus. The sidebar has the brand (icon + name) top-left. The blue SPP CT-007 icon is the collapse/expand control for the sidebar (not the window), and there is no separate toggle button. It stays in the 40 px icon column, so it is visible and clickable in both states. It has a grey hover tint, a blue keyboard-focus ring (Tab, then Enter/Space) and a "Collapse sidebar" / "Expand sidebar" tooltip and accessible name; navigation items are rounded, grey on hover, and the page currently shown has a soft blue fill, blue icon and semibold text and a blue accent bar at the sidebar edge. **Current page highlight:** the selection is derived from `MainViewModel.CurrentPage` (`IsCoreSelected` / `IsMeasurementSelected`, raised whenever the page changes, so exactly one item is selected — at start-up Core Information, and after any navigation including Save & Continue). It reaches the button template through a typed attached property (`Shared/Infrastructure/SidebarItem.IsSelected`) and a plain property trigger declared after the hover trigger, so it stays on regardless of the pointer or focus and stays distinct from hover; collapsed, the fill and accent bar stay around the icon. (Before, the template compared an untyped `Tag` through a relative-source binding inside the template, which did not reliably match, so no item looked selected.) The Online/Offline indicator stays at the bottom, left-aligned under the navigation icons with the dot and text 8 px apart; collapsed, the dot and tooltip remain. Only the two existing pages are in the navigation. All colours and control styles are in `Shared/Styles/Theme.xaml` (palette at the top).
+- **Look (after the Shopeers reference).** White sidebar with a hairline divider on a light grey page (`Canvas`); white section cards with hairline borders and 12 px corners; 40 px inputs and dropdowns with light borders, 8 px corners, a darker border on hover and blue on focus. The sidebar has the brand (icon + name) top-left and is always open (no collapse: a hidden icon-only state was not discoverable); navigation items are rounded, grey on hover, and the page currently shown has a soft blue fill, blue icon and semibold text and a blue accent bar at the sidebar edge. **Current page highlight:** the selection is derived from `MainViewModel.CurrentPage` (`NavigationItem.IsSelected`, set whenever the page changes, so exactly one item is selected — at start-up Core Information, and after any navigation including Save & Continue). It reaches the button template through a typed attached property (`Shared/Infrastructure/SidebarItem.IsSelected`) and a plain property trigger declared after the hover trigger, so it stays on regardless of the pointer or focus and stays distinct from hover. (Before, the template compared an untyped `Tag` through a relative-source binding inside the template, which did not reliably match, so no item looked selected.) The Online/Offline indicator stays at the bottom, left-aligned under the navigation icons with the dot and text 8 px apart, and the version below it. All colours and control styles are in `Shared/Styles/Theme.xaml` (palette at the top).
 - **Autofill and input fixes.** (1) Picking a drillhole no longer gets undone. Replacing the dropdown's items (re-filtering after a pick, a list refresh, a Measured-group refresh) made the WPF ComboBox drop its selection and write "" into its Text binding, which cleared Drillhole, Project and Campaign. The ViewModel now ignores that echo while it rebuilds the list and then re-syncs the selection and text. In XAML, `Text` and `SelectedItem` are bound before `ItemsSource`, so leaving the page cannot push "" into the form either. (2) Text boxes have no vertical padding. The single text line is centred in the 40 px box at its natural height, so Operator, Project, Campaign, Starting Depth and Step text cannot be clipped by the fixed height. Notes keeps its 9 px top padding. (3) Depths accept a decimal point or a comma on any Windows number format and are shown with a point. (4) Depth values typed while a drillhole's session is still loading are kept on screen and stored as its progress, not overwritten by the load.
 - **Field heights.** Text boxes and dropdowns share `ControlHeight` (40 px) in `Theme.xaml`, with the same 11 px left padding, font, 1 px border and 8 px corners. Drillhole, Project, Campaign and Operator are therefore exactly the same height. Notes sets its own height, and the wrapping path boxes size to their text. Width priorities are unchanged. In the dropdown list, hover and arrow-key highlight are grey, and the selected drillhole has a soft blue fill with blue text.
 - **Measurement controls.** The Start / Stop toggle (still one button, below Starting Depth and Step) is `ControlHeight` tall, the same as those two boxes (box only, labels not counted). Its text is 16 px and its glyph 13 px so they fit. The control row is: inputs | countdown | chart (the chart takes the remaining width). The capture countdown ring, ring line and number are enlarged by 25% through the multipliers in `CapturePanel/CapturePanel.yaml` (175 px ring, 10 px line, 40 px number). The ring column is no taller than the input column, so the chart and table keep their space. Timing, trigger and reset logic are unchanged.
@@ -255,7 +281,7 @@ How it is wired: `Shared/Infrastructure/YamlSettings.cs` (the one YAML loader, Y
 ## Existing features preserved
 
 - Core Information page: two sections, **Drillhole Information** and **Device Status**. Labels Drillhole, Project and Campaign are display text for `DrillholeId`, `DrillholeName` and `ProjectArea` (SQLite `DrillholeID`, `DrillholeName`, `Project`); Drillhole and Project are required. There is no Core ID field (it was never stored). Required form validation and saved core snapshots. Operator is pre-filled with the signed-in Windows account (`DOMAIN\Username` for a domain account, otherwise the user name — never the computer name alone); it stays editable, an emptied field is filled again on Save & Continue, and a drillhole's stored operator is never overwritten.
-- Blue/white theme, collapsible sidebar, active navigation, icon tooltips and retained sidebar state.
+- Blue/white theme, always-open sidebar with active navigation.
 - Delete column after the configured measurement columns; alternating backgrounds. Compact table sizes (the temporary 2x enlargement was reverted): 36 px rows, 14 px row text, 12 px headers (34 px minimum), 8 px cell padding, 28 px delete button in a 64 px column — all multipliers 1.0 in `Table/MeasurementTable.yaml`.
 - Measurement page sizes are size × multiplier values in `CapturePanel/CapturePanel.yaml` and `Table/MeasurementTable.yaml`. Every multiplier is 1.0 by default (the countdown's 1.25), which is the current look.
 - Stable capture identifiers and CSV save dialog.
@@ -384,12 +410,12 @@ Manual Windows checks:
 2. Right-click anywhere in the main window: one capture of the configured duration, full ring/zero, one averaged row, reset to Ready. Repeat and rapidly right-click during capture.
 3. Stop mid-capture and during zero/Processing: no cancelled row. Restart and repeat. Previously completed rows stay unchanged.
 4. While armed, verify main-window right-clicks on the panel, table, sidebar and Core Information each trigger only one capture when Ready. While Idle, verify none trigger captures. Verify another application or an open modal dialog never triggers the main window.
-5. Switch pages/collapse the sidebar during capture, return, and confirm state/result continuity. Edit the core and verify mode disarms until saved again.
+5. Switch pages during capture, return, and confirm state/result continuity. Edit the core and verify mode disarms until saved again.
 6. Verify the ring at 0%, 50%, 100%, resizing, and 125%/150% display scaling. Check the compact table remains scrollable at minimum window size.
 7. Delete/export results (rows stay sorted by From). Compare table seconds-only display with precise CSV start/end/completion timestamps and offsets.
 8. Close during capture; verify no uncaught cancellation errors.
 9. Device Status with the backend stopped: "No device selected" until a CT007-M is picked in the dropdown (name + address; nothing is auto-selected). Pick the paired CT-007 (Disconnected, "paired … not connected", one toast), open its COM port in the device software (Connected, one toast), close it (Disconnected, one toast), turn Bluetooth off (Status unavailable, 5 s error toast). Measure throughout: Start, right-click captures, saving and export keep working in every Bluetooth state. Both database rows show local paths; rename the Gamma Guard file (Not found / File not found), Retry after restoring it.
-10. Sidebar: Core Information highlighted at start; click Measurement, Save & Continue, collapse/expand, hover and Tab — exactly one item stays highlighted.
+10. Sidebar: Core Information highlighted at start; click Measurement, Save & Continue, hover and Tab — exactly one item stays highlighted.
 11. Drillhole dropdown with a large list (thousands of holes): typing stays fluid, the list scrolls, picking fills Project and Campaign.
 12. Toasts: delete a row (green, 3 s), stop the backend (amber "Backend offline", once), restart it (once), disconnect the CT-007 (once), Save & Continue without a drillhole (red, 5 s, red border). Toasts never move the page and × closes them.
 13. Drillhole box: type part of an ID (closest outlined, text untouched), Enter picks it; × clears it (Measurement page empty, Start disabled); pick it again (its rows and depths return). Try to change it while measuring (refused).

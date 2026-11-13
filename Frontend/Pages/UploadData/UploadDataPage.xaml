@@ -44,11 +44,9 @@
                 <ColumnDefinition/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Text="Upload Data" Style="{StaticResource PageTitle}"/>
-                <TextBlock Text="Send a CSV exported from the Measurement page to the central database." Style="{StaticResource PageSubtitle}"/>
-            </StackPanel>
+            <TextBlock Text="Upload Data" Style="{StaticResource PageTitle}"/>
             <Button Grid.Column="1"
                     Style="{StaticResource SecondaryButton}"
                     FontSize="{StaticResource TableActionButtonFontSize}"
@@ -91,6 +89,7 @@
                     <TextBlock Text="{Binding UploadLabel}"/>
                 </StackPanel>
             </Button>
+            <Button Grid.Column="3" Style="{StaticResource HelpButton}"/>
         </Grid>
 
         <Border Grid.Row="1" Style="{StaticResource Card}">

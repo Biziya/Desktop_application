@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <!-- SPP CT-007 Measurement Studio. Source icon; Theme.xaml "AppIcon" draws the same shapes, icon.ico is rendered from it. -->
+  <!-- SPP CT007. Source icon; Theme.xaml "AppIcon" draws the same shapes, icon.ico is rendered from it. -->
   <rect x="0" y="0" width="64" height="64" rx="14" fill="#2563EB"/>
   <rect x="14" y="30" width="9" height="16" rx="2" fill="#FFFFFF"/>
   <rect x="27.5" y="21" width="9" height="25" rx="2" fill="#FFFFFF"/>

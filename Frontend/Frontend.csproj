@@ -61,10 +61,12 @@
     <Resource Include="Icons\icon.ico" />
     <None Include="Icons\icon.svg" />
 
-    <!-- Application metadata (name, version) and data retention; read at start-up -->
+    <!-- Application metadata (name, version), data retention and Help text; read at start-up -->
     <None Update="Config\application.yaml"
           CopyToOutputDirectory="PreserveNewest" />
     <None Update="Config\data-retention.yaml"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Config\help.yaml"
           CopyToOutputDirectory="PreserveNewest" />
 
     <!-- CT-007 device configuration -->
