@@ -1,20 +1,12 @@
 namespace Frontend.Pages.Measurement.Table;
 
-/// <summary>
-/// One known measurement column: the stable identifier MeasurementTable.yaml refers to, the model property the table
-/// binds to, and how CSV export writes it. Fixed in code, so editing the YAML can never change a binding, a stored
-/// field or the CSV format.
-/// </summary>
+/// <summary>A measurement column, fixed in code so editing MeasurementTable.yaml can never change a binding or the CSV.</summary>
 /// <param name="Id">Identifier used in MeasurementTable.yaml.</param>
 /// <param name="Binding">Property path on <see cref="MeasurementResult"/> the table cell shows.</param>
 /// <param name="CsvValue">The stored value CSV export writes (full precision, never the table format).</param>
 public sealed record MeasurementColumn(string Id, string Binding, string CsvHeader, bool IncludeInCsv, Func<MeasurementResult, object?> CsvValue);
 
-/// <summary>
-/// Every measurement column, in CSV order. How the table shows them (order, header, visibility, width, format,
-/// alignment) is set in MeasurementTable.yaml; hiding a column there never removes it from SQLite or CSV.
-/// SQLite column names are in MeasurementRepository.cs.
-/// </summary>
+/// <summary>Every measurement column, in CSV order. Table display is configured in MeasurementTable.yaml.</summary>
 public static class MeasurementTableColumns
 {
     private const string Reading = nameof(MeasurementResult.Reading) + ".";
@@ -25,8 +17,7 @@ public static class MeasurementTableColumns
     public static readonly MeasurementColumn StartTime = new("startTime", nameof(MeasurementResult.StartTime), "Start Time", true, r => r.StartTime);
     public static readonly MeasurementColumn EndTime = new("endTime", nameof(MeasurementResult.EndTime), "End Time", true, r => r.EndTime);
 
-    // Saved depth interval of each capture: From and To in metres, Step in centimetres in the table. Exported in metres
-    // (step_m too) so an exported file can be imported on the Upload Data page with its depths.
+    // Step is shown in cm but exported in metres, so exports can be re-imported on Upload Data.
     public static readonly MeasurementColumn From = new("from", nameof(MeasurementResult.FromMetres), "from_m", true, r => r.FromMetres);
     public static readonly MeasurementColumn To = new("to", nameof(MeasurementResult.ToMetres), "to_m", true, r => r.ToMetres);
     public static readonly MeasurementColumn Step = new("step", nameof(MeasurementResult.StepCentimetres), "step_m", true, r => r.StepMetres);

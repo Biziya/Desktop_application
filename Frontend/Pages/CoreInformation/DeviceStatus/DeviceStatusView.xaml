@@ -1,16 +1,11 @@
 <UserControl x:Class="Frontend.Pages.CoreInformation.DeviceStatus.DeviceStatusView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- Device Status of THIS laptop (the backend may run on another computer): the CT-007 Bluetooth connection and the
-         two SQLite databases, checked locally (Calculation/Core-Information) at start, every few seconds and on Retry —
-         also while the backend is offline. Paths are read-only text boxes: long paths wrap and can be selected and
-         copied. Labels, sizes and spacing: DeviceStatus.yaml (application resources). -->
+    <!-- Device Status of THIS laptop, checked locally (also while the backend is offline). Sizes: DeviceStatus.yaml. -->
     <UserControl.Resources>
         <ResourceDictionary>
-            <!-- Each row's DataContext is one LocalStatus (Devices.Bluetooth, Devices.MeasurementDatabase,
-                 Devices.GammaGuardDatabase); its State colours the row: green Connected / Available, red Disconnected,
-                 grey while checking or before a selection, amber otherwise (a missing, not found, inaccessible or busy
-                 database, and "Status unavailable"). -->
+            <!-- Each row's DataContext is one LocalStatus; its State colours the row (green ok, red disconnected,
+                 grey checking, amber otherwise). -->
             <Style x:Key="DeviceRow" TargetType="Border">
                 <Setter Property="Background" Value="{StaticResource WarningSurface}"/>
                 <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}"/>
@@ -96,10 +91,7 @@
             <TextBlock Text="{StaticResource DeviceStatusTitle}" Style="{StaticResource SectionTitle}" Margin="{StaticResource DeviceStatusTitleMargin}"/>
             <Border Style="{StaticResource DeviceRow}" DataContext="{Binding Devices.Bluetooth}">
                 <DockPanel>
-                    <!-- No Retry: the selected device's connection is checked every second. The dropdown lists
-                         paired/connected CT007-M devices (name + Bluetooth address); the user must pick one, and
-                         picking only starts monitoring — no pairing or connection. Informational only: it never
-                         enables or blocks measuring. -->
+                    <!-- No Retry: checked every second. Picking a device only starts monitoring; never blocks measuring. -->
                     <TextBlock Style="{StaticResource DeviceStatusValue}"
                                AutomationProperties.Name="Bluetooth device status"><Run Text="{StaticResource DeviceStatusDot}"/><Run Text="{Binding Text, Mode=OneWay}"/></TextBlock>
                     <StackPanel Margin="{StaticResource DeviceRowLabelMargin}">

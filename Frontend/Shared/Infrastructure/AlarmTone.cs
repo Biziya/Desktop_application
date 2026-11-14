@@ -4,8 +4,8 @@ using System.Media;
 namespace Frontend.Shared.Infrastructure;
 
 /// <summary>
-/// A short warning tone generated in memory (no sound file to ship, independent of the Windows sound scheme).
-/// <see cref="Play"/> returns at once: SoundPlayer plays on its own thread, and a new Play replaces a tone still sounding.
+/// Warning tone generated in memory (no sound file, independent of the Windows sound scheme). <see cref="Play"/>
+/// returns at once; a new Play replaces a tone still sounding.
 /// </summary>
 public sealed class AlarmTone
 {

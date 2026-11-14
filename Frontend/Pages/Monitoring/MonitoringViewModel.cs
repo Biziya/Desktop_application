@@ -6,9 +6,8 @@ using Frontend.Shared.Infrastructure;
 namespace Frontend.Pages.Monitoring;
 
 /// <summary>
-/// Monitoring page: live status and readings of every detector in the CT008 database. It reads the same database the
-/// app already uses (Core Information → Device Status), strictly read-only. Polls only while the page is shown or a
-/// 5-second sample is running; the read runs on the thread pool and its result is applied on the UI thread.
+/// Monitoring page: live detector status from the CT008 database (read-only). Polls only while shown or while a sample
+/// runs; reads run on the thread pool and results are applied on the UI thread.
 /// </summary>
 public sealed class MonitoringViewModel : ObservableObject, INavigationAware, IDisposable
 {
@@ -106,10 +105,7 @@ public sealed class MonitoringViewModel : ObservableObject, INavigationAware, ID
 
     public void OnHidden() => isShown = false;
 
-    /// <summary>
-    /// Reads the database once and applies the result. A poll already in progress is reused, so reads never overlap.
-    /// Public so tests can drive polling step by step.
-    /// </summary>
+    /// <summary>Reads once and applies the result, reusing a poll in progress so reads never overlap.</summary>
     public Task PollOnceAsync() => running is { IsCompleted: false } ? running : running = PollAsync();
 
     private async Task PollAsync()

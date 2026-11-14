@@ -4,17 +4,8 @@ using System.Security;
 
 namespace Backend.Repositories.CoreInformation.SqliteDatabase;
 
-/// <summary>
-/// Locates the CT008 log database (ct008-log.sqlite) on this computer without opening it.
-/// <para>
-/// Search order:
-/// 1. Folders whose name contains "CT008" near the user's Downloads, Desktop, Documents,
-///    profile, AppData, Program Files, ProgramData and the system drive root (shallow scan),
-///    then a recursive search inside those folders only.
-/// 2. Only if nothing was found: a depth-limited search of Downloads, Desktop and Documents.
-/// </para>
-/// The result is cached briefly so repeated requests do not rescan the disk.
-/// </summary>
+// Locates ct008-log.sqlite without opening it: first inside "CT008" folders near common user/system roots,
+// then (only if none found) a depth-limited scan of Downloads, Desktop and Documents. Cached briefly.
 public sealed class SqliteDatabaseRepository(ILogger<SqliteDatabaseRepository> logger)
 {
     public const string DatabaseFileName = "ct008-log.sqlite";
@@ -63,10 +54,7 @@ public sealed class SqliteDatabaseRepository(ILogger<SqliteDatabaseRepository> l
         }
     }
 
-    /// <summary>
-    /// Validation shared by automatic discovery and future manual selection.
-    /// Only reads file metadata; the database itself is never opened.
-    /// </summary>
+    /// <summary>Checks file metadata only; never opens the database.</summary>
     public static bool IsDatabaseFile(string? path) =>
         !string.IsNullOrWhiteSpace(path)
         && File.Exists(path)
@@ -109,7 +97,7 @@ public sealed class SqliteDatabaseRepository(ILogger<SqliteDatabaseRepository> l
         return SelectMostRecent(candidates);
     }
 
-    /// <summary>Most recently modified valid file wins; full path breaks ties deterministically.</summary>
+    // Most recently modified wins; full path breaks ties.
     internal static string SelectMostRecent(IEnumerable<string> candidates) =>
         candidates
             .Where(IsDatabaseFile)
@@ -131,10 +119,7 @@ public sealed class SqliteDatabaseRepository(ILogger<SqliteDatabaseRepository> l
 
     private delegate bool NameFilter(ReadOnlySpan<char> name);
 
-    /// <summary>
-    /// Depth-limited enumeration that skips inaccessible folders, symlinks/junctions and
-    /// known noisy folders. A missing or unreadable root yields nothing instead of throwing.
-    /// </summary>
+    // Skips inaccessible folders, reparse points and noisy folders; a missing or unreadable root yields nothing.
     private List<string> SafeEnumerate(string root, int maxDepth, bool isDirectory, NameFilter nameFilter, CancellationToken cancellationToken)
     {
         if (!Directory.Exists(root))

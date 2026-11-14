@@ -30,9 +30,8 @@ public sealed class CsvExportService : ICsvExportService
             return false;
         }
 
-        // Snapshot serialization happens before yielding so a later capture or delete cannot affect this export.
-        // The measurement database is per Windows user (%LocalAppData%), so the account exporting it is the account
-        // that created its measurements.
+        // Serialize before yielding so a later capture or delete cannot affect this export. The database is per
+        // Windows user, so the exporting account is the one that created the measurements.
         var csv = Serialize(rows, session, WindowsAccount.Current());
         var temporary = dialog.FileName + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
@@ -63,7 +62,6 @@ public sealed class CsvExportService : ICsvExportService
     public const string CreatedUsernameHeader = "Created Username";
 
     // Session metadata repeated on every row: CSV header → stored session field.
-    // Placed just before Created At (the session's creation time), Created Username and session_id, which stays the last column.
     private static readonly (string Header, Func<MeasurementSession, string?> Value)[] SessionColumns =
     [
         (DrillholeHeader, s => s.DrillholeId),
@@ -74,9 +72,8 @@ public sealed class CsvExportService : ICsvExportService
     ];
 
     /// <summary>
-    /// Measurement columns, order and headers come from MeasurementTableColumns.cs, followed by the metadata of
-    /// <paramref name="session"/>, its creation time, <paramref name="createdUsername"/> and session_id. Rows are
-    /// written in the given (displayed, From-sorted) order and must all belong to <paramref name="session"/>. ts_ms is the device value only — demo values are never exported.
+    /// Measurement columns, then session metadata, Created At, Created Username and session_id (always last). Rows must
+    /// all belong to <paramref name="session"/>; demo ts_ms values are never exported.
     /// </summary>
     public static string Serialize(IReadOnlyList<MeasurementResult> rows, MeasurementSession session, string createdUsername = "")
     {

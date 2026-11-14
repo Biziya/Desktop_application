@@ -4,21 +4,17 @@ using Frontend.Pages.Measurement;
 namespace Frontend.Calculation.CoreInformation.GammaGuardDatabase;
 
 /// <summary>
-/// Picks the detector for a capture at the click, from the Gamma Guard database alone: the serial that wrote the
-/// newest samples. Its detector_status row (name, MAC, firmware) is supporting metadata only. The device is frozen for
-/// the whole capture by <see cref="DeviceCaptureService"/>, so samples of two detectors are never mixed.
-/// Bluetooth monitoring (Core Information → Device Status) is deliberately NOT consulted: it is informational only, and
-/// a missing selection, a disconnected device or a failed Bluetooth check never blocks or changes a capture. A future
-/// connection requirement belongs here, as a separate rule, not inside the monitor.
-/// Refuses (with a message for the error toast) when the database is not available, holds no samples, or two
-/// detectors are writing at the same time (their samples cannot be told apart by the click alone).
+/// Picks the capture's detector from the Gamma Guard database alone: the serial with the newest samples. Refuses when
+/// the database is unavailable, empty, or two detectors are recording at once.
+/// Bluetooth status is deliberately not consulted (informational only); a future connection requirement belongs
+/// here as a separate rule, not in the monitor.
 /// </summary>
 public sealed class GammaGuardCaptureDevices(DeviceStatusMonitor devices) : ICaptureDeviceResolver
 {
-    /// <summary>How many of the newest sample rows are looked at to find the detector that is recording.</summary>
+    // Newest sample rows inspected to find the recording detector.
     public const int RecentRows = 200;
 
-    /// <summary>Two serials whose newest samples are this close are both recording: ambiguous.</summary>
+    // Two serials whose newest samples are this close are both recording: ambiguous.
     public static readonly TimeSpan SimultaneousWindow = TimeSpan.FromSeconds(5);
 
     public CaptureDevice Resolve()
@@ -34,7 +30,6 @@ public sealed class GammaGuardCaptureDevices(DeviceStatusMonitor devices) : ICap
         return new CaptureDevice(identity, source);
     }
 
-    /// <summary>The serial with the newest sample; refused when none, or when another serial recorded just as recently.</summary>
     public static string Pick(IReadOnlyList<RecentSerial> recent)
     {
         if (recent.Count == 0)
@@ -44,12 +39,12 @@ public sealed class GammaGuardCaptureDevices(DeviceStatusMonitor devices) : ICap
 
         var ordered = recent.OrderByDescending(r => r.LastTsMs).ToList();
         var newest = ordered[0];
-        var simultaneous = ordered.Skip(1).Where(r => newest.LastTsMs - r.LastTsMs <= (long)SimultaneousWindow.TotalMilliseconds).ToList();
+        var simultaneous = ordered.Skip(1).Count(r => newest.LastTsMs - r.LastTsMs <= (long)SimultaneousWindow.TotalMilliseconds);
 
-        if (simultaneous.Count > 0)
+        if (simultaneous > 0)
         {
             throw new CaptureException(
-                $"More than one detector is recording ({string.Join(", ", ordered.Take(simultaneous.Count + 1).Select(r => r.Serial))}). Stop the others to measure.");
+                $"More than one detector is recording ({string.Join(", ", ordered.Take(simultaneous + 1).Select(r => r.Serial))}). Stop the others to measure.");
         }
 
         return newest.Serial;

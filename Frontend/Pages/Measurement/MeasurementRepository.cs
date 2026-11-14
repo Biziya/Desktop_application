@@ -5,10 +5,7 @@ using Microsoft.Data.Sqlite;
 
 namespace Frontend.Pages.Measurement;
 
-/// <summary>
-/// One measurement session per drillhole (MeasurementSessions row). Sessions stored before drillhole metadata existed
-/// have null metadata.
-/// </summary>
+/// <summary>One measurement session per drillhole. Sessions stored before drillhole metadata existed have null metadata.</summary>
 public sealed record MeasurementSession(
     Guid Id,
     DateTimeOffset CreatedAt,
@@ -26,52 +23,33 @@ public sealed record MeasurementSession(
 /// <summary>A drillhole with saved measurements and the Start Time of its most recent capture.</summary>
 public sealed record MeasuredDrillhole(string DrillholeId, DateTimeOffset LastMeasured);
 
-/// <summary>
-/// Where the next capture of a session starts and the selected step, in millimetres inside the app (see Depth.cs).
-/// Stored in MeasurementProgress in centimetres (next_from_cm, step_cm); the repository converts exactly (mm / 10).
-/// </summary>
+/// <summary>Next capture's start depth and step in mm (stored in MeasurementProgress as cm).</summary>
 public sealed record DepthProgress(long NextFromMm, long StepMm);
 
 public interface IMeasurementRepository
 {
-    /// <summary>Full path of the database file in use.</summary>
     string DatabasePath { get; }
 
-    /// <summary>
-    /// Returns the session of <paramref name="candidate"/>'s DrillholeId: the stored one when it exists (its id,
-    /// CreatedAt and metadata are kept), otherwise <paramref name="candidate"/> is stored and returned.
-    /// </summary>
+    /// <summary>Returns the stored session of the candidate's DrillholeId, or stores and returns the candidate.</summary>
     Task<MeasurementSession> ResolveSessionAsync(MeasurementSession candidate);
 
-    /// <summary>
-    /// In one transaction: inserts new rows, stores the displayed order (SortOrder = position in
-    /// <paramref name="rows"/>) of rows already stored, and stores <paramref name="progress"/> when given.
-    /// Nothing else of a stored row changes.
-    /// </summary>
+    /// <summary>One transaction: inserts new rows, updates SortOrder of stored rows, and saves progress when given.</summary>
     Task SaveAsync(MeasurementSession session, IReadOnlyList<MeasurementResult> rows, DepthProgress? progress);
 
-    /// <summary>Saved next depth and step of a session, or null when none is stored.</summary>
     Task<DepthProgress?> LoadProgressAsync(Guid sessionId);
 
     Task DeleteAsync(Guid sessionId, int captureNumber);
 
-    /// <summary>The stored session of a Drillhole ID, or null when that drillhole has none. Never creates one.</summary>
+    /// <summary>The stored session of a Drillhole ID, or null. Never creates one.</summary>
     Task<MeasurementSession?> FindSessionAsync(string drillholeId);
 
-    /// <summary>Rows of one session only (with their record IDs); the ViewModel shows them sorted by From.</summary>
     Task<IReadOnlyList<MeasurementResult>> LoadAsync(Guid sessionId);
 
-    /// <summary>
-    /// Drillholes that have saved measurement records, most recently measured first. Recency is the latest capture
-    /// Start Time (not the table order); sessions without a Drillhole ID are ignored.
-    /// </summary>
+    /// <summary>Drillholes with saved records, most recent capture Start Time first.</summary>
     Task<IReadOnlyList<MeasuredDrillhole>> LoadMeasuredDrillholesAsync();
 }
 
-/// <summary>
-/// SQLite storage for measurement rows. All work runs off the UI thread. Database column names are stable and
-/// independent of the table headers and CSV headers in Table/MeasurementTableColumns.cs.
-/// </summary>
+/// <summary>SQLite storage for measurement rows, off the UI thread. Column names are independent of table/CSV headers.</summary>
 public sealed partial class SqliteMeasurementRepository : IMeasurementRepository
 {
     // Raise when the schema changes, and add a step to Migrate that alters existing tables without dropping data.
@@ -101,13 +79,11 @@ public sealed partial class SqliteMeasurementRepository : IMeasurementRepository
 
     public string DatabasePath { get; }
 
-    /// <summary>%LocalAppData%\CT007_Measurement_Studio\measurements.db — no spaces, so it is easy to use in tools.</summary>
+    /// <summary>%LocalAppData%\CT007_Measurement_Studio\measurements.db</summary>
     public static string DefaultPath { get; } = ResolveDefaultPath(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
 
-    // Earlier versions used a folder name with spaces. Their database (with its WAL files) is moved once into the
-    // new folder. If the move is not possible (e.g. another program has the file open), the old location keeps
-    // being used, so no stored measurements are ever left behind.
+    // Moves a database from the old folder name (with spaces) once; if that fails the old location keeps being used.
     internal static string ResolveDefaultPath(string localAppData)
     {
         var path = Path.Combine(localAppData, "CT007_Measurement_Studio", "measurements.db");
@@ -219,9 +195,7 @@ public sealed partial class SqliteMeasurementRepository : IMeasurementRepository
             saveProgress.ExecuteNonQuery();
         }
 
-        // (session_id, CaptureNo) is unique: saving a stored row again never duplicates it and only rewrites its
-        // SortOrder (its position in the displayed, From-sorted table; kept as is, no migration needed).
-        // IDs, capture numbers, times and values stay unchanged.
+        // (session_id, CaptureNo) is unique: re-saving a stored row only rewrites its SortOrder.
         using var upsert = connection.CreateCommand();
         upsert.Transaction = transaction;
         upsert.CommandText = $"""
@@ -322,8 +296,7 @@ public sealed partial class SqliteMeasurementRepository : IMeasurementRepository
         return samples;
     });
 
-    // Inserts a capture's raw samples, linked to its MeasurementRecords row. (record_id, source_id) is unique, so a
-    // retried save of the same capture never duplicates a sample.
+    // (record_id, source_id) is unique, so a retried save never duplicates a sample.
     private static void SaveSamples(SqliteConnection connection, SqliteTransaction transaction, Guid sessionId, int captureNumber,
         IReadOnlyList<DeviceSample> samples)
     {
@@ -462,8 +435,7 @@ public sealed partial class SqliteMeasurementRepository : IMeasurementRepository
         {
             if (!schemaReady)
             {
-                // WAL lets other tools (DBeaver, check-db.ps1) read the file while the app writes, and the app keep
-                // writing while they read. The setting is stored in the file; it cannot change inside a transaction.
+                // WAL lets other tools read while the app writes. It cannot be set inside a transaction.
                 using (var wal = connection.CreateCommand())
                 {
                     wal.CommandText = "PRAGMA journal_mode = WAL";

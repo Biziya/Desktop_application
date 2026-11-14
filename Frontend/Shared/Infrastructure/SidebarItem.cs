@@ -3,9 +3,8 @@ using System.Windows;
 namespace Frontend.Shared.Infrastructure;
 
 /// <summary>
-/// Marks a sidebar navigation button as the page currently shown. A typed bool attached property, so the button
-/// template can use a plain property trigger (no relative-source data binding inside the template, and no string
-/// "True" compared with an untyped Tag). Bound one-way to NavigationItem.IsSelected.
+/// Marks the current page's sidebar button. A typed attached property lets the template use a plain property trigger
+/// instead of a relative-source binding or a string Tag.
 /// </summary>
 public static class SidebarItem
 {

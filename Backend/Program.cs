@@ -21,7 +21,7 @@ builder.Services.AddScoped<IUploadedMeasurementRepository, UploadedMeasurementRe
 
 var app = builder.Build();
 
-app.UseSwagger(); // Serves /swagger/v1/swagger.json
+app.UseSwagger();
 app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Backend v1"));
 
 app.MapControllers();

@@ -4,10 +4,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Backend.Repositories.Measurement;
 
-/// <summary>
-/// Stores uploads in the SPP CT007 table through <see cref="SppCt007Database.UploadProcedure"/>: one call per upload,
-/// with every row in one JSON parameter (@RecordsJson). The procedure checks for duplicates and inserts in one transaction.
-/// </summary>
+// One stored-procedure call per upload with all rows in @RecordsJson; the procedure dedupes and inserts in one transaction.
 public sealed class MeasurementUploadRepository(IConfiguration configuration) : IMeasurementUploadRepository
 {
     // Unique key violations (2627 constraint, 2601 index): a concurrent upload stored the same captures first.
@@ -52,7 +49,6 @@ public sealed class MeasurementUploadRepository(IConfiguration configuration) : 
             }
 
             var status = reader.GetString(0);
-
             switch (status)
             {
                 case "Stored":

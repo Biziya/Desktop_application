@@ -2,11 +2,7 @@ using System.Windows;
 
 namespace Frontend.Pages.Measurement.CapturePanel;
 
-/// <summary>
-/// CapturePanel.yaml: labels, sizes and spacing of Starting Depth, Step, Threshold, Start / Stop, the countdown and the bar
-/// chart, and the CPS threshold alarm.
-/// A size with a multiplier is used as size × multiplier.
-/// </summary>
+/// <summary>CapturePanel.yaml settings. A size with a multiplier is used as size × multiplier.</summary>
 public sealed class CapturePanelSettings
 {
     public const string File = "Pages/Measurement/CapturePanel/CapturePanel.yaml";
@@ -130,10 +126,7 @@ public sealed class CapturePanelSettings
         public required double TickFontSize { get; init; }
     }
 
-    /// <summary>
-    /// Starting Depth, Step and Threshold: the box height, how far the label reaches above it, label and value fonts,
-    /// paddings, border and the gap between inputs.
-    /// </summary>
+    /// <summary>Starting Depth, Step and Threshold input boxes.</summary>
     public sealed class FloatingInputSettings
     {
         public required double BoxHeight { get; init; }

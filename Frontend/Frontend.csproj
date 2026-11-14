@@ -9,11 +9,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
 
-    <!-- Application icon -->
     <ApplicationIcon>Icons\icon.ico</ApplicationIcon>
 
     <!-- Use custom Main() for Velopack initialization -->
     <StartupObject>Frontend.App</StartupObject>
+
+    <!-- release/ holds build output (build-installer.ps1), never source. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);release/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <!-- Application metadata comes from Config\application.yaml (the single source of truth), so every build -
@@ -27,7 +29,7 @@
   </PropertyGroup>
 
   <!-- Backend API environment: Debug builds read Frontend\.env.local, every other build
-       %LocalAppData%\CT007_Measurement_Studio\Config\.env.production (Api\ApiSettings.cs, docs\API_CONFIGURATION.md).
+       %LocalAppData%\CT007_Measurement_Studio\Config\.env.production (Api\ApiSettings.cs, Frontend\README.md).
        Override with -p:AppEnvironment=local|production. Only the environment name is compiled in, never an address. -->
   <PropertyGroup>
     <AppEnvironment Condition="'$(AppEnvironment)' == '' and '$(Configuration)' == 'Debug'">local</AppEnvironment>

@@ -4,12 +4,8 @@ using System.Text.Json;
 namespace Frontend.Calculation.Measurement;
 
 /// <summary>
-/// The capture duration (seconds), edited by clicking the countdown and kept in a small JSON file next to the
-/// measurement database (%LocalAppData%\CT007_Measurement_Studio\capture-settings.json). This is the one place the
-/// limits are defined: whole seconds from <see cref="MinSeconds"/> to <see cref="MaxSeconds"/>; 5 s when nothing is
-/// saved. The detector records about one sample per second, so a capture expects as many samples as seconds (2–10).
-/// A saved value outside the limits (e.g. from an earlier version that allowed longer captures) falls back to 5 s.
-/// Historical measurement records are never touched.
+/// The capture duration in whole seconds, saved in capture-settings.json beside the measurement database. The single
+/// source of the limits; an out-of-range saved value (e.g. from an older version) falls back to the default.
 /// </summary>
 public sealed class CaptureDurationSettings(string? path)
 {
@@ -17,11 +13,9 @@ public sealed class CaptureDurationSettings(string? path)
     public const int MinSeconds = 2;
     public const int MaxSeconds = 10;
 
-    /// <summary>Settings file beside the measurement database.</summary>
     public static string PathBeside(string databasePath) =>
         Path.Combine(Path.GetDirectoryName(Path.GetFullPath(databasePath))!, "capture-settings.json");
 
-    /// <summary>The saved duration, or 5 s when none (or an invalid one) is saved.</summary>
     public int Load()
     {
         try
@@ -44,7 +38,7 @@ public sealed class CaptureDurationSettings(string? path)
         }
     }
 
-    /// <summary>Stores the duration (written to a temporary file, then moved over the old one).</summary>
+    // Written to a temporary file, then moved over the old one.
     public void Save(int seconds)
     {
         if (path is null)
@@ -60,7 +54,6 @@ public sealed class CaptureDurationSettings(string? path)
 
     public static bool IsValid(int seconds) => seconds is >= MinSeconds and <= MaxSeconds;
 
-    /// <summary>Parses the editor text: whole seconds only, within the limits.</summary>
     public static bool TryParse(string text, out int seconds) =>
         int.TryParse(text.Trim(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out seconds) && IsValid(seconds);
 }

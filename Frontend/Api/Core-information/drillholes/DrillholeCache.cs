@@ -4,9 +4,8 @@ using Microsoft.Data.Sqlite;
 namespace Frontend.Api.CoreInformation.Drillholes;
 
 /// <summary>
-/// Last successful GET /api/core-information/drillholes response, kept in the application's SQLite database so the
-/// list is available immediately on start and while the backend is unreachable. Reference data only: it lives in its
-/// own table (DrillholeCache) and never touches measurement sessions or records.
+/// Last successful drillhole list, cached in SQLite so it is available on start and while offline.
+/// Lives in its own table and never touches measurement data.
 /// </summary>
 public sealed class DrillholeCache(string databasePath)
 {
@@ -18,7 +17,6 @@ public sealed class DrillholeCache(string databasePath)
         )
         """;
 
-    /// <summary>The cached list, or an empty list when nothing has been cached yet.</summary>
     public Task<IReadOnlyList<DrillholeResponse>> LoadAsync() => Task.Run<IReadOnlyList<DrillholeResponse>>(() =>
     {
         using var connection = Open();
@@ -38,7 +36,7 @@ public sealed class DrillholeCache(string databasePath)
         return drillholes;
     });
 
-    /// <summary>Replaces the whole cached list in one transaction (all or nothing). Call only with a successful response.</summary>
+    // All or nothing; call only with a successful response.
     public Task ReplaceAsync(IReadOnlyList<DrillholeResponse> drillholes) => Task.Run(() =>
     {
         using var connection = Open();

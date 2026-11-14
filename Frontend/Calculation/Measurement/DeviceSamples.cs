@@ -1,11 +1,8 @@
 namespace Frontend.Calculation.Measurement;
 
 /// <summary>
-/// One row of the Gamma Guard <c>samples</c> table, read as is. <see cref="SourceId"/> is that table's <c>id</c>
-/// (the row's identity in the device database); <see cref="DeviceSessionId"/> is the DEVICE's <c>session_id</c>
-/// (a Gamma Guard recording session) and has nothing to do with this app's measurement session.
-/// <see cref="TsMs"/> is Unix epoch milliseconds (UTC) — checked by <see cref="DeviceTime"/> before each capture.
-/// <see cref="Count0"/> and <see cref="Count0Raw"/> are shocks per minute, as the device reports them.
+/// One Gamma Guard <c>samples</c> row as is. <see cref="DeviceSessionId"/> is the device's recording session, unrelated
+/// to this app's measurement session. <see cref="TsMs"/> is Unix ms (UTC); Count0/Count0Raw are shocks per minute.
 /// </summary>
 public sealed record DeviceSample(
     long SourceId,
@@ -25,12 +22,8 @@ public sealed record DeviceSample(
 public sealed record DetectorIdentity(string Serial, string? Name, string? Mac, string? Firmware, string? DeviceType);
 
 /// <summary>
-/// Result of one capture: arithmetic means of the accepted samples, per field, over that field's valid (non-null,
-/// finite) values only — a missing value is never counted as zero, and a field without any valid value stays null.
-/// <see cref="Count0"/> and <see cref="Count0Raw"/> are in shocks per second (the device reports shocks per minute).
-/// Identifiers, sequence numbers and timestamps are not averaged: <see cref="FirstTsMs"/> is the ts_ms of the first
-/// accepted sample (in time order) and <see cref="DeviceSessionId"/> is the device session when every accepted sample
-/// has the same one (null when they differ; each raw sample keeps its own).
+/// Per-field means over valid (non-null, finite) values only; a missing value never counts as zero. Count0/Count0Raw
+/// are shocks per second. <see cref="DeviceSessionId"/> is null unless all samples share one.
 /// </summary>
 public sealed record CaptureSummary(
     int SampleCount,
@@ -46,7 +39,6 @@ public sealed record CaptureSummary(
 
 public static class SampleAveraging
 {
-    /// <summary>The device reports Count0 and Count0Raw as shocks per minute; the summary uses shocks per second.</summary>
     private const double SecondsPerMinute = 60.0;
 
     public static CaptureSummary Summarize(IReadOnlyList<DeviceSample> samples)
@@ -74,10 +66,8 @@ public static class SampleAveraging
 }
 
 /// <summary>
-/// Which samples belong to a capture: <c>trigger &lt; ts_ms &lt;= trigger + duration</c> (epoch milliseconds), from
-/// the frozen detector only, each source row once. A sample at or before the click never counts; the window never
-/// grows to replace missing samples. A second row with the same device session, sequence number and timestamp as an
-/// accepted one (a duplicate write) is ignored.
+/// Samples of one detector in <c>trigger &lt; ts_ms &lt;= trigger + duration</c>, each source row once. A duplicate
+/// write (same device session, seq and timestamp) is ignored.
 /// </summary>
 public sealed class CaptureWindow(string serial, long triggerMs, long durationMs)
 {
@@ -89,7 +79,7 @@ public sealed class CaptureWindow(string serial, long triggerMs, long durationMs
 
     public long EndMs { get; } = triggerMs + durationMs;
 
-    /// <summary>Samples the device normally records in the window: one per second.</summary>
+    // The device records one sample per second.
     public int ExpectedSamples { get; } = (int)Math.Max(1, durationMs / 1000);
 
     public IReadOnlyList<DeviceSample> Accepted => accepted.OrderBy(s => s.TsMs).ThenBy(s => s.SourceId).ToList();
@@ -125,14 +115,11 @@ public sealed class CaptureWindow(string serial, long triggerMs, long durationMs
 }
 
 /// <summary>
-/// The time basis of <c>samples.ts_ms</c>: Unix epoch milliseconds (UTC), comparable with the trigger's
-/// <see cref="DateTimeOffset.ToUnixTimeMilliseconds"/>. Before a capture the newest ts_ms of the device is checked
-/// against this laptop's clock; a value in seconds, a device-relative counter or a clock far off is refused instead of
-/// being compared with the click.
+/// Checks that <c>samples.ts_ms</c> is Unix ms comparable with the click time: seconds, a power-on counter or a far-off
+/// clock are refused rather than silently mismatched.
 /// </summary>
 public static class DeviceTime
 {
-    /// <summary>How far the newest sample may be from this laptop's clock.</summary>
     public static readonly TimeSpan MaxClockDifference = TimeSpan.FromHours(12);
 
     /// <summary>Null when ts_ms is usable; otherwise why not.</summary>

@@ -3,9 +3,8 @@ using Frontend.Calculation.Measurement;
 namespace Frontend.Pages.Measurement;
 
 /// <summary>What a capture delivered.</summary>
-/// <param name="Samples">Plain sample values (used by test services; the device capture leaves it empty and fills
-/// <paramref name="DeviceSamples"/>).</param>
-/// <param name="DeviceSamples">Raw Gamma Guard samples accepted for the capture window (null for non-device services).</param>
+/// <param name="Samples">Plain sample values from test services; empty for device captures.</param>
+/// <param name="DeviceSamples">Raw Gamma Guard samples (null for non-device services).</param>
 /// <param name="Device">Detector the samples came from, frozen at the click.</param>
 /// <param name="ExpectedSamples">Samples the window should contain (one per second of the duration).</param>
 public sealed record CaptureData(
@@ -19,10 +18,7 @@ public sealed record CaptureData(
     DetectorIdentity? Device = null,
     int? ExpectedSamples = null);
 
-/// <summary>
-/// Device values of one capture (the averages of its accepted samples; TsMs is the first accepted sample's ts_ms).
-/// Every field is optional: a value the device did not provide stays null (blank in table/CSV, NULL in SQLite).
-/// </summary>
+/// <summary>Averaged device values of one capture; TsMs is the first sample's. Missing values stay null.</summary>
 public sealed record DeviceReading(
     long? TsMs = null,
     double? Count0 = null,
@@ -39,9 +35,7 @@ public sealed class CaptureException(string message) : Exception(message);
 
 public interface IMeasurementService
 {
-    /// <param name="start">The click (trigger) time, recorded when the mouse button went down.</param>
-    /// <param name="duration">Length of this capture (the configured capture duration when it started; it never
-    /// changes during the capture).</param>
+    /// <param name="start">The time the mouse button went down.</param>
     Task<CaptureData> CaptureAsync(
         DateTimeOffset start,
         TimeSpan duration,

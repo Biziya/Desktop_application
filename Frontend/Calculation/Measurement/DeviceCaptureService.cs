@@ -5,26 +5,24 @@ namespace Frontend.Calculation.Measurement;
 /// <summary>Read-only access to the device's samples (the Gamma Guard database).</summary>
 public interface ISampleSource
 {
-    /// <summary>Highest samples.id right now (null when the table is empty).</summary>
     long? MaxSampleId();
 
     /// <summary>Samples of one detector with id greater than <paramref name="afterId"/>, in id order.</summary>
     IReadOnlyList<DeviceSample> ReadSamplesAfter(string serial, long afterId);
 
-    /// <summary>ts_ms of the detector's newest sample (null when it has none).</summary>
     long? LatestTsMs(string serial);
 }
 
-/// <summary>The detector to capture from and where its samples are, resolved (and frozen) when a capture starts.</summary>
+/// <summary>The detector and its sample source, frozen when a capture starts.</summary>
 public sealed record CaptureDevice(DetectorIdentity Identity, ISampleSource Samples);
 
 public interface ICaptureDeviceResolver
 {
-    /// <summary>The one connected CT007-M detector; throws <see cref="CaptureException"/> with the reason otherwise.</summary>
+    /// <exception cref="CaptureException">No single detector can be used; the message says why.</exception>
     CaptureDevice Resolve();
 }
 
-/// <summary>Wall clock (Unix ms, same basis as the click time and ts_ms) and waiting — replaceable in tests.</summary>
+/// <summary>Unix-ms wall clock and delay, replaceable in tests.</summary>
 public interface ICaptureClock
 {
     long NowMs { get; }
@@ -42,18 +40,10 @@ public sealed class SystemCaptureClock : ICaptureClock
 }
 
 /// <summary>
-/// Real capture: reads the samples the selected CT007-M detector recorded after the click from the Gamma Guard
-/// database (read-only) and returns those inside <c>click &lt; ts_ms &lt;= click + duration</c>.
-/// <list type="number">
-/// <item>The click time is the mouse-down timestamp (ms). The detector, its database and the window are frozen at once.</item>
-/// <item>The newest samples.id is noted, and reading continues from a little before it (<see cref="LookbackRows"/>,
-/// so a row written in the same instant is not missed). Only rows with a larger id are read on each poll — never
-/// "the last N rows" — and every row is filtered by serial and by the window; each source id counts once.</item>
-/// <item>After the window ends, a short bounded final read (<see cref="FinalReadLimit"/>) picks up rows the device wrote
-/// late. The window itself never changes and never grows to replace missing samples.</item>
-/// </list>
-/// Cancellation (Stop, closing) ends the capture without a result. No values are invented: missing samples are
-/// reported by the caller as an incomplete capture, and no samples at all is an error.
+/// Captures the samples the frozen detector recorded in <c>click &lt; ts_ms &lt;= click + duration</c>. Polling starts
+/// <see cref="LookbackRows"/> before the newest id so a row written at the click is not missed, then reads only larger
+/// ids. A bounded final read (<see cref="FinalReadLimit"/>) picks up late writes; the window never grows to make up
+/// for missing samples.
 /// </summary>
 public sealed class DeviceCaptureService(ICaptureDeviceResolver resolver, ICaptureClock? clock = null) : IMeasurementService
 {
@@ -126,7 +116,6 @@ public sealed class DeviceCaptureService(ICaptureDeviceResolver resolver, ICaptu
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var accepted = window.Accepted;
 
         return new CaptureData(
             start,
@@ -134,7 +123,7 @@ public sealed class DeviceCaptureService(ICaptureDeviceResolver resolver, ICaptu
             [],
             "",
             DateTimeOffset.Now,
-            DeviceSamples: accepted,
+            DeviceSamples: window.Accepted,
             Device: device.Identity,
             ExpectedSamples: window.ExpectedSamples);
     }

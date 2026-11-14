@@ -5,15 +5,8 @@ using Frontend.Calculation.Measurement;
 namespace Frontend.Pages.Monitoring;
 
 /// <summary>
-/// The Monitoring page's behaviour, ported from EIC's CT008 Monitor (MonitorViewModel). It holds no database
-/// connection and no timer: <see cref="Apply"/> takes one poll's <see cref="MonitorSnapshot"/>, <see cref="Tick"/>
-/// advances time-based rules. Call both on the UI thread; the collections are bound directly.
-/// Rules kept from the CT008 integration guide:
-/// * new data is read by id (<see cref="Cursor"/>), never by timestamp; a database whose ids went backwards was
-///   recreated and the cursor follows it;
-/// * a detector whose heartbeat is older than the stale limit is Stale, unless it is disconnected;
-/// * a 5-second sample discards the first reading after the request and averages the next 5;
-/// * a live detector whose response time is not 1 s is warned about.
+/// Monitoring page logic (ported from CT008 Monitor), with no database or timer: <see cref="Apply"/> takes one poll,
+/// <see cref="Tick"/> advances time-based rules. Call both on the UI thread. New data is read by id, never by timestamp.
 /// </summary>
 public sealed class MonitorEngine(MonitoringSettings settings)
 {
@@ -22,10 +15,8 @@ public sealed class MonitorEngine(MonitoringSettings settings)
     /// <summary>A sample gives up after this long (a full one takes about 6 s), e.g. when logging stopped.</summary>
     public const int SampleTimeoutMs = 12_000;
 
-    // Readings are counted, not timed: the detector delivers about one per second with jitter, so a fixed 5 s window
-    // can hold 4 or 6. The first reading after the request is discarded because, with a 1 s response time, it
-    // integrates the second before its timestamp, which began before the request. The next 5 then cover exactly the
-    // 5 seconds from the discarded reading's timestamp to the last reading's.
+    // Readings are counted, not timed (jitter makes a 5 s window hold 4 or 6). The first reading (Anchor) is discarded
+    // because it integrates a second that began before the request.
     private sealed class SampleJob(string serial, long startMs)
     {
         public string Serial { get; } = serial;
@@ -85,8 +76,7 @@ public sealed class MonitorEngine(MonitoringSettings settings)
         }
         else if (snapshot.MaxSampleId < Cursor)
         {
-            // The file was deleted and recreated: ids start again at 1. Follow it instead of waiting for the new ids to
-            // pass the old cursor; samples in progress cannot continue across files.
+            // The file was recreated (ids restart at 1): follow it and cancel samples in progress.
             Cursor = snapshot.MaxSampleId;
             CancelJobs("database was recreated");
         }
@@ -102,9 +92,7 @@ public sealed class MonitorEngine(MonitoringSettings settings)
         Tick(nowMs);
     }
 
-    /// <summary>
-    /// Starts a 5-second sample for <paramref name="serial"/>. Ignored while one is already running for it.
-    /// </summary>
+    /// <summary>Starts a 5-second sample; ignored while one is already running for the serial.</summary>
     public bool StartSample(string serial, long nowMs)
     {
         if (string.IsNullOrEmpty(serial) || jobs.ContainsKey(serial))
@@ -131,11 +119,7 @@ public sealed class MonitorEngine(MonitoringSettings settings)
         {
             var row = RowFor(job.Serial);
 
-            if (job.Readings.Count >= ReadingsPerSample)
-            {
-                Finish(job, row, nowMs);
-            }
-            else if (nowMs - job.StartMs >= SampleTimeoutMs)
+            if (job.Readings.Count >= ReadingsPerSample || nowMs - job.StartMs >= SampleTimeoutMs)
             {
                 Finish(job, row, nowMs);
             }

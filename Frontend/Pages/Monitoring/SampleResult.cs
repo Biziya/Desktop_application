@@ -1,10 +1,6 @@
 namespace Frontend.Pages.Monitoring;
 
-/// <summary>
-/// One completed 5-second sample. <see cref="Readings"/> of <see cref="Expected"/> readings were averaged;
-/// <see cref="CoverageSeconds"/> runs from the discarded first reading's timestamp to the last kept reading's
-/// (about 5.0 s when complete). Values are null when no reading arrived.
-/// </summary>
+/// <summary>One completed 5-second sample; values are null when no reading arrived.</summary>
 public sealed record SampleResult(
     string Serial,
     DateTimeOffset TakenAt,

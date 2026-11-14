@@ -3,9 +3,8 @@ using System.Globalization;
 namespace Frontend.Pages.Measurement.Table;
 
 /// <summary>
-/// Table display formatting of measurement cells (used through <see cref="MeasurementTableColumn.Format"/>). Display
-/// only: models, calculations, SQLite and CSV keep the original values. A missing value is an empty cell, never 0; a
-/// value that cannot be formatted is shown as it is.
+/// Display-only cell formatting (see <see cref="MeasurementTableColumn.Format"/>). A missing value is an empty cell,
+/// never 0; a value that cannot be formatted is shown as it is.
 /// </summary>
 public static class MeasurementCellFormat
 {
@@ -45,10 +44,7 @@ public static class MeasurementCellFormat
         var other => other.ToString()
     };
 
-    /// <summary>
-    /// A Unix time in milliseconds (UTC) as this computer's local time, "yyyy-MM-dd HH:mm:ss". Outside the range a
-    /// date can represent, the raw number is shown instead.
-    /// </summary>
+    /// <summary>Unix milliseconds as local time; out-of-range values are shown raw.</summary>
     public static string? UnixMillisecondsLocal(object? value) => value switch
     {
         null => null,

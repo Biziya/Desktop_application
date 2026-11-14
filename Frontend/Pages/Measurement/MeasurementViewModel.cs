@@ -130,10 +130,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     /// <summary>The bell beside Threshold: mutes or unmutes the alarm sound.</summary>
     public RelayCommand ToggleAlarmMuteCommand { get; }
 
-    /// <summary>
-    /// DEMO / PREVIEW MODE: rows without a device ts_ms get a random one so the table can be previewed.
-    /// Turn off (MainViewModel) once the device provides ts_ms. Demo values are never saved or exported.
-    /// </summary>
+    /// <summary>Demo mode: rows without a device ts_ms get a random one for display only (never saved or exported).</summary>
     public bool ShowDemoTsMs { get; }
 
     public MeasurementState State
@@ -168,10 +165,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         private set => Set(ref captureProgress, value);
     }
 
-    /// <summary>The app's toasts (results and errors of measurement actions).</summary>
     public ToastService Toasts { get; }
-
-    // ---------- Capture duration (click the countdown to edit) ----------
 
     /// <summary>Length of the next capture. A running capture keeps the duration it started with.</summary>
     public TimeSpan CaptureDuration => captureDuration;
@@ -195,7 +189,6 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Seconds typed in the duration editor.</summary>
     public string DurationText
     {
         get => durationText;
@@ -204,10 +197,10 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
     public bool NeedsCore => savedCore is null;
 
-    /// <summary>Session shown in the table and exported: the session of the saved Drillhole ID (or a restored one).</summary>
+    /// <summary>Session shown in the table and exported.</summary>
     public Guid? SessionId => session?.Id;
 
-    /// <summary>Starting depth (metres, the next capture's "from"). A change applies from the next capture.</summary>
+    /// <summary>Starting depth in metres; a change applies from the next capture.</summary>
     public string NextFrom
     {
         get => nextFrom;
@@ -220,10 +213,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>
-    /// Depth step of each capture in CENTIMETRES (Step (cm) input): to_m = from_m + step_cm / 100. Stored in mm as
-    /// before. A change applies from the next capture.
-    /// </summary>
+    /// <summary>Depth step in centimetres (stored in mm); a change applies from the next capture.</summary>
     public string Step
     {
         get => step;
@@ -236,10 +226,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>
-    /// CPS alarm threshold: a completed row whose CPS (the table's value) is above it sounds the alarm. Empty means no
-    /// alarm. It never blocks Start or changes a measurement; a change applies from the next completed row.
-    /// </summary>
+    /// <summary>CPS alarm threshold; empty means no alarm. Never blocks Start.</summary>
     public string Threshold
     {
         get => threshold;
@@ -255,15 +242,11 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Red border on Threshold (typed text that is not a valid threshold).</summary>
     public bool IsThresholdInvalid => threshold.Trim().Length > 0 && thresholdCps is null;
 
     public const string ThresholdError = "Threshold: enter a CPS value of 0 or more (at most 2 decimals), or leave it empty for no alarm.";
 
-    /// <summary>
-    /// Mutes the alarm sound only: rows above the threshold still turn the bell red. Kept in memory, so the app always
-    /// starts with the sound on.
-    /// </summary>
+    /// <summary>Mutes the sound only (the bell still turns red). Not persisted.</summary>
     public bool IsAlarmMuted
     {
         get => isAlarmMuted;
@@ -276,8 +259,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>The last completed row was above the threshold. Cleared by the next row below it, a threshold change or
-    /// a new measurement.</summary>
+    /// <summary>The last completed row was above the threshold.</summary>
     public bool IsAlarmTriggered
     {
         get => isAlarmTriggered;
@@ -290,7 +272,6 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>What the bell beside Threshold shows.</summary>
     public AlarmState Alarm => thresholdCps is null ? AlarmState.Off
         : IsAlarmTriggered ? AlarmState.Triggered
         : IsAlarmMuted ? AlarmState.Muted
@@ -304,7 +285,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         _ => $"Alarm sounds above {CpsAlarm.FormatThreshold(thresholdCps!.Value)} CPS. Click to mute."
     };
 
-    /// <summary>Called when the user leaves the Threshold box: invalid text gets an error toast (no alarm until fixed).</summary>
+    /// <summary>Called when the Threshold box loses focus.</summary>
     public void CommitThreshold()
     {
         if (IsThresholdInvalid)
@@ -313,10 +294,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Red border on Starting Depth (typed text that is not a valid depth).</summary>
     public bool IsNextFromInvalid => nextFrom.Length > 0 && nextFromMm is null;
 
-    /// <summary>Red border on Step (typed text that is not a valid step).</summary>
     public bool IsStepInvalid => step.Length > 0 && stepMm is null;
 
     public string DepthError =>
@@ -330,10 +309,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         session is { DrillholeId: { } drillhole } && savedCore is { } core && drillhole == core.DrillholeId;
 
     /// <summary>
-    /// Follows the drillhole selected on Core Information (empty when none is selected). Empty: the table and chart
-    /// are emptied and Start, export and delete are unavailable — nothing stored is deleted. A drillhole: its stored
-    /// rows (sorted by From), session and depth progress are shown, without creating a session; Save &amp; Continue
-    /// still creates it when needed. A load that finishes after a newer selection is discarded.
+    /// Shows the stored rows of the drillhole selected on Core Information (empty clears the view) without creating a
+    /// session. A load that finishes after a newer selection is discarded.
     /// </summary>
     public void SelectDrillhole(string drillholeId)
     {
@@ -391,8 +368,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         RefreshCommands();
     }
 
-    // Looks up the session of the core's Drillhole ID (creating it only if none exists) and shows its rows and
-    // saved progress. The same Drillhole ID always resolves to the same session, also after a restart.
+    // The same Drillhole ID always resolves to the same session (created only if none exists).
     private Task OpenDrillholeAsync(CoreSnapshot core)
     {
         var version = ++viewVersion;
@@ -479,9 +455,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         SetDepthInputs("", "");
     }
 
-    // Shows a stored session: its rows sorted by From and its saved starting depth and step (the step converted from
-    // stored mm to cm). Without saved progress the starting depth is empty (to be entered on the Measurement page) and
-    // the step stays as entered.
+    // Without saved progress the starting depth is cleared and the step stays as entered.
     private void ShowSession(MeasurementSession shown, IReadOnlyList<MeasurementResult> rows, DepthProgress? progress)
     {
         session = shown;
@@ -566,10 +540,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         DeleteCommand.Refresh();
     }
 
-    /// <summary>
-    /// Called when the user leaves a depth box (commits it): invalid text gets an error toast. Typing itself only
-    /// colours the box border.
-    /// </summary>
+    /// <summary>Called when a depth box loses focus; typing itself only colours the border.</summary>
     public void CommitDepthInputs()
     {
         if (IsNextFromInvalid || IsStepInvalid)
@@ -603,14 +574,12 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             return;
         }
 
-        // Start needs a valid starting depth and step; otherwise say what is missing (5 s error toast).
         if (!HasValidDepths)
         {
             Notify(ToastKind.Error, DepthError);
             return;
         }
 
-        // Start (also after Stop) continues the drillhole's session, its rows and its next depth and step.
         ResetCountdown();
         State = MeasurementState.Ready;
     }
@@ -641,7 +610,6 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         alarm.Reset();
     }
 
-    // Back to the full configured duration (after completion, cancellation, Stop or a duration change).
     private void ResetCountdown()
     {
         Countdown = FormatCountdown(captureDuration);
@@ -667,8 +635,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         IsEditingDuration = true;
     }
 
-    // Saves a valid duration for the next capture (and stores it); invalid input keeps the editor open with an error
-    // toast. Never starts measuring or triggers a capture.
+    // Invalid input keeps the editor open.
     private void SaveDuration()
     {
         if (!CaptureDurationSettings.TryParse(DurationText, out var seconds))
@@ -744,7 +711,6 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             token.ThrowIfCancellationRequested();
             var row = BuildResult(data, current, core, fromMm, toMm, stepValue, duration);
 
-            // The row goes to its place in the From order (not necessarily the end).
             AddSorted(row);
 
             // Once per completed row, on the CPS the table shows; the sound plays without waiting.
@@ -761,9 +727,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
                     $"Incomplete capture: {row.SampleCount} of {row.ExpectedSamples} samples received. The result averages the {row.SampleCount} received.");
             }
 
-            // Advance once per completed capture, from this capture's own interval (never from the last displayed
-            // row: the table is sorted by From) — unless the user typed a new starting depth meanwhile, which then
-            // applies to the next capture. Saved in the same transaction as the new row.
+            // Advance from this capture's own interval (the table is sorted by From), unless the user typed a new
+            // starting depth meanwhile.
             if (nextFromMm == fromMm)
             {
                 SetDepthInputs(Depth.Format(toMm), step);
@@ -804,9 +769,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    // The completed row of a capture. Device captures: the averages of the accepted samples (each field over its own
-    // valid values), the actual sample count, the window and the source detector; the raw samples ride along and are
-    // saved with the row. Other services (tests) deliver plain values. No samples at all is an error — nothing is invented.
+    // Device captures are averaged from their samples (saved with the row); other services (tests) deliver plain values.
     private MeasurementResult BuildResult(
         CaptureData data, MeasurementSession current, CoreSnapshot core, long fromMm, long toMm, long stepMm, TimeSpan duration)
     {
@@ -879,8 +842,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         _ = DeleteAsync(row);
     }
 
-    // Removes the confirmed row. If the database delete fails the row is shown again in its place, because it is
-    // still stored.
+    // If the database delete fails the row is shown again, because it is still stored.
     private async Task DeleteAsync(MeasurementResult row)
     {
         Results.Remove(row);
@@ -895,11 +857,9 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
 
         SaveSession();
-        // Reported only now: the row is gone from the database.
         Notify(ToastKind.Success, "Measurement deleted.");
     }
 
-    // Inserts a row at its position in the From order and renumbers No. to match the displayed positions.
     private void AddSorted(MeasurementResult row)
     {
         Results.Insert(MeasurementOrder.InsertIndex(Results, row), row);
@@ -914,8 +874,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
     }
 
-    // Stores the whole table (one session, displayed order) without waiting. Stored rows only get their SortOrder
-    // updated, so a row whose earlier save failed is saved by the next change, Stop or close — never twice.
+    // Fire-and-forget save of the whole table; a row whose earlier save failed is retried here, never saved twice.
     private void SaveSession() => _ = SaveSessionAsync();
 
     private async Task SaveSessionAsync()

@@ -3,10 +3,8 @@ using System.Globalization;
 namespace Frontend.Calculation.Measurement;
 
 /// <summary>
-/// CPS threshold alarm of the Measurement page. It is checked once per completed row, with the same finalized CPS the
-/// table shows (the row's averaged count0, counts per second), and sounds only when that value is strictly greater than
-/// the threshold. The sound is played without waiting for it, so acquisition, the countdown and the row are never held
-/// up or changed. While a sound is still playing, another one is not started (no overlapping alarms).
+/// CPS threshold alarm, checked once per completed row; sounds when CPS is strictly above the threshold. Playback is
+/// fire-and-forget so capture is never held up, and a new sound never overlaps one still playing.
 /// </summary>
 public sealed class CpsAlarm(Action play, TimeSpan soundLength, Func<DateTimeOffset>? clock = null)
 {
@@ -15,10 +13,7 @@ public sealed class CpsAlarm(Action play, TimeSpan soundLength, Func<DateTimeOff
 
     public static bool Exceeds(double? cps, double? threshold) => cps is { } value && threshold is { } limit && value > limit;
 
-    /// <summary>
-    /// Parses a threshold typed on the page: a number of CPS, not negative, at most two decimals (the table's CPS
-    /// precision). A point or a comma is accepted as decimal separator, as for depths.
-    /// </summary>
+    /// <summary>Non-negative, at most two decimals (the table's CPS precision); point or comma as separator.</summary>
     public static bool TryParseThreshold(string text, out double threshold)
     {
         threshold = 0;
@@ -35,7 +30,7 @@ public sealed class CpsAlarm(Action play, TimeSpan soundLength, Func<DateTimeOff
 
     public static string FormatThreshold(double threshold) => threshold.ToString("0.##", CultureInfo.InvariantCulture);
 
-    /// <summary>Sounds the alarm when <paramref name="cps"/> exceeds <paramref name="threshold"/>; true when it sounded.</summary>
+    /// <summary>True when the alarm sounded.</summary>
     public bool Check(double? cps, double? threshold)
     {
         if (!Exceeds(cps, threshold) || (playingUntil is { } until && now() < until))
@@ -58,6 +53,5 @@ public sealed class CpsAlarm(Action play, TimeSpan soundLength, Func<DateTimeOff
         return true;
     }
 
-    /// <summary>Stop: the next measurement session starts without a pending sound state.</summary>
     public void Reset() => playingUntil = null;
 }

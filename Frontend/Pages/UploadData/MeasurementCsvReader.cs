@@ -6,11 +6,7 @@ using Frontend.Pages.Measurement.Table;
 
 namespace Frontend.Pages.UploadData;
 
-/// <summary>
-/// Metadata of an imported CSV: the same on every row. A column missing from the file (older exports have no Created At
-/// or Created Username; the oldest no metadata at all) is null, never guessed. CreatedAt is the measurement session's
-/// creation time as exported (its own offset kept), never the file's date.
-/// </summary>
+/// <summary>Metadata of an imported CSV (same on every row). Columns missing from older exports are null.</summary>
 public sealed record ImportedMetadata(
     Guid SessionId,
     string? Drillhole,
@@ -21,18 +17,14 @@ public sealed record ImportedMetadata(
     string? CreatedUsername,
     DateTimeOffset? CreatedAt = null);
 
-/// <summary>An imported CSV: its metadata and its rows in display order (sorted by From, numbered from 1).</summary>
+/// <summary>An imported CSV: metadata and rows in display order.</summary>
 public sealed record ImportedMeasurements(ImportedMetadata Metadata, IReadOnlyList<MeasurementResult> Rows);
 
-/// <summary>The CSV cannot be imported; the message says why (with the row for a value problem).</summary>
 public sealed class CsvImportException(string message) : Exception(message);
 
 /// <summary>
-/// Reads a CSV exported by the Measurement page (CsvExportService) back into measurement rows. Columns are found by
-/// header name, so their order does not matter and unknown columns are ignored. Quoted values may contain commas,
-/// quotes and line breaks; CRLF and LF line endings are accepted. Required: Capture No, Start Time, End Time, Sample and
-/// session_id. Depths (from_m, to_m, step_m), device values and metadata are read when present and stay empty when the
-/// file is older than the column. Reading never changes the file.
+/// Reads a CSV exported by <see cref="CsvExportService"/> back into rows. Columns are matched by header name; optional
+/// columns missing from older exports stay empty.
 /// </summary>
 public static class MeasurementCsvReader
 {
@@ -226,13 +218,12 @@ public static class MeasurementCsvReader
         public double? Number(string column) => Parse(column,
             (string s, out double v) => double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v) && double.IsFinite(v), "a number");
 
-        // Metres to whole millimetres, exactly as the Measurement page stores them (at most 3 decimals, not negative).
         public long? Metres(string column) => Parse(column, (string s, out long v) => Depth.TryParseMetres(s, out v),
             "a depth in metres (not negative, at most 3 decimals)");
 
         private delegate bool TryParse<T>(string text, out T value);
 
-        // An empty cell (or a missing optional column) is null: a value the device or an older export did not provide.
+        // An empty cell or missing optional column is null.
         private T? Parse<T>(string column, TryParse<T> parse, string expected) where T : struct
         {
             var value = Value(column)?.Trim();

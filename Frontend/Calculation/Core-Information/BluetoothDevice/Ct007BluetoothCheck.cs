@@ -2,37 +2,27 @@ using System.Globalization;
 
 namespace Frontend.Calculation.CoreInformation.BluetoothDevice;
 
-/// <summary>A Bluetooth device known to this laptop (paired or connected).</summary>
-/// <param name="Connected">Windows reports the device's live ConnectionStatus as Connected. Paired alone is not
-/// connected.</param>
-/// <param name="DeviceId">Windows device ID (stable for a paired device); null when unknown.</param>
-/// <param name="LowEnergy">Found as a Bluetooth LE device (otherwise Bluetooth Classic).</param>
+/// <summary>A paired or connected Bluetooth device. <c>Connected</c> is the live status; paired alone is not connected.</summary>
 public sealed record KnownBluetoothDevice(string Name, ulong Address, bool Connected, bool Paired, string? DeviceId = null, bool LowEnergy = false);
 
-/// <summary>Reads Bluetooth devices of this laptop (Windows in the app, a fake in tests). Both methods throw when the
-/// state cannot be read (no adapter, Bluetooth off, API error, timeout).</summary>
+/// <summary>Bluetooth device source (Windows in the app, a fake in tests). Throws when the state cannot be read.</summary>
 public interface IBluetoothReader
 {
-    /// <summary>Paired or connected devices whose name passes <paramref name="nameMatches"/>.</summary>
     IReadOnlyList<KnownBluetoothDevice> ListDevices(Func<string, bool> nameMatches);
 
-    /// <summary>The live state of one device, or null when Windows does not know it (any more).</summary>
+    /// <summary>The live state of one device, or null when Windows no longer knows it.</summary>
     KnownBluetoothDevice? ReadDevice(BluetoothDeviceOption device);
 }
 
-/// <summary>
-/// A CT007-M device the user can pick for monitoring. Identified by its Bluetooth address (stable; the name is only
-/// shown): two options are the same device when their addresses match, even if Windows reports another name.
-/// </summary>
-/// <param name="DeviceId">Windows device ID, used to open the device for each check (null: looked up by address).</param>
-/// <param name="LowEnergy">Bluetooth LE device (otherwise Bluetooth Classic).</param>
+/// <summary>A selectable CT007-M. Equality is by Bluetooth address only; the name may change.</summary>
+/// <param name="DeviceId">Windows device ID used to open the device; null means look it up by address.</param>
 public sealed record BluetoothDeviceOption(ulong Address, string Name, string? DeviceId = null, bool LowEnergy = false)
 {
     public string AddressText => string.Join(":", Address.ToString("X12", CultureInfo.InvariantCulture).Chunk(2).Select(c => new string(c)));
 
     public string DisplayName => string.IsNullOrWhiteSpace(Name) ? "Name unavailable" : Name.Trim();
 
-    /// <summary>Dropdown text: name and address, so two devices with similar names stay distinguishable.</summary>
+    // Address included so similarly named devices stay distinguishable.
     public string Display => $"{DisplayName}  ({AddressText})";
 
     public bool Equals(BluetoothDeviceOption? other) => other is not null && other.Address == Address;
@@ -43,11 +33,8 @@ public sealed record BluetoothDeviceOption(ulong Address, string Name, string? D
 }
 
 /// <summary>
-/// Local Bluetooth information about CT007-M detectors on THIS laptop (not the backend's computer), read from Windows
-/// (<see cref="WindowsBluetooth"/>: the Windows Runtime Bluetooth API, Classic and LE, live ConnectionStatus). A device is a CT007-M when its name begins with <see cref="DeviceSettings.Ct007NamePrefix"/>
-/// ("CT007-M-") — or, when <see cref="DeviceSettings.Ct007Address"/> is set, when it has that address.
-/// <see cref="ListDevices"/> fills the selection dropdown; <see cref="CheckSelected"/> checks the ONE device the user
-/// picked, by address. Reading only: no inquiry scan, no pairing, no connection is ever started.
+/// CT007-M detection on this laptop: a device matches <see cref="DeviceSettings.Ct007Address"/> when set, otherwise
+/// its name starts with <see cref="DeviceSettings.Ct007NamePrefix"/>. Read-only; never pairs or connects.
 /// </summary>
 public sealed class Ct007BluetoothCheck(DeviceSettings settings, IBluetoothReader reader)
 {
@@ -60,10 +47,8 @@ public sealed class Ct007BluetoothCheck(DeviceSettings settings, IBluetoothReade
     {
     }
 
-    /// <summary>Status shown before the user has picked a device.</summary>
     public static LocalStatus NotSelected { get; } = new(LocalState.NotSelected, "No device selected", "Select the CT007-M device to monitor.");
 
-    /// <summary>CT007-M devices paired with or connected to this laptop, by name. Throws when Windows cannot be asked.</summary>
     public IReadOnlyList<BluetoothDeviceOption> ListDevices() =>
         reader.ListDevices(NameMayMatch).Where(IsCt007)
             .GroupBy(d => d.Address)
@@ -73,11 +58,7 @@ public sealed class Ct007BluetoothCheck(DeviceSettings settings, IBluetoothReade
             .ThenBy(o => o.Address)
             .ToList();
 
-    /// <summary>
-    /// The selected device's connection, found by address: Connected only when Windows reports an active connection;
-    /// Disconnected when the check worked and it is only paired (or no longer known); Status unavailable when the
-    /// check itself failed (no adapter, Bluetooth off, API error) — never Disconnected then.
-    /// </summary>
+    // A failed check is "Status unavailable", never "Disconnected".
     public LocalStatus CheckSelected(BluetoothDeviceOption selected)
     {
         KnownBluetoothDevice? device;
@@ -112,7 +93,6 @@ public sealed class Ct007BluetoothCheck(DeviceSettings settings, IBluetoothReade
         };
     }
 
-    /// <summary>The identification rule: configured address, otherwise a name beginning with the configured prefix.</summary>
     public bool IsCt007(KnownBluetoothDevice device)
     {
         if (ParseAddress(settings.Ct007Address) is { } address)
@@ -135,7 +115,6 @@ public sealed class Ct007BluetoothCheck(DeviceSettings settings, IBluetoothReade
         return hex.Length == 12 ? Convert.ToUInt64(hex, 16) : null;
     }
 
-    /// <summary>A fixed list as the device source: the selected device is looked up in it by address.</summary>
     private sealed class ListReader(Func<IReadOnlyList<KnownBluetoothDevice>> list) : IBluetoothReader
     {
         public IReadOnlyList<KnownBluetoothDevice> ListDevices(Func<string, bool> nameMatches) => list().Where(d => nameMatches(d.Name)).ToList();

@@ -5,14 +5,14 @@ using Microsoft.Data.SqlClient;
 
 namespace Backend.Controllers.Measurement;
 
-/// <summary>Data Viewer page: the measurements stored by POST api/measurements/upload, read-only.</summary>
+/// <summary>Data Viewer page: read-only access to uploaded measurements.</summary>
 [ApiController]
 [Tags("Measurement")]
 [Route("api/measurements/uploaded")]
 public sealed class UploadedMeasurementController(IUploadedMeasurementRepository repository, ILogger<UploadedMeasurementController> logger)
     : ControllerBase
 {
-    /// <summary>Most rows one request returns (the same as the most one upload may contain).</summary>
+    /// <summary>Same as the upload limit.</summary>
     public const int MaxRecords = 10_000;
 
     public const string TablesMissingMessage =

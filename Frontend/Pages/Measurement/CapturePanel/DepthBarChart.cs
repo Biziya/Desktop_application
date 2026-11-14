@@ -13,11 +13,8 @@ using Frontend.Pages.Measurement.Table;
 namespace Frontend.Pages.Measurement.CapturePanel;
 
 /// <summary>
-/// Bar chart of the measurement rows: x = depth (m), y = CPS. Each row is one vertical bar from its saved
-/// <c>from</c> to <c>to</c> (so widths follow the actual interval, including step changes) and from 0 up to the same
-/// CPS the table shows (the row's averaged count0, counts per second). Bars are placed by depth (rows are also
-/// listed by From). Rows without depths or CPS are not drawn. Hover a bar for its values. Rendering only — the data
-/// stays in the ViewModel. Axis labels, empty text and font sizes are set from CapturePanel.yaml.
+/// Bar chart of the rows: x = depth (m), one bar per from–to interval; y = the CPS the table shows. Rows without
+/// depths or CPS are not drawn.
 /// </summary>
 public sealed class DepthBarChart : FrameworkElement
 {

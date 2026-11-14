@@ -6,11 +6,7 @@ using Frontend.Shared.Infrastructure;
 
 namespace Frontend.Pages.DataViewer;
 
-/// <summary>
-/// Data Viewer page: the measurements stored in the central database by the Upload Data page, by drillhole. Pick a
-/// drillhole to see its project, campaign and every uploaded row in the Measurement page's table. Read-only.
-/// The drillhole list reloads whenever the page is shown and when the backend comes back online after a failure.
-/// </summary>
+/// <summary>Data Viewer page: read-only view of uploaded measurements, by drillhole.</summary>
 public sealed class DataViewerViewModel : ObservableObject, INavigationAware
 {
     private readonly UploadedMeasurementsClient client;
@@ -45,7 +41,7 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
     /// <summary>Drillholes matching the search text (all of them when it is empty or is the shown Hole ID).</summary>
     public BulkObservableCollection<UploadedDrillhole> DrillholeOptions { get; } = [];
 
-    /// <summary>The shown drillhole's rows, by depth, as on the Measurement page (MeasurementGrid binds Results).</summary>
+    /// <summary>The shown drillhole's rows (MeasurementGrid binds Results).</summary>
     public BulkObservableCollection<MeasurementResult> Results { get; } = [];
 
     public AsyncCommand RefreshCommand { get; }
@@ -75,7 +71,6 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
         }
     }
 
-    /// <summary>The drillhole whose rows are in the table.</summary>
     public UploadedDrillhole? Shown
     {
         get => shown;
@@ -99,10 +94,9 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
         ? $"{Count(d.UploadCount, "upload")} · {Count(Results.Count, "row")} · last upload {d.LastUploadedAt.ToLocalTime():yyyy-MM-dd HH:mm}"
         : "";
 
-    /// <summary>Loading, error or empty-state text under the drillhole box; empty when there is nothing to say.</summary>
     public string Message { get => message; private set => Set(ref message, value); }
 
-    /// <summary>The last load failed: Retry is shown.</summary>
+    /// <summary>The last load failed.</summary>
     public bool CanRetry { get => canRetry; private set => Set(ref canRetry, value); }
 
     public bool IsLoading { get => isLoading; private set => Set(ref isLoading, value); }

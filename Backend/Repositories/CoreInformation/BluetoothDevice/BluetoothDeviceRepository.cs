@@ -8,11 +8,7 @@ using WinBluetoothDevice = Windows.Devices.Bluetooth.BluetoothDevice;
 
 namespace Backend.Repositories.CoreInformation.BluetoothDevice;
 
-/// <summary>
-/// Detects a CT007-M probe that is currently connected to this Windows computer.
-/// Both Bluetooth Classic and Bluetooth LE devices are checked, and every match is
-/// re-verified through its live ConnectionStatus, so paired-but-disconnected devices are ignored.
-/// </summary>
+// Checks Classic and LE devices and re-verifies each live ConnectionStatus, so paired-but-disconnected probes are ignored.
 public sealed class BluetoothDeviceRepository(ILogger<BluetoothDeviceRepository> logger)
 {
     private const string DeviceNamePrefix = "CT007-M";

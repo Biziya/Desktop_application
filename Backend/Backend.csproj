@@ -6,13 +6,14 @@
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- The SQL Server connection string is a secret: dotnet user-secrets (development) or the
-         ConnectionStrings__DefaultConnection environment variable (deployment). Never in appsettings.json. -->
+    <!-- Connection string is a secret: user-secrets (dev) or ConnectionStrings__DefaultConnection (deploy), never appsettings.json. -->
     <UserSecretsId>ct007-backend-5b1c6f0e</UserSecretsId>
+    <!-- release/ holds build output (build-backend.ps1), never source. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);release/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- SQL Server migrations: run by hand on the central database (README.md); copied for the Sql tests. -->
+    <!-- SQL migrations: run by hand on the central database; copied to output for the tests. -->
     <None Update="Database\**\*.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

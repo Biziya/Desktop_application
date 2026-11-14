@@ -8,17 +8,13 @@ using WinBluetoothDevice = Windows.Devices.Bluetooth.BluetoothDevice;
 namespace Frontend.Calculation.CoreInformation.BluetoothDevice;
 
 /// <summary>
-/// Reads Bluetooth devices of THIS laptop with the Windows Runtime Bluetooth API — the detection logic of the former
-/// backend's BluetoothDeviceRepository, which worked on the measurement laptop: Bluetooth Classic and Bluetooth LE are
-/// both enumerated, and every device's state is re-read from its live <c>ConnectionStatus</c>, so a paired but
-/// disconnected device is never reported as connected. Differences from the backend: paired devices are listed too
-/// (for the selection dropdown, marked not connected), a device is identified by its Bluetooth address and Windows
-/// device ID, and a failure is thrown (shown as "Status unavailable") instead of being reported as not connected.
-/// Reading only: no inquiry scan, no pairing, no connection. Every Windows call is bounded by <see cref="CallTimeout"/>.
+/// Reads this laptop's Bluetooth devices (Classic and LE) via WinRT. State comes from the live <c>ConnectionStatus</c>,
+/// so a paired-but-disconnected device is never reported connected; failures throw ("Status unavailable") rather than
+/// reading as disconnected. Read-only: no scan, pairing or connection. Every call is bounded by <see cref="CallTimeout"/>.
 /// </summary>
 internal sealed class WindowsBluetooth : IBluetoothReader
 {
-    /// <summary>A Windows Bluetooth call that takes longer than this fails the check (it never hangs the monitor).</summary>
+    // A slow Windows call fails the check instead of hanging the monitor.
     public static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(3);
 
     public IReadOnlyList<KnownBluetoothDevice> ListDevices(Func<string, bool> nameMatches)
@@ -87,10 +83,8 @@ internal sealed class WindowsBluetooth : IBluetoothReader
             return device is null ? null : Read(device);
         }
 
-        using (var device = Wait(WinBluetoothDevice.FromIdAsync(id)))
-        {
-            return device is null ? null : Read(device);
-        }
+        using var classic = Wait(WinBluetoothDevice.FromIdAsync(id));
+        return classic is null ? null : Read(classic);
     }
 
     private static KnownBluetoothDevice Read(WinBluetoothDevice device) =>

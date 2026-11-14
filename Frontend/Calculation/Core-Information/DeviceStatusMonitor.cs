@@ -6,16 +6,9 @@ using Frontend.Shared.Infrastructure;
 namespace Frontend.Calculation.CoreInformation;
 
 /// <summary>
-/// Runs the local Device Status checks on this laptop. Bluetooth: the user picks one CT007-M device
-/// (<see cref="SelectedBluetoothDevice"/>, by Bluetooth address); only that device's connection is checked, every
-/// <see cref="DeviceSettings.BluetoothCheckInterval"/> (1 s). Nothing is checked before a selection, and no device is
-/// ever selected or switched automatically. The dropdown list and the two databases are refreshed every
-/// <see cref="DeviceSettings.CheckInterval"/> (and the list when the dropdown opens; the databases on Retry).
-/// Checks run on the thread pool (Bluetooth enumeration and file access never block the UI); results are published on
-/// the caller's (UI) context. A check never overlaps another of its kind. A result for a previously selected device
-/// is discarded. One instance lives as long as the main window (navigation never creates another), so there is one
-/// polling loop of each kind; everything stops on <see cref="Dispose"/>.
-/// Bluetooth monitoring is informational only: nothing here enables, blocks or changes a measurement capture.
+/// Local Device Status checks: the user-selected CT007-M's connection (never auto-selected), the device list and
+/// both databases. Checks run on the thread pool and publish on the UI context; checks of one kind never overlap,
+/// and a result for a previously selected device is discarded. Informational only: never affects a capture.
 /// </summary>
 public sealed class DeviceStatusMonitor : ObservableObject, IDisposable
 {
@@ -54,31 +47,25 @@ public sealed class DeviceStatusMonitor : ObservableObject, IDisposable
         measurementDatabase = LocalStatus.Checking(measurementDatabaseCheck.DatabasePath);
     }
 
-    /// <summary>Connection of the selected CT007-M device ("No device selected" before a selection).</summary>
     public LocalStatus Bluetooth
     {
         get => bluetooth;
         private set => Set(ref bluetooth, value);
     }
 
-    /// <summary>CT007-M devices paired with or connected to this laptop (dropdown items).</summary>
     public IReadOnlyList<BluetoothDeviceOption> BluetoothDevices
     {
         get => bluetoothDevices;
         private set => Set(ref bluetoothDevices, value);
     }
 
-    /// <summary>Note under the dropdown: no CT007-M paired, or the list could not be read ("" otherwise).</summary>
     public string BluetoothDevicesMessage
     {
         get => bluetoothDevicesMessage;
         private set => Set(ref bluetoothDevicesMessage, value);
     }
 
-    /// <summary>
-    /// The device the user chose to monitor. Set only by the user (the dropdown); null is ignored, so a list refresh
-    /// can never clear or switch the selection.
-    /// </summary>
+    // Null is ignored, so a list refresh can never clear or switch the user's selection.
     public BluetoothDeviceOption? SelectedBluetoothDevice
     {
         get => selectedBluetoothDevice;
@@ -97,7 +84,6 @@ public sealed class DeviceStatusMonitor : ObservableObject, IDisposable
         private set => Set(ref gammaGuardDatabase, value);
     }
 
-    /// <summary>Starts the periodic checks (once).</summary>
     public void Start()
     {
         if (!started && !disposed)
@@ -108,11 +94,7 @@ public sealed class DeviceStatusMonitor : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>
-    /// Starts monitoring <paramref name="device"/> instead of the previous one: the status shows Checking at once and a
-    /// check of the new device follows; a result still arriving for the previous device is discarded. Monitoring only:
-    /// no pairing or connection is started.
-    /// </summary>
+    // Monitoring only: no pairing or connection is started.
     public void SelectBluetoothDevice(BluetoothDeviceOption? device)
     {
         if (disposed || device is null || device.Equals(selectedBluetoothDevice))
@@ -127,7 +109,6 @@ public sealed class DeviceStatusMonitor : ObservableObject, IDisposable
         _ = CheckBluetoothAsync();
     }
 
-    /// <summary>Checks the selected device's connection (nothing to do before a selection).</summary>
     public Task CheckBluetoothAsync()
     {
         if (disposed || selectedBluetoothDevice is not { } device)
@@ -136,15 +117,9 @@ public sealed class DeviceStatusMonitor : ObservableObject, IDisposable
         }
 
         // One check at a time. If it is for a previous selection, it starts a check of the new device when it ends.
-        if (bluetoothRun is { IsCompleted: false })
-        {
-            return bluetoothRun;
-        }
-
-        return bluetoothRun = CheckSelectedAsync(device, selection);
+        return bluetoothRun is { IsCompleted: false } ? bluetoothRun : bluetoothRun = CheckSelectedAsync(device, selection);
     }
 
-    /// <summary>Reads the CT007-M devices known to this laptop for the dropdown.</summary>
     public Task RefreshBluetoothDevicesAsync() =>
         Run(ref bluetoothListRun, () => (Devices: bluetoothCheck.ListDevices(), Error: (string?)null), PublishDevices,
             error => (Devices: (IReadOnlyList<BluetoothDeviceOption>)[], Error: (string?)error.Message));
@@ -157,11 +132,8 @@ public sealed class DeviceStatusMonitor : ObservableObject, IDisposable
         Run(ref gammaGuardRun, () => gammaGuardCheck.Check(rediscover), status => GammaGuardDatabase = status, Unavailable);
 
     /// <summary>
-    /// Switches to the Gamma Guard database the user chose, if it is valid (<see cref="GammaGuardDatabaseCheck.Select"/>):
-    /// the row shows it at once and every later read (the next capture) uses it; it is saved for the next start.
-    /// Otherwise the current database stays and the returned status says why. Runs off the UI thread after a running
-    /// Gamma Guard check, and checks requested meanwhile wait for it, so an older result never replaces the new one.
-    /// No connection is kept open to either file.
+    /// Switches to the user's Gamma Guard database if valid; otherwise the returned status says why. Queued behind
+    /// any running Gamma Guard check so an older result never replaces the new selection.
     /// </summary>
     public Task<LocalStatus> SelectGammaGuardDatabaseAsync(string path)
     {
@@ -287,12 +259,7 @@ public sealed class DeviceStatusMonitor : ObservableObject, IDisposable
             return Task.CompletedTask;
         }
 
-        if (running is { IsCompleted: false })
-        {
-            return running;
-        }
-
-        return running = RunCheckAsync(check, publish, failed);
+        return running is { IsCompleted: false } ? running : running = RunCheckAsync(check, publish, failed);
     }
 
     private async Task RunCheckAsync<T>(Func<T> check, Action<T> publish, Func<Exception, T> failed)

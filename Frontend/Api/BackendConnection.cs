@@ -10,11 +10,9 @@ public enum BackendState
 }
 
 /// <summary>
-/// Backend reachability for the sidebar indicator only. There is no health endpoint, so the periodic check is a HEAD
-/// request to the base URL (<see cref="ApiClient.ProbeAsync"/>): nothing is downloaded and no status endpoint is used.
-/// Every other request also updates the state through <see cref="ApiClient.Reached"/>. Device Status (Bluetooth and
-/// databases) is checked locally and never affects this state. One instance lives as long as the main window: checks
-/// never overlap and stop on <see cref="Dispose"/>.
+/// Backend reachability for the sidebar indicator. There is no health endpoint, so it polls with
+/// <see cref="ApiClient.ProbeAsync"/> and also listens to every other request via <see cref="ApiClient.Reached"/>.
+/// Checks never overlap.
 /// </summary>
 public sealed class BackendConnection : ObservableObject, IDisposable
 {
@@ -59,7 +57,6 @@ public sealed class BackendConnection : ObservableObject, IDisposable
     public string Tooltip =>
         $"Backend {api.BaseUrl}: {StateText}" + (lastChecked is { } time ? $" (checked {time:HH:mm:ss})" : "");
 
-    /// <summary>Starts the periodic check (once).</summary>
     public void Start()
     {
         if (!started)
@@ -77,12 +74,7 @@ public sealed class BackendConnection : ObservableObject, IDisposable
             return Task.CompletedTask;
         }
 
-        if (check is { IsCompleted: false })
-        {
-            return check;
-        }
-
-        return check = CheckAsync();
+        return check is { IsCompleted: false } ? check : check = CheckAsync();
     }
 
     public void Dispose()

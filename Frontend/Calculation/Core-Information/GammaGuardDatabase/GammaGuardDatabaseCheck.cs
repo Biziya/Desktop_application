@@ -4,24 +4,14 @@ using System.Text.Json;
 namespace Frontend.Calculation.CoreInformation.GammaGuardDatabase;
 
 /// <summary>
-/// Finds the Gamma Guard SQLite database on THIS laptop and checks it read-only (it is never modified).
-/// Rules, in order:
-/// 1. The database the user selected (Select / Change Database), saved in the selection file. It is used while it is a
-///    readable Gamma Guard database (or only busy). When it cannot be used (moved, deleted, network drive offline) the
-///    rules below are tried; the selection stays saved and is used again as soon as the file is back.
-/// 2. <see cref="DeviceSettings.GammaGuardDatabasePath"/> when set (environment variables expanded) — used as is,
-///    so a wrong path shows as "File not found" with that path.
-/// 3. Otherwise the Gamma Guard install layout <c>…\GammaGuard\&lt;version&gt;\Database\&lt;file&gt;.sqlite</c>
-///    (e.g. <c>GammaGuard\CT008 1.9.0\Database\ct008-log.sqlite</c>) is searched under the current user's
-///    Documents, Desktop and profile folders, LocalAppData, AppData, ProgramData and Program Files: folders whose
-///    name contains "GammaGuard" or "Gamma Guard", then files matching <see cref="DeviceSettings.GammaGuardFileName"/>
-///    in a "Database" folder below them. The most recently written file wins.
-/// The search is bounded in depth, skips folders it may not read, and its result is reused until the file
-/// disappears or Retry is used. A selected file can be anywhere, so it must also have the Gamma Guard tables
-/// (<see cref="GammaGuardDeviceDatabase.StructureProblem"/>); a found or configured one only needs to be readable.
-/// Safe to call from several threads: checks and selections never run interleaved.
+/// Finds the Gamma Guard SQLite database on this laptop and checks it read-only. Order:
+/// 1. the user's saved selection, while usable (it stays saved and is used again once the file is back);
+/// 2. <see cref="DeviceSettings.GammaGuardDatabasePath"/> when set, used as is;
+/// 3. a bounded search for <c>…\GammaGuard*\&lt;version&gt;\Database\&lt;file&gt;</c> in the usual user/program folders;
+///    the newest file wins and is cached until it disappears or Retry is used.
+/// Only a selected file must also have the Gamma Guard tables, since it can be any file. Thread-safe.
 /// </summary>
-/// <param name="selectionFile">Where the selected path is saved (JSON); null: a selection lasts until the app closes.</param>
+/// <param name="selectionFile">Where the selection is saved (JSON); null keeps it in memory only.</param>
 public sealed class GammaGuardDatabaseCheck(
     DeviceSettings settings, IReadOnlyList<(string Root, int Depth)>? searchRoots = null, string? selectionFile = null)
 {
@@ -33,14 +23,10 @@ public sealed class GammaGuardDatabaseCheck(
     private string? selected;
     private bool selectionLoaded;
 
-    /// <summary>
-    /// gamma-guard-database.json in the Config folder beside the measurement database
-    /// (%LocalAppData%\CT007_Measurement_Studio\Config): per user, outside the install folder, so updates keep it.
-    /// </summary>
+    // Per user and outside the install folder, so updates keep it.
     public static string SelectionFileBeside(string measurementDatabasePath) =>
         Path.Combine(Path.GetDirectoryName(Path.GetFullPath(measurementDatabasePath))!, "Config", "gamma-guard-database.json");
 
-    /// <summary>The database the user selected (saved across restarts), or null.</summary>
     public string? SelectedPath
     {
         get
@@ -81,11 +67,7 @@ public sealed class GammaGuardDatabaseCheck(
         }
     }
 
-    /// <summary>
-    /// Makes <paramref name="path"/> the database to use if it is a readable Gamma Guard database: it is saved for the
-    /// next start and replaces any earlier selection or found path. Otherwise nothing changes and the returned status
-    /// says why. The file is only read.
-    /// </summary>
+    /// <summary>Saves <paramref name="path"/> as the selection if it is a valid Gamma Guard database; otherwise nothing changes.</summary>
     /// <exception cref="IOException">The selection could not be saved; nothing changed.</exception>
     /// <exception cref="UnauthorizedAccessException">The selection could not be saved; nothing changed.</exception>
     public LocalStatus Select(string path)
@@ -110,7 +92,7 @@ public sealed class GammaGuardDatabaseCheck(
 
     public string? Discover()
     {
-        var options = new EnumerationOptions { IgnoreInaccessible = true, RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint };
+        var options = new EnumerationOptions { IgnoreInaccessible = true, RecurseSubdirectories = true, MaxRecursionDepth = 3, AttributesToSkip = FileAttributes.ReparsePoint };
         var candidates = new List<FileInfo>();
 
         foreach (var (root, depth) in roots)
@@ -133,7 +115,6 @@ public sealed class GammaGuardDatabaseCheck(
 
                 foreach (var install in installs)
                 {
-                    options.MaxRecursionDepth = 3;
                     candidates.AddRange(Directory.EnumerateFiles(install, settings.GammaGuardFileName, options)
                         .Where(f => string.Equals(Path.GetFileName(Path.GetDirectoryName(f)), "Database", StringComparison.OrdinalIgnoreCase))
                         .Select(f => new FileInfo(f)));
@@ -218,11 +199,9 @@ public sealed class GammaGuardDatabaseCheck(
         File.Move(temporary, selectionFile, true);
     }
 
-    private static bool IsGammaGuardFolder(string directory)
-    {
-        var name = Path.GetFileName(directory).Replace(" ", "");
-        return name.Contains("GammaGuard", StringComparison.OrdinalIgnoreCase);
-    }
+    // Matches "GammaGuard" and "Gamma Guard".
+    private static bool IsGammaGuardFolder(string directory) =>
+        Path.GetFileName(directory).Replace(" ", "").Contains("GammaGuard", StringComparison.OrdinalIgnoreCase);
 
     private static IReadOnlyList<(string Root, int Depth)> DefaultRoots()
     {

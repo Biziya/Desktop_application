@@ -4,14 +4,10 @@ using System.Reflection;
 namespace Frontend.Api;
 
 /// <summary>
-/// Backend settings, read once at start-up from exactly one .env file (docs/API_CONFIGURATION.md). The build decides
-/// which one (AppEnvironment in Frontend.csproj: Debug builds local, Release builds and the installer production):
-/// - local: Frontend\.env.local of the source checkout the app runs from (dotnet run / dotnet watch run).
-/// - production: %LocalAppData%\CT007_Measurement_Studio\Config\.env.production. On first start it is created from
-///   Config\.env.production.template shipped with the app; an existing file is never overwritten, so the address
-///   stays editable and survives updates.
-/// API_BASE_URL is required; the two timings default to 5 s. Every problem stops the app with a message instead of
-/// silently pointing it at another backend: there is no fallback from one file or environment to another.
+/// Backend settings from exactly one .env file, chosen by the build's AppEnvironment (see Frontend\README.md):
+/// local = Frontend\.env.local of the source checkout; production = %LocalAppData%\...\.env.production, created
+/// once from the shipped template and never overwritten. Any problem stops the app: there is deliberately no
+/// fallback to another file or backend.
 /// </summary>
 public sealed record ApiSettings(string BaseUrl, TimeSpan RequestTimeout, TimeSpan StatusInterval)
 {
@@ -20,28 +16,22 @@ public sealed record ApiSettings(string BaseUrl, TimeSpan RequestTimeout, TimeSp
     public const string TimeoutKey = "API_TIMEOUT_SECONDS";
     public const string RetryIntervalKey = "API_RETRY_INTERVAL_SECONDS";
 
-    /// <summary>The production template's path relative to the executable (Frontend.csproj copies it there).</summary>
+    // Relative to the executable; Frontend.csproj copies it there.
     public const string ProductionTemplate = @"Config\.env.production.template";
 
     // Optional values only; the backend address never has a default.
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan DefaultStatusInterval = TimeSpan.FromSeconds(5);
 
-    /// <summary>The settings the app uses: the .env file of the build's environment.</summary>
     /// <exception cref="InvalidDataException">The configuration is missing or invalid; the message says what to fix.</exception>
-    public static ApiSettings LoadConfigured()
+    public static ApiSettings LoadConfigured() => BuildEnvironment switch
     {
-        var environment = BuildEnvironment;
+        "local" => Load("local", LocalFile(AppContext.BaseDirectory)),
+        "production" => Load("production", InitializeProductionFile(ProductionFile, Path.Combine(AppContext.BaseDirectory, ProductionTemplate))),
+        var environment => throw new InvalidDataException($"This build has AppEnvironment '{environment}'; it must be 'local' or 'production'. Rebuild the application.")
+    };
 
-        return environment switch
-        {
-            "local" => Load("local", LocalFile(AppContext.BaseDirectory)),
-            "production" => Load("production", InitializeProductionFile(ProductionFile, Path.Combine(AppContext.BaseDirectory, ProductionTemplate))),
-            _ => throw new InvalidDataException($"This build has AppEnvironment '{environment}'; it must be 'local' or 'production'. Rebuild the application.")
-        };
-    }
-
-    /// <summary>AppEnvironment from Frontend.csproj, compiled into the assembly.</summary>
+    // AppEnvironment from Frontend.csproj, compiled into the assembly.
     public static string? BuildEnvironment => typeof(ApiSettings).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
         .FirstOrDefault(attribute => attribute.Key == "AppEnvironment")?.Value;
 
@@ -66,10 +56,7 @@ public sealed record ApiSettings(string BaseUrl, TimeSpan RequestTimeout, TimeSp
             $"(dotnet watch run in Frontend). Installed copies are built with build-installer.ps1.");
     }
 
-    /// <summary>
-    /// Copies <paramref name="template"/> to <paramref name="file"/> when the file does not exist yet (first start).
-    /// An existing file is left untouched. Returns <paramref name="file"/>.
-    /// </summary>
+    /// <summary>Creates <paramref name="file"/> from <paramref name="template"/> on first start; never overwrites. Returns <paramref name="file"/>.</summary>
     /// <exception cref="InvalidDataException">The file is missing and cannot be created from the template.</exception>
     public static string InitializeProductionFile(string file, string template)
     {
@@ -95,7 +82,6 @@ public sealed record ApiSettings(string BaseUrl, TimeSpan RequestTimeout, TimeSp
         return file;
     }
 
-    /// <summary>Reads <paramref name="path"/>, the .env file of <paramref name="environment"/>.</summary>
     /// <exception cref="InvalidDataException">The file is missing or a line or value is invalid, or API_BASE_URL is not set.</exception>
     public static ApiSettings Load(string environment, string path)
     {

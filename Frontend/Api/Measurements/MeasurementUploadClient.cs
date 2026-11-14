@@ -3,10 +3,7 @@ namespace Frontend.Api.Measurements;
 /// <summary>Body of POST /api/measurements/upload (Backend/Models/Measurement/MeasurementUploadRequest.cs).</summary>
 public sealed record MeasurementUploadRequest(MeasurementUploadInformation MeasurementInformation, IReadOnlyList<MeasurementUploadRecord> Records);
 
-/// <summary>
-/// Metadata of the uploaded measurement session. The user names are what this app declares; the backend stores them
-/// as such and records a server-verified identity separately when its hosting provides one.
-/// </summary>
+// User names are self-declared; the backend records a verified identity separately when available.
 public sealed record MeasurementUploadInformation(
     Guid SessionId,
     string? Drillhole,
@@ -32,10 +29,7 @@ public sealed record MeasurementUploadRecord(
     double? HdmRaw,
     double? DoseRate);
 
-/// <summary>
-/// The stored upload. <see cref="AlreadyUploaded"/>: the same dataset was stored before (e.g. a retry after a timeout
-/// whose first attempt had succeeded), so nothing was inserted again.
-/// </summary>
+/// <summary><see cref="AlreadyUploaded"/>: the same dataset was stored before (e.g. a retry after a timeout), nothing was inserted.</summary>
 public sealed record MeasurementUploadResponse(long UploadId, int RecordCount, bool AlreadyUploaded, DateTimeOffset UploadedAt);
 
 public sealed class MeasurementUploadClient(ApiClient api)
