@@ -24,7 +24,7 @@
   <!-- The backend's appsettings*.json holds the SQL Server connection string: keep it out of the test output so no test
        can reach a real server. -->
   <Target Name="RemoveBackendAppSettings" AfterTargets="Build">
-    <Delete Files="$(OutDir)appsettings.json;$(OutDir)appsettings.Development.json" />
+    <Delete Files="$(OutDir)appsettings.json;$(OutDir)appsettings.Development.json;$(OutDir)appsettings.Local.json" />
   </Target>
 
 </Project>

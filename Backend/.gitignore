@@ -1,5 +1,8 @@
 # release/ is tracked: build-backend.ps1 publishes the deployable API there.
 
+# This machine's connection string (also the copy published into release/). Never commit it.
+appsettings.Local.json
+
 # Local development settings and databases
 appsettings.*.local.json
 *.db

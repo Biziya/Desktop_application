@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stops a commit that contains a connection string or password. Enable once per clone:
+#   git config core.hooksPath .githooks
+exec sh tools/check-secrets.sh
