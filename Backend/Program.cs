@@ -5,9 +5,6 @@ using Backend.Repositories.Measurement;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// This machine's connection string. Git-ignored (Backend/.gitignore), so the password never reaches GitHub.
-builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
-
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 

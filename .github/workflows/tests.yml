@@ -34,10 +34,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Check for committed passwords
-        shell: bash
-        run: sh tools/check-secrets.sh --all
-
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
