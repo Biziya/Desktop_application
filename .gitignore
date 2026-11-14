@@ -1,12 +1,15 @@
+# Shared rules. Frontend/.gitignore and Backend/.gitignore hold the project-specific ones.
 bin/
 obj/
 .vs/
+.vscode/
 *.user
-
-# Build output (Frontend/release, Backend/release)
-release/
+*.suo
 
 # Real .env files hold machine-specific settings; only .env.example is committed
 .env
 .env.*
 !.env.example
+
+# Test run output
+test-results*.csv

@@ -16,7 +16,7 @@ exported to CSV, and uploaded to a central SQL Server database through a small A
 | `Images/` | Screenshots |
 | `SHIBA/` | CT008 Monitor source handed over by EIC, kept for reference |
 
-`release/` folders inside `Frontend/` and `Backend/` are build output and are not committed.
+Builds are committed so every released version is kept on GitHub: `Frontend/release/installer/` (Setup.exe, Portable.zip, .nupkg) and `Backend/release/`. `Frontend/release/publish/` is temporary and ignored. Each project has its own `.gitignore`; the root one holds the shared rules.
 
 ## Prerequisites
 

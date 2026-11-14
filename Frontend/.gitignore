@@ -1,0 +1,5 @@
+# release/installer is tracked: each version's Setup.exe, Portable.zip and .nupkg are kept in git
+# (Velopack also needs the older packages to build delta updates).
+
+# Intermediate publish output; build-installer.ps1 recreates it on every run
+release/publish/

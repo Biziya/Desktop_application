@@ -1,0 +1,7 @@
+# release/ is tracked: build-backend.ps1 publishes the deployable API there.
+
+# Local development settings and databases
+appsettings.*.local.json
+*.db
+*.db-shm
+*.db-wal
