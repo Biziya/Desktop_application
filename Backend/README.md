@@ -46,14 +46,9 @@ with Windows authentication, the authenticated name goes into `UPLOADED_BY_VERIF
 
 ## Connection string
 
-`appsettings.json` leaves `ConnectionStrings:DefaultConnection` empty on purpose. Set it with user-secrets on a dev PC:
-
-```powershell
-dotnet user-secrets set ConnectionStrings:DefaultConnection "Data Source=...;Initial Catalog=...;User ID=...;Password=...;Encrypt=True;" --project Backend
-```
-
-On a server, set the environment variable `ConnectionStrings__DefaultConnection` instead. Use
-`TrustServerCertificate=True` only on dev.
+`ConnectionStrings:DefaultConnection` is set in `appsettings.json` (and `appsettings.Development.json`), and
+`build-backend.ps1` publishes it into `release\`. To use a different database on one machine without editing the file,
+set the environment variable `ConnectionStrings__DefaultConnection`; it overrides the file.
 
 ## Database setup
 
@@ -75,5 +70,5 @@ cd Backend
 ```
 
 This publishes a framework-dependent win-x64 Release build to `Backend\release\`. The server needs the ASP.NET Core 10
-runtime and the `ConnectionStrings__DefaultConnection` variable. Then point the desktop app's `API_BASE_URL` at it
+runtime. Then point the desktop app's `API_BASE_URL` at it
 (see `Frontend/README.md`).

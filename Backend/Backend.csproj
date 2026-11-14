@@ -6,7 +6,7 @@
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Connection string is a secret: user-secrets (dev) or ConnectionStrings__DefaultConnection (deploy), never appsettings.json. -->
+    <!-- The connection string is in appsettings.json; user-secrets or ConnectionStrings__DefaultConnection override it. -->
     <UserSecretsId>ct007-backend-5b1c6f0e</UserSecretsId>
     <!-- release/ holds build output (build-backend.ps1), never source. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);release/**</DefaultItemExcludes>
