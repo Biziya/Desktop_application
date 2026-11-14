@@ -9,5 +9,5 @@ application:
   # feed with the same id. It is internal and not shown to users (the name below is).
   id: "CT007.MeasurementStudio"
   name: "SPP CT007"
-  version: "1.1.0"
+  version: "1.1.1"
   description: "SPP CT007 measurement desktop application"
