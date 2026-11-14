@@ -15,10 +15,7 @@ public sealed class InverseBoolVisibilityConverter : IValueConverter
         throw new NotSupportedException();
 }
 
-/// <summary>
-/// A non-empty string → Visible; null or "" → Collapsed (banners and notes that only exist with text). With
-/// <see cref="Invert"/> it is the other way round (placeholder text over an empty box).
-/// </summary>
+/// <summary>Non-empty string → Visible, else Collapsed; reversed with <see cref="Invert"/>.</summary>
 public sealed class NonEmptyVisibilityConverter : IValueConverter
 {
     public bool Invert { get; set; }
@@ -30,7 +27,7 @@ public sealed class NonEmptyVisibilityConverter : IValueConverter
         throw new NotSupportedException();
 }
 
-/// <summary>A count of 0 (or an empty list) → Visible, anything else → Collapsed: empty-state text over a table.</summary>
+/// <summary>Zero count, empty list or null → Visible (empty-state text), else Collapsed.</summary>
 public sealed class ZeroVisibilityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>

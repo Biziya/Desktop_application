@@ -7,11 +7,8 @@ using Microsoft.Data.Sqlite;
 namespace Frontend.Pages.Measurement;
 
 /// <summary>
-/// Deletes old measurements from measurements.db (Config/data-retention.yaml). The unit is the session (one drillhole):
-/// a session is deleted, with its records, raw samples and depth progress, when its newest capture — or, without
-/// captures, its creation — is older than the retention period. Deleting whole sessions never leaves a drillhole with
-/// gaps in its capture numbers. The session open on the Measurement page is always kept.
-/// Only measurements.db is touched; the CT008 / Gamma Guard database is never written.
+/// Deletes whole sessions from measurements.db whose newest capture (or creation) is older than the retention period
+/// (Config/data-retention.yaml). Whole sessions, so a drillhole never has gaps in its capture numbers.
 /// </summary>
 public sealed class DataRetention(string databasePath, DataRetentionSettings settings, Func<DateTimeOffset>? clock = null)
 {
@@ -19,9 +16,7 @@ public sealed class DataRetention(string databasePath, DataRetentionSettings set
 
     public DataRetentionSettings Settings { get; } = settings;
 
-    /// <summary>
-    /// Runs one check. Returns how many sessions were deleted (0 when disabled or the database does not exist yet).
-    /// </summary>
+    /// <summary>Runs one check and returns how many sessions were deleted.</summary>
     /// <param name="keepSessionId">The session in use on the Measurement page; never deleted.</param>
     public int Run(Guid? keepSessionId)
     {

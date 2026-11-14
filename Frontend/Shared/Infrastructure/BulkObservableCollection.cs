@@ -4,10 +4,7 @@ using System.ComponentModel;
 
 namespace Frontend.Shared.Infrastructure;
 
-/// <summary>
-/// ObservableCollection that can replace all its items with ONE Reset notification instead of one per item
-/// (thousands of Add notifications are what makes a bound list freeze).
-/// </summary>
+/// <summary>Replaces all items with one Reset notification; per-item Adds freeze large bound lists.</summary>
 public sealed class BulkObservableCollection<T> : ObservableCollection<T>
 {
     public void ReplaceAll(IEnumerable<T> items)

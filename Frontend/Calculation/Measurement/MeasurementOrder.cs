@@ -3,10 +3,8 @@ using Frontend.Pages.Measurement;
 namespace Frontend.Calculation.Measurement;
 
 /// <summary>
-/// Display (and CSV) order of measurement rows: ascending numeric From; equal From values by capture Start Time, then
-/// by stored record ID (rows not stored yet come after stored ones), then by Capture No. Rows stored before depths
-/// were recorded (no From) come last. Ordering never changes a row's values, IDs or interval, and it is not used to
-/// work out the next depth (that comes from the capture state).
+/// Display and CSV order: From, then Start Time, then record ID, then Capture No.; missing From or ID sorts last.
+/// Not used to work out the next depth (that comes from the capture state).
 /// </summary>
 public sealed class MeasurementOrder : IComparer<MeasurementResult>
 {
@@ -18,13 +16,7 @@ public sealed class MeasurementOrder : IComparer<MeasurementResult>
         if (x is null) return -1;
         if (y is null) return 1;
 
-        var byFrom = (x.FromMm, y.FromMm) switch
-        {
-            ({ } a, { } b) => a.CompareTo(b),
-            (null, null) => 0,
-            (null, _) => 1,
-            (_, null) => -1
-        };
+        var byFrom = NullsLast(x.FromMm, y.FromMm);
 
         if (byFrom != 0) return byFrom;
 
@@ -32,18 +24,20 @@ public sealed class MeasurementOrder : IComparer<MeasurementResult>
 
         if (byTime != 0) return byTime;
 
-        var byRecord = (x.RecordId, y.RecordId) switch
-        {
-            ({ } a, { } b) => a.CompareTo(b),
-            (null, null) => 0,
-            (null, _) => 1,
-            (_, null) => -1
-        };
+        var byRecord = NullsLast(x.RecordId, y.RecordId);
 
         return byRecord != 0 ? byRecord : x.CaptureNumber.CompareTo(y.CaptureNumber);
     }
 
-    /// <summary>Rows in display order (a stable sort of a copy).</summary>
+    private static int NullsLast(long? x, long? y) => (x, y) switch
+    {
+        ({ } a, { } b) => a.CompareTo(b),
+        (null, null) => 0,
+        (null, _) => 1,
+        (_, null) => -1
+    };
+
+    // Stable sort of a copy.
     public static List<MeasurementResult> Sort(IEnumerable<MeasurementResult> rows) => rows.Order(Instance).ToList();
 
     /// <summary>Position at which <paramref name="row"/> belongs in an already sorted list (after equal rows).</summary>

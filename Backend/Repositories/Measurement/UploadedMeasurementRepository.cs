@@ -1,9 +1,10 @@
+using System.Data;
 using Backend.Models.Measurement;
 using Microsoft.Data.SqlClient;
 
 namespace Backend.Repositories.Measurement;
 
-/// <summary>Reads the SPP CT007 table (<see cref="SppCt007Database.Table"/>) with parameterized SELECTs. Never writes.</summary>
+/// <summary>Read-only access to <see cref="SppCt007Database.Table"/>.</summary>
 public sealed class UploadedMeasurementRepository(IConfiguration configuration) : IUploadedMeasurementRepository
 {
     // A drillhole uploaded several times may have had its project or campaign corrected in between: the latest wins.
@@ -51,8 +52,8 @@ public sealed class UploadedMeasurementRepository(IConfiguration configuration) 
     public Task<IReadOnlyList<UploadedRecordResponse>> GetRecordsAsync(string drillhole, int limit, CancellationToken cancellationToken) =>
         QueryAsync(RecordsQuery, parameters =>
         {
-            parameters.Add("@Drillhole", System.Data.SqlDbType.NVarChar, 100).Value = drillhole;
-            parameters.Add("@Limit", System.Data.SqlDbType.Int).Value = limit;
+            parameters.Add("@Drillhole", SqlDbType.NVarChar, 100).Value = drillhole;
+            parameters.Add("@Limit", SqlDbType.Int).Value = limit;
         }, reader => new UploadedRecordResponse(
             SessionId: reader.GetGuid(0),
             CaptureNumber: reader.GetInt32(1),

@@ -6,11 +6,8 @@ using Frontend.Shared.Infrastructure;
 namespace Frontend.ViewModels;
 
 /// <summary>
-/// Turns connection changes into toasts — once per transition, never per status check (a check that finds the same
-/// state says nothing). The backend (sidebar Online/Offline) and the CT-007 Bluetooth device are announced separately
-/// and named differently, so the two are never confused. The first database results after start-up are not announced,
-/// nor is a backend that is online from the start. Bluetooth: after the user selects a device, its first confirmed
-/// state is announced once, then every change (Connected ⇄ Disconnected, 3 s; a failed check, 5 s error).
+/// Toasts on status transitions only, never per check. Initial database results and an initially-online backend are
+/// not announced; a newly selected Bluetooth device's first confirmed state is.
 /// </summary>
 public sealed class StatusAnnouncements : IDisposable
 {
@@ -85,7 +82,7 @@ public sealed class StatusAnnouncements : IDisposable
         }
 
         bluetoothState = status.State;
-        var name = $"{device.DisplayName} (Bluetooth)";
+        var name = $"{device.DisplayName} (Bluetooth)"; // "(Bluetooth)" keeps it distinct from the backend's toasts
 
         switch (status.State)
         {

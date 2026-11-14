@@ -6,9 +6,8 @@ using Frontend.Shared.Infrastructure;
 namespace Frontend.Config;
 
 /// <summary>
-/// Config/application.yaml: application id, name, version and description. The same file sets the compiled version
-/// (Frontend.csproj) and the installer metadata (build-installer.ps1), so the window title, assembly and Velopack
-/// package always show the same version.
+/// Config/application.yaml. Also read by Frontend.csproj and build-installer.ps1, so the window title, assembly and
+/// Velopack package always show the same version.
 /// </summary>
 public sealed partial class ApplicationSettings
 {
@@ -40,7 +39,6 @@ public sealed partial class ApplicationSettings
         return settings;
     }
 
-    /// <summary>The resources MainWindow.xaml (title, sidebar, Help panel) and App use.</summary>
     public void AddTo(ResourceDictionary resources)
     {
         resources.Add("ApplicationName", Application.Name);

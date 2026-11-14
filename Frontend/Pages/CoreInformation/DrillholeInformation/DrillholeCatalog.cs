@@ -7,10 +7,8 @@ namespace Frontend.Pages.CoreInformation.DrillholeInformation;
 public sealed record DrillholeOptions(IReadOnlyList<DrillholeOption> Entries, DrillholeOption? Closest);
 
 /// <summary>
-/// One loaded drillhole list, prepared once (off the UI thread) for fast lookups and filtering: usable entries only
-/// (no empty Hole ID, duplicates once), an index by Hole ID, the alphabetical order, and one dropdown entry object per
-/// drillhole. Entry objects are reused from the previous list when a drillhole did not change, so a refresh with the
-/// same data changes nothing in the dropdown. Immutable, so it can be filtered on any thread.
+/// Immutable, indexed drillhole list (safe to filter on any thread). Option objects are reused from the previous
+/// catalog for unchanged drillholes, so a refresh with the same data changes nothing in the dropdown.
 /// </summary>
 public sealed class DrillholeCatalog
 {
@@ -62,12 +60,8 @@ public sealed class DrillholeCatalog
         holeId.Length > 0 && options.TryGetValue(holeId.Trim(), out var found) ? found : null;
 
     /// <summary>
-    /// Dropdown entries for <paramref name="text"/>: entries whose Hole ID contains it (all of them when it is empty
-    /// or the picked drillhole's own text). Measured drillholes come first (newest measurement first) and are not
-    /// repeated under All drillholes (A–Z). History entries that are not in this list are left out: they are not
-    /// offered as available. While searching, each group lists exact matches first, then Hole IDs that start with the
-    /// text, then the other partial matches (each kept in the group's own order); the best of them is the closest
-    /// match — highlighted, never picked automatically.
+    /// Entries whose Hole ID contains <paramref name="text"/>: measured drillholes first, then the rest A–Z. While
+    /// searching, each group is ranked exact, prefix, partial.
     /// </summary>
     public DrillholeOptions Options(IReadOnlyList<MeasuredDrillhole> history, string text, string picked)
     {

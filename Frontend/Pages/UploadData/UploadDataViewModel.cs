@@ -9,10 +9,7 @@ using Frontend.Shared.Infrastructure;
 namespace Frontend.Pages.UploadData;
 
 /// <summary>
-/// Upload Data page: import a CSV exported by the Measurement page, review it (rows can only be removed, never edited),
-/// and upload it to the central database through the backend. The CSV file is only read; removing a row changes the
-/// import in memory only. A failed upload keeps everything for a retry; a successful one keeps the rows for review and
-/// is not repeated until another file is imported.
+/// Upload Data page: import an exported CSV, remove rows if needed (in memory only), and upload it through the backend.
 /// </summary>
 public sealed class UploadDataViewModel : ObservableObject
 {
@@ -54,7 +51,6 @@ public sealed class UploadDataViewModel : ObservableObject
 
     public ToastService Toasts { get; }
 
-    /// <summary>Imported rows in Measurement page order; the table's DataContext is this ViewModel, as on that page.</summary>
     public BulkObservableCollection<MeasurementResult> Results { get; } = [];
 
     public AsyncCommand ImportCommand { get; }
@@ -81,15 +77,11 @@ public sealed class UploadDataViewModel : ObservableObject
 
     public string Notes => Show(metadata?.Notes);
 
-    /// <summary>
-    /// When the measurement session was created, from the CSV, in this computer's local time; files exported before it
-    /// was recorded show "Not available" (never the file's date or the current time).
-    /// </summary>
+    /// <summary>Session creation time from the CSV, in local time; older exports show "Not available".</summary>
     public string CreatedAt => metadata?.CreatedAt is { } created
         ? created.ToLocalTime().ToString(MeasurementCellFormat.TimestampFormat, CultureInfo.InvariantCulture)
         : NotAvailable;
 
-    /// <summary>The Windows account using this app now (DOMAIN\user when on a domain).</summary>
     public string UploadingUsername { get; }
 
     public string TotalText => $"Total measurements: {Results.Count.ToString(CultureInfo.CurrentCulture)}";

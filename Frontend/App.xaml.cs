@@ -1,5 +1,3 @@
-
-using System;
 using System.IO;
 using System.Reflection;
 using System.Windows;
@@ -15,17 +13,15 @@ public partial class App : Application
     [STAThread]
     private static void Main(string[] args)
     {
-        // Initialize Velopack before WPF starts.
+        // Velopack must run before WPF starts (it may handle install/update hooks and exit).
         VelopackApp.Build().Run();
 
-        // Start the WPF application normally.
         App app = new();
         app.InitializeComponent();
         app.Run();
     }
 
-    // Load YAML configuration (application metadata, page sections, data retention, Help text) and the backend API settings before showing
-    // MainWindow; a configuration error is shown and the app closes instead of opening half-configured.
+    // A configuration error closes the app instead of opening it half-configured.
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -38,8 +34,7 @@ public partial class App : Application
             DataRetentionSettings.Load(AppContext.BaseDirectory).AddTo(Resources);
             HelpSettings.Load(AppContext.BaseDirectory).AddTo(Resources);
 
-            // MainViewModel reads ApiSettings.LoadConfigured() (APP_ENV, .env.<APP_ENV>, API_* variables).
-            window = new MainWindow();
+            window = new MainWindow(); // loads ApiSettings, which can also throw InvalidDataException
         }
         catch (InvalidDataException error)
         {

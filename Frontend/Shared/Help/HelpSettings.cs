@@ -8,7 +8,6 @@ public sealed class HelpSettings
 {
     public const string File = "Config/help.yaml";
 
-    /// <summary>Resource key under which MainViewModel finds these settings.</summary>
     public const string Resource = "HelpSettings";
 
     public required List<HelpPage> Pages { get; init; }
@@ -40,7 +39,6 @@ public sealed class HelpSettings
         return settings;
     }
 
-    /// <summary>The section for a sidebar page title, or null.</summary>
     public HelpPage? For(string pageTitle) => Pages.FirstOrDefault(p => p.Page == pageTitle);
 
     public void AddTo(ResourceDictionary resources) => resources.Add(Resource, this);

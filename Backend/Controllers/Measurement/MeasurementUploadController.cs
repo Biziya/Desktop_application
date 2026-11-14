@@ -10,12 +10,8 @@ namespace Backend.Controllers.Measurement;
 [Route("api/measurements")]
 public sealed class MeasurementUploadController(IMeasurementUploadRepository repository, ILogger<MeasurementUploadController> logger) : ControllerBase
 {
-    /// <summary>
-    /// Stores one imported measurement session in the central database. Validated here whatever the client checked.
-    /// Repeating a request (e.g. after a client timeout) never stores the dataset twice: the answer is then the earlier
-    /// upload with alreadyUploaded = true. The user names in the body are stored as declared by the app; an identity the
-    /// server authenticated (Windows authentication in the hosting, when enabled) is stored separately.
-    /// </summary>
+    // Idempotent: a retried request returns the earlier upload with alreadyUploaded = true. Body user names are stored
+    // as declared; a server-authenticated identity (Windows auth, when enabled) is stored separately.
     [HttpPost("upload")]
     [ProducesResponseType<MeasurementUploadResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<MeasurementUploadResponse>(StatusCodes.Status200OK)]

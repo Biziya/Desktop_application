@@ -2,10 +2,7 @@ using Frontend.Shared.Infrastructure;
 
 namespace Frontend.Shared.Help;
 
-/// <summary>
-/// The Help panel beside the page (MainWindow): what each button of the current page does, from Config/help.yaml.
-/// Opened by the Help button of every page header or F1; closed with its × or Esc.
-/// </summary>
+/// <summary>The Help panel beside the page, filled from Config/help.yaml.</summary>
 public sealed class HelpPanel : ObservableObject
 {
     private readonly HelpSettings? settings;
@@ -23,7 +20,6 @@ public sealed class HelpPanel : ObservableObject
 
     public bool IsOpen { get => isOpen; private set => Set(ref isOpen, value); }
 
-    /// <summary>The section shown; null when help.yaml has none for the page.</summary>
     public HelpSettings.HelpPage? Page { get => page; private set => Set(ref page, value); }
 
     public void Open(string pageTitle)

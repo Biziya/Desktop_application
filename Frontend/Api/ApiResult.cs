@@ -2,13 +2,12 @@ namespace Frontend.Api;
 
 public enum ApiStatus
 {
-    /// <summary>The backend answered with the expected data.</summary>
     Ok,
 
-    /// <summary>No answer: connection refused, network failure or timeout. The backend is offline.</summary>
+    /// <summary>No answer: connection refused, network failure or timeout.</summary>
     Unreachable,
 
-    /// <summary>The backend answered with an HTTP error status. It is online; this endpoint failed.</summary>
+    /// <summary>The backend is online but returned an error status.</summary>
     HttpError,
 
     /// <summary>The backend answered, but not with the expected JSON.</summary>

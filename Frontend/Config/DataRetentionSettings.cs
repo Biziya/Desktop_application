@@ -8,7 +8,6 @@ public sealed class DataRetentionSettings
 {
     public const string File = "Config/data-retention.yaml";
 
-    /// <summary>Resource key under which MainViewModel finds these settings.</summary>
     public const string Resource = "DataRetentionSettings";
 
     public required bool Enabled { get; init; }

@@ -1,6 +1,5 @@
 namespace Backend.Models.Measurement;
 
-/// <summary>A drillhole with uploaded measurements, for the Data Viewer's drillhole list.</summary>
 public sealed record UploadedDrillholeResponse(
     string HoleId,
     string ProjectCode,
@@ -9,10 +8,7 @@ public sealed record UploadedDrillholeResponse(
     int RecordCount,
     DateTimeOffset LastUploadedAt);
 
-/// <summary>
-/// One uploaded measurement row (dbo.SPPCT007_BEK) with the upload it came from. Count0 is CPS, as on
-/// the Measurement page; device values may be null.
-/// </summary>
+/// <summary>Count0 is CPS; device values may be null.</summary>
 public sealed record UploadedRecordResponse(
     Guid SessionId,
     int CaptureNumber,

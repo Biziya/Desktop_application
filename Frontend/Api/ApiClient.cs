@@ -5,9 +5,8 @@ using System.Text.Json;
 namespace Frontend.Api;
 
 /// <summary>
-/// The one HTTP setup for the backend: base URL, timeout and JSON options. Every request reports whether the backend
-/// answered at all (<see cref="Reached"/>), which drives the sidebar Online/Offline indicator without extra requests.
-/// Continuations run on the caller's context, so results and events arrive on the UI thread.
+/// The single HTTP client for the backend. Every request raises <see cref="Reached"/>, which feeds the sidebar
+/// Online/Offline indicator. Continuations run on the caller's context, so results arrive on the UI thread.
 /// </summary>
 public sealed class ApiClient : IDisposable
 {
@@ -27,15 +26,11 @@ public sealed class ApiClient : IDisposable
     /// <summary>Raised after every request: true when any HTTP response arrived (even an error status).</summary>
     public event Action<bool>? Reached;
 
-    /// <param name="showProblemDetail">True when the endpoint's ProblemDetails text is written for users (see PostAsync);
-    /// otherwise an error answer becomes "Backend error &lt;status&gt;".</param>
+    /// <param name="showProblemDetail">Show the endpoint's user-facing ProblemDetails text instead of "Backend error &lt;status&gt;".</param>
     public Task<ApiResult<T>> GetAsync<T>(string path, CancellationToken cancellationToken, bool showProblemDetail = false) =>
         SendAsync<T>(token => http.GetAsync(path, token), showProblemDetail, cancellationToken);
 
-    /// <summary>
-    /// Posts <paramref name="body"/> as JSON. An error answer's ProblemDetails text (the backend's reason, written for
-    /// users: a validation or duplicate message, never internal details) becomes <see cref="ApiResult{T}.Error"/>.
-    /// </summary>
+    // POST errors carry user-facing ProblemDetails (validation/duplicate messages), so they are shown as-is.
     public Task<ApiResult<T>> PostAsync<T>(string path, object body, CancellationToken cancellationToken) =>
         SendAsync<T>(token => http.PostAsJsonAsync(path, body, Json, token), showProblemDetail: true, cancellationToken);
 
@@ -113,10 +108,7 @@ public sealed class ApiClient : IDisposable
         }
     }
 
-    /// <summary>
-    /// Reachability check without downloading anything: a HEAD request to the base URL. Any HTTP answer, even 404 or
-    /// 405, means the backend is reachable. Reports through <see cref="Reached"/> like every other request.
-    /// </summary>
+    // HEAD to the base URL: any HTTP answer, even 404/405, counts as reachable.
     public async Task<bool> ProbeAsync(CancellationToken cancellationToken)
     {
         try

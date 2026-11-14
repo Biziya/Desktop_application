@@ -28,10 +28,7 @@ public sealed record DetectorStatusRow(
     long? LastSampleMs,
     long? UpdatedMs);
 
-/// <summary>
-/// One Monitoring poll, read over a single read-only connection. <see cref="Samples"/> holds either the rows after the
-/// requested id (in id order) or, for the first read, the newest row of every detector.
-/// </summary>
+/// <summary>One Monitoring poll. <see cref="Samples"/>: rows after the requested id, or on first read the newest row per detector.</summary>
 public sealed record MonitorSnapshot(
     int SchemaVersion,
     long MaxSampleId,
@@ -39,10 +36,8 @@ public sealed record MonitorSnapshot(
     IReadOnlyList<DeviceSample> Samples);
 
 /// <summary>
-/// The only code that reads the Gamma Guard database (samples, detector_status). Every call opens the file read-only
-/// through <see cref="SqliteFileCheck.OpenReadOnly"/> and closes it again: no writes and no journal changes (the only
-/// PRAGMA used is reading user_version).
-/// Sample reads go forward by samples.id (the table's key), so a poll touches only new rows, never the whole history.
+/// The only reader of the Gamma Guard database. Every call opens it read-only and closes it again (no writes, no
+/// journal changes). Sample reads go forward by samples.id, so a poll touches only new rows.
 /// </summary>
 public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
 {
@@ -53,10 +48,7 @@ public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
 
     public string Path { get; } = path;
 
-    /// <summary>
-    /// Why the database on <paramref name="connection"/> is not a Gamma Guard database, or null when it is: every
-    /// column this class reads must exist and a row of each table must be readable. Reads at most one row per table.
-    /// </summary>
+    /// <summary>Why <paramref name="connection"/> is not a Gamma Guard database (a column this class reads is missing), or null.</summary>
     public static string? StructureProblem(SqliteConnection connection)
     {
         foreach (var (table, columns) in new[] { ("samples", SampleColumns), ("detector_status", DetectorColumns) })
@@ -97,10 +89,8 @@ public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
     }
 
     /// <summary>
-    /// Everything the Monitoring page needs for one poll. With <paramref name="afterId"/> null (first read after
-    /// connecting) the newest sample of every detector is returned; otherwise up to <paramref name="limit"/> samples
-    /// with id &gt; afterId, in id order. Ids are AUTOINCREMENT and every writer commits through SQLite's single write
-    /// lock, so a row with a smaller id can never appear later: reading by id never misses or repeats a row.
+    /// One Monitoring poll. Ids are AUTOINCREMENT and SQLite has a single writer lock, so a smaller id never appears
+    /// later: reading by id never misses or repeats a row.
     /// </summary>
     public MonitorSnapshot ReadMonitorSnapshot(long? afterId, int limit)
     {
@@ -197,10 +187,7 @@ public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
         return command.ExecuteScalar() is { } value and not DBNull ? Convert.ToInt64(value, CultureInfo.InvariantCulture) : null;
     }
 
-    /// <summary>
-    /// Serials that wrote the most recent <paramref name="rows"/> samples (by samples.id), each with its newest ts_ms.
-    /// Only the tail of the table is read, never the whole history.
-    /// </summary>
+    /// <summary>Serials in the last <paramref name="rows"/> samples, each with its newest ts_ms.</summary>
     public IReadOnlyList<RecentSerial> RecentSerials(int rows)
     {
         using var connection = SqliteFileCheck.OpenReadOnly(Path);
@@ -225,7 +212,7 @@ public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
         return serials;
     }
 
-    /// <summary>The detector_status row of a serial (the most recently updated one if there are several), or null.</summary>
+    // Most recently updated row if a serial has several.
     public DetectorStatus? FindDetector(string serial)
     {
         using var connection = SqliteFileCheck.OpenReadOnly(Path);

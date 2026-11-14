@@ -12,11 +12,9 @@ using YamlDotNet.Serialization.NamingConventions;
 namespace Frontend.Shared.Infrastructure;
 
 /// <summary>
-/// Reads a section's YAML file into its typed settings class. Strict on purpose: a missing, unknown (misspelled),
-/// duplicate or empty key is an error, and so is a number that is not greater than 0 or a negative margin. Every
-/// error is an <see cref="InvalidDataException"/> whose message names the file and the line or key.
-/// Keys are camelCase versions of the C# property names. Thickness ("8", "8,4" or "8,4,8,4"), GridLength and
-/// DataGridLength values ("2.3*", "Auto", "110") are written as WPF writes them in XAML.
+/// Strict YAML → typed settings: missing, unknown, duplicate or empty keys, non-positive numbers and negative margins
+/// are all <see cref="InvalidDataException"/>s naming the file and line or key. Keys are camelCase property names;
+/// Thickness/GridLength/DataGridLength use XAML syntax.
 /// </summary>
 public static class YamlSettings
 {
@@ -30,7 +28,6 @@ public static class YamlSettings
 
     private static readonly NullabilityInfoContext Nullability = new();
 
-    /// <param name="relativePath">Path below the application folder, e.g. "Pages/Measurement/Table/MeasurementTable.yaml".</param>
     public static T Load<T>(string baseDirectory, string relativePath) where T : class
     {
         var path = Path.Combine(baseDirectory, relativePath);
@@ -65,7 +62,6 @@ public static class YamlSettings
         return settings;
     }
 
-    /// <summary>An error in <paramref name="file"/> at <paramref name="key"/> (e.g. "columns[3].alignment").</summary>
     public static InvalidDataException Invalid(string file, string key, string message) => new($"{file}: {key}: {message}");
 
     // Sizes must be greater than 0 and margins not negative; nested settings and lists are checked the same way.

@@ -3,19 +3,14 @@ using Microsoft.Data.Sqlite;
 
 namespace Frontend.Calculation.CoreInformation;
 
-/// <summary>
-/// Read-only availability check of a SQLite file, shared by the measurement and Gamma Guard database rows. It opens
-/// the file with Mode=ReadOnly (which never creates a file), no connection pooling (the file is not kept open) and a
-/// short busy timeout, reads the schema table and closes. Nothing is written.
-/// </summary>
+/// <summary>Read-only availability check of a SQLite file (measurement and Gamma Guard database rows).</summary>
 public static class SqliteFileCheck
 {
     private const int BusyTimeoutSeconds = 2;
 
     /// <summary>
-    /// The one way this app opens a database it must not change (the Gamma Guard database; the status check of its
-    /// own): Mode=ReadOnly (never creates the file, never writes), no pooling (the file is not kept open afterwards),
-    /// a short busy timeout, and no PRAGMA that sets anything — journal settings stay as the owner set them.
+    /// The only way to open a database this app must not change: ReadOnly never creates or writes the file, no pooling
+    /// keeps it from staying open, and no PRAGMA is set, so the owner's journal settings stay untouched.
     /// </summary>
     public static SqliteConnection OpenReadOnly(string path)
     {
@@ -39,8 +34,7 @@ public static class SqliteFileCheck
         }
     }
 
-    /// <param name="verify">Optional extra read-only check on the open connection: returns why the file is not the
-    /// expected database (shown as "Wrong database"), or null when it is.</param>
+    /// <param name="verify">Optional: returns why the file is the wrong database ("Wrong database"), or null.</param>
     public static LocalStatus Check(string path, string missingDetail, Func<SqliteConnection, string?>? verify = null)
     {
         try

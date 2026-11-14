@@ -23,9 +23,8 @@ public sealed partial class SqliteMeasurementRepository
 
         if (version < 1)
         {
-            // Original (version 1) schema; later steps rename columns. Times are ISO 8601 round-trip text ("O"):
-            // full sub-second precision and the original UTC offset. The unique index (session, CaptureNo) prevents
-            // duplicate rows and, because the session column comes first, is also the index for lookups by session.
+            // Original schema; later steps rename columns. Times are round-trip text ("O") keeping the UTC offset.
+            // The unique (session, CaptureNo) index also serves lookups by session.
             command.CommandText = """
                 CREATE TABLE IF NOT EXISTS MeasurementSessions (
                     MeasurementSessionId TEXT NOT NULL PRIMARY KEY,
@@ -61,9 +60,7 @@ public sealed partial class SqliteMeasurementRepository
 
         if (version < 3)
         {
-            // Short, consistent ID names: MeasurementSessions.id, MeasurementRecords.id and
-            // MeasurementRecords.session_id -> MeasurementSessions.id. RENAME COLUMN keeps every value and row in place,
-            // and SQLite updates the foreign key and the unique index to the new names (no table is recreated).
+            // Short ID names. RENAME COLUMN keeps data, and SQLite updates the foreign key and index.
             command.CommandText = """
                 ALTER TABLE MeasurementSessions RENAME COLUMN MeasurementSessionId TO id;
                 ALTER TABLE MeasurementRecords RENAME COLUMN MeasurementRecordId TO id;
@@ -98,9 +95,7 @@ public sealed partial class SqliteMeasurementRepository
         transaction.Commit();
     }
 
-    // Version 4. Only adds columns, one unique index and the progress table: existing ids, links and values stay.
-    // Sessions stored earlier keep null metadata and their records null depths — no drillhole IDs, intervals or steps
-    // are invented. (Earlier schemas never had session-level from/to, so there is nothing to map onto records.)
+    // Version 4: additive only. Earlier sessions keep null metadata and their records null depths.
     private static void AddDrillholeMetadataAndDepths(SqliteCommand command)
     {
         AddMissingColumns(command, "MeasurementSessions",
@@ -133,7 +128,6 @@ public sealed partial class SqliteMeasurementRepository
                 ". Nothing was changed. Merge or rename these sessions, then restart the app.");
         }
 
-        // next_from and step: where the session's next capture starts and the selected step (millimetres).
         command.CommandText = """
             CREATE UNIQUE INDEX IF NOT EXISTS UX_MeasurementSessions_DrillholeID ON MeasurementSessions (DrillholeID);
             CREATE TABLE IF NOT EXISTS MeasurementProgress (
@@ -145,12 +139,8 @@ public sealed partial class SqliteMeasurementRepository
         command.ExecuteNonQuery();
     }
 
-    // Version 5 (real device capture). Runs once, inside the migration transaction:
-    // * MeasurementProgress: next_from / step (millimetres) become next_from_cm / step_cm (centimetres, REAL), each
-    //   value divided by 10 exactly once (the table is rebuilt, so the old mm columns cannot be read as cm later).
-    // * MeasurementRecords: capture window, expected sample count, averaged temperature/pressure and the source detector
-    //   (serial, name, MAC) plus the device's own session id. Existing rows keep NULL there — nothing is invented.
-    // * CaptureSamples: the raw Gamma Guard samples of each capture, linked to its MeasurementRecords row.
+    // Version 5 (device capture): progress mm -> cm (table rebuilt so values are converted exactly once), new nullable
+    // record columns, and CaptureSamples for each capture's raw samples.
     private static void AddDeviceCapture(SqliteCommand command)
     {
         command.CommandText = """

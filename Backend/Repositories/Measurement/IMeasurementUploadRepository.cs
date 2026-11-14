@@ -5,10 +5,8 @@ namespace Backend.Repositories.Measurement;
 public interface IMeasurementUploadRepository
 {
     /// <summary>
-    /// Stores a validated upload (session and records in one transaction). A dataset with the same
-    /// <paramref name="fingerprint"/> already stored is returned with AlreadyUploaded = true and nothing is inserted.
-    /// Throws <see cref="MeasurementUploadConflictException"/> when some captures of the session were stored by an
-    /// earlier, different upload; nothing is inserted then either.
+    /// Stores a validated upload in one transaction; a known fingerprint returns AlreadyUploaded = true.
+    /// Throws <see cref="MeasurementUploadConflictException"/> when a different upload already stored some captures.
     /// </summary>
     Task<MeasurementUploadResponse> SaveAsync(
         MeasurementUploadRequest request, string fingerprint, string? verifiedUploader, CancellationToken cancellationToken);

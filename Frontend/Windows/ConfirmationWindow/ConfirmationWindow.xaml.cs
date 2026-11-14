@@ -5,7 +5,7 @@ namespace Frontend.Windows.ConfirmationWindow;
 
 public partial class ConfirmationWindow : Window
 {
-    /// <param name="actionBrush">Background of the action button; null keeps the theme's primary blue.</param>
+    /// <param name="actionBrush">Action button background; null keeps the theme's primary colour.</param>
     public ConfirmationWindow(string title, string question, string detail, string action, Brush? actionBrush = null)
     {
         InitializeComponent();

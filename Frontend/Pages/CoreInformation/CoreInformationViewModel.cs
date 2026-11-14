@@ -10,11 +10,8 @@ using Frontend.Windows.ConfirmationWindow;
 namespace Frontend.Pages.CoreInformation;
 
 /// <summary>
-/// Core Information form and Device Status. Field mapping (labels were renamed earlier; storage was not):
-/// Drillhole = <see cref="DrillholeId"/> (API holeId, SQLite DrillholeID), Project = <see cref="DrillholeName"/>
-/// (API projectCode, SQLite DrillholeName), Campaign = <see cref="ProjectArea"/> (API campaign, SQLite Project).
-/// The drillhole list comes from the backend (shown from the local cache first); Device Status is checked locally on
-/// this laptop by <see cref="DeviceStatusMonitor"/>. One failing never blocks the others or touches form values.
+/// Core Information form and Device Status. Labels were renamed but storage was not: Project = <see cref="DrillholeName"/>
+/// (API projectCode), Campaign = <see cref="ProjectArea"/> (API campaign, SQLite Project).
 /// </summary>
 public sealed class CoreInformationViewModel : ObservableObject
 {
@@ -94,19 +91,14 @@ public sealed class CoreInformationViewModel : ObservableObject
     /// <summary>Raised with the new Drillhole ID ("" when cleared) whenever the selected drillhole changes.</summary>
     public event Action<string>? DrillholeChanged;
 
-    /// <summary>Validation errors (5 s toasts).</summary>
     public ToastService Toasts { get; }
 
-    /// <summary>The × in the Drillhole box: clears the search text and the selected drillhole (with Project and
-    /// Campaign). Operator, Notes and every stored session and measurement stay as they are.</summary>
+    /// <summary>Clears the search text and the selected drillhole; Operator, Notes and stored data are kept.</summary>
     public RelayCommand ClearDrillholeCommand { get; }
 
     public bool CanClearDrillhole => !isSelectionLocked && (drillholeSearch.Length > 0 || DrillholeId.Length > 0);
 
-    /// <summary>
-    /// True while measurement mode is active (set by MainViewModel): the drillhole cannot be changed or cleared until
-    /// Stop, so a running capture can never be assigned to another drillhole.
-    /// </summary>
+    /// <summary>Set while measuring, so a running capture can never be assigned to another drillhole.</summary>
     public bool IsSelectionLocked
     {
         get => isSelectionLocked;
@@ -120,10 +112,7 @@ public sealed class CoreInformationViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Best match for the typed text — exact, then prefix, then partial — highlighted in the list. It is not picked
-    /// until the user presses Enter (<see cref="CommitClosest"/>) or clicks it; the typed text is never replaced.
-    /// </summary>
+    /// <summary>Highlighted best match for the typed text; picked only on Enter (<see cref="CommitClosest"/>) or a click.</summary>
     public DrillholeOption? ClosestOption
     {
         get => closestOption;
@@ -138,24 +127,14 @@ public sealed class CoreInformationViewModel : ObservableObject
 
     public RelayCommand RefreshGammaGuardDatabaseCommand { get; }
 
-    /// <summary>Select / Change Database: lets the user choose the Gamma Guard database file (always available).</summary>
     public AsyncCommand SelectGammaGuardDatabaseCommand { get; }
 
-    /// <summary>Local Device Status of this laptop: CT-007 Bluetooth, measurement database, Gamma Guard database.</summary>
     public DeviceStatusMonitor Devices { get; }
 
-    // ---------- Drillhole Information ----------
-
-    /// <summary>
-    /// Dropdown entries matching <see cref="DrillholeSearch"/> (partial, case-insensitive), in two groups:
-    /// "Measured drillholes" (saved measurement history, most recently measured first) and "All drillholes" (the rest,
-    /// alphabetical). Each drillhole appears once; a group heading is listed only when its group has entries. Every
-    /// match is listed (nothing is truncated); the dropdown virtualizes, so only visible rows get controls.
-    /// </summary>
+    /// <summary>Matches for <see cref="DrillholeSearch"/>: "Measured drillholes" (most recent first), then "All drillholes".</summary>
     public BulkObservableCollection<DrillholeOption> DrillholeOptions { get; } = [];
 
-    /// <summary>Text typed in the Drillhole box. Filters the list (after a short pause, off the UI thread); it never
-    /// selects an entry by itself unless it is exactly an existing Hole ID.</summary>
+    /// <summary>Text typed in the Drillhole box; filters the list after a short pause, off the UI thread.</summary>
     public string DrillholeSearch
     {
         get => drillholeSearch;
@@ -179,8 +158,7 @@ public sealed class CoreInformationViewModel : ObservableObject
             Changed(nameof(CanClearDrillhole));
             ClearDrillholeCommand.Refresh();
 
-            // Text that no longer names the chosen drillhole clears it (and its Project/Campaign). Typing never picks:
-            // the closest match is only highlighted until Enter or a click.
+            // Text that no longer names the chosen drillhole clears it; typing never picks.
             if (!string.Equals(value, DrillholeId, StringComparison.OrdinalIgnoreCase) && DrillholeId.Length > 0)
             {
                 SetDrillhole("", "", "");
@@ -190,8 +168,7 @@ public sealed class CoreInformationViewModel : ObservableObject
         }
     }
 
-    /// <summary>Bound to the dropdown's SelectedItem. Picking fills Drillhole, Project and Campaign; the dropdown
-    /// clearing its own selection while the list is filtered is ignored, and headings cannot be picked.</summary>
+    /// <summary>Dropdown SelectedItem; the control clearing its own selection while filtering is ignored.</summary>
     public DrillholeOption? PickedDrillhole
     {
         get => DrillholeId.Length > 0 && catalog.Option(DrillholeId) is { } option && shownOptions.Contains(option) ? option : null;
@@ -232,10 +209,10 @@ public sealed class CoreInformationViewModel : ObservableObject
 
     public string DrillholeId => drillholeId;
 
-    /// <summary>"Project" on the form (API projectCode). Read-only: filled by the selected drillhole.</summary>
+    /// <summary>"Project" on the form (API projectCode).</summary>
     public string DrillholeName => drillholeName;
 
-    /// <summary>"Campaign" on the form (API campaign). Read-only: filled by the selected drillhole.</summary>
+    /// <summary>"Campaign" on the form (API campaign).</summary>
     public string ProjectArea => projectArea;
 
     public string Operator
@@ -250,7 +227,6 @@ public sealed class CoreInformationViewModel : ObservableObject
         set { if (Set(ref notes, value)) Update(); }
     }
 
-    /// <summary>Loading, empty, error or "not in the latest list" message under the Drillhole box.</summary>
     public string DrillholesMessage
     {
         get
@@ -283,12 +259,9 @@ public sealed class CoreInformationViewModel : ObservableObject
     // The latest load got no usable answer (offline, HTTP error, unexpected data).
     private bool DrillholesFailed => drillholesStatus is not null and not ApiStatus.Ok;
 
-    /// <summary>Red border on the Drillhole box after Save &amp; Continue without a drillhole (the message is a toast).</summary>
     public bool HasDrillholeError => showErrors && !HasDrillhole;
 
-    // ---------- Loading ----------
-
-    /// <summary>Loads the drillhole list. A running load is reused; the current selection and form values are kept.</summary>
+    /// <summary>Loads the drillhole list, reusing a running load.</summary>
     public Task LoadDrillholesAsync()
     {
         if (drillholesLoad is { IsCompleted: false })
@@ -299,7 +272,7 @@ public sealed class CoreInformationViewModel : ObservableObject
         return drillholesLoad = LoadDrillholesCoreAsync();
     }
 
-    /// <summary>Reloads "Measured drillholes" from the saved measurement history (on start and after each save).</summary>
+    /// <summary>Reloads "Measured drillholes" from the saved measurement history.</summary>
     public Task RefreshMeasuredAsync()
     {
         // A refresh requested while one runs starts after it, so a save that just finished is never missed.
@@ -339,7 +312,7 @@ public sealed class CoreInformationViewModel : ObservableObject
 
     private async Task LoadDrillholesCoreAsync()
     {
-        // 1. The cached list is shown at once (first load only), so the form works before the backend answers.
+        // Show the cached list first so the form works before the backend answers.
         if (!cacheChecked)
         {
             cacheChecked = true;
@@ -361,8 +334,7 @@ public sealed class CoreInformationViewModel : ObservableObject
             }
         }
 
-        // 2. Refresh from the backend. Only a successful response with drillholes replaces the list and the cache;
-        //    a failure or timeout keeps what is shown (cached or previously loaded).
+        // Only a successful, non-empty response replaces the list and the cache.
         var result = await drillholesApi.GetAsync(CancellationToken.None);
         emptyResponse = false;
 
@@ -403,8 +375,6 @@ public sealed class CoreInformationViewModel : ObservableObject
         Changed(nameof(DrillholesMessage));
         Changed(nameof(CanRetryDrillholes));
     }
-
-    // ---------- Selection ----------
 
     private void Choose(DrillholeResponse entry)
     {
@@ -500,8 +470,7 @@ public sealed class CoreInformationViewModel : ObservableObject
         }
     }
 
-    // Applies only the difference to the bound collection: unchanged entries keep their instances (and the dropdown
-    // its selection); a large change is one Reset notification instead of thousands of item notifications.
+    // Applies only the difference so the dropdown keeps its selection; a large change is one Reset notification.
     private void Apply(IReadOnlyList<DrillholeOption> options)
     {
         var current = DrillholeOptions;
@@ -561,8 +530,6 @@ public sealed class CoreInformationViewModel : ObservableObject
         Changed(nameof(DrillholeSearch));
     }
 
-    // ---------- Device Status ----------
-
     // Cancelling the dialog or choosing an unusable file keeps the current database. Not while measuring: the
     // samples of one drillhole run come from one database.
     private async Task SelectGammaGuardDatabaseAsync()
@@ -589,8 +556,6 @@ public sealed class CoreInformationViewModel : ObservableObject
             Toasts.Error($"The Gamma Guard database was not changed. {status.Text}: {status.Detail}");
         }
     }
-
-    // ---------- Saving ----------
 
     private bool HasDrillhole => !string.IsNullOrWhiteSpace(DrillholeId);
 

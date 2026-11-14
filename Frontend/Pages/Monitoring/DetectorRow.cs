@@ -5,10 +5,7 @@ using Frontend.Shared.Infrastructure;
 
 namespace Frontend.Pages.Monitoring;
 
-/// <summary>
-/// One detector on the Monitoring page: its detector_status row plus the newest reading seen for it. Rows are updated
-/// in place on every poll, so the table keeps its scroll position and selection.
-/// </summary>
+/// <summary>One detector's status and newest reading, updated in place so the table keeps scroll and selection.</summary>
 public sealed class DetectorRow(string serial) : ObservableObject
 {
     public const int ExpectedResponseTime = 1;
@@ -149,10 +146,7 @@ public sealed class DetectorRow(string serial) : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Recomputes the ages and the shown state against <paramref name="nowMs"/>. The heartbeat (updated_ms) says whether
-    /// the CT008 instance is alive; the newest reading says whether data is flowing.
-    /// </summary>
+    /// <summary>Recomputes ages and state: the heartbeat says CT008 is alive, the newest reading that data flows.</summary>
     internal void Refresh(long nowMs, int staleAfterMs)
     {
         LastReadingAge = lastSampleMs > 0 ? MonitorFormat.Age(nowMs - lastSampleMs) : "–";

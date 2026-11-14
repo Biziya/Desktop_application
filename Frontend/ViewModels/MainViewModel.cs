@@ -39,14 +39,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
     }
 
-    /// <param name="handler">HTTP handler for the backend; null uses the network (tests pass a stub).</param>
-    /// <param name="bluetoothDevices">Bluetooth device list; null reads Windows' list (tests pass a fake).</param>
-    /// <param name="captureService">Capture source; null reads the Gamma Guard database (tests pass a fake).</param>
-    /// <param name="alarmSettings">CPS alarm of CapturePanel.yaml; null: no default threshold and a silent alarm (tests).</param>
-    /// <param name="dialogs">Confirmations and file dialogs; null shows the real windows (tests pass a fake).</param>
-    /// <param name="monitoringSettings">Monitoring.yaml; null uses the defaults.</param>
-    /// <param name="retentionSettings">data-retention.yaml; null: old data is never deleted (tests).</param>
-    /// <param name="helpSettings">help.yaml; null: the Help panel is empty (tests).</param>
+    /// <summary>Optional parameters are test seams; null means the real implementation, except:</summary>
+    /// <param name="alarmSettings">null: no default threshold and no alarm.</param>
+    /// <param name="retentionSettings">null: old data is never deleted.</param>
+    /// <param name="helpSettings">null: the Help panel is empty.</param>
     public MainViewModel(
         IMeasurementRepository repository,
         ApiSettings apiSettings,
@@ -62,12 +58,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         dialogs ??= new DialogService();
 
-        // One HTTP client, connection monitor, device monitor and toast list for the whole app, alive until the window closes.
+        // App-wide singletons, alive until the window closes.
         api = new ApiClient(apiSettings, handler);
         Backend = new BackendConnection(api, apiSettings.StatusInterval);
 
-        // A Gamma Guard database chosen by the user is saved beside the measurement database (Config folder), so it is
-        // kept across restarts and updates.
         Devices = new DeviceStatusMonitor(
             bluetoothDevices is null ? new Ct007BluetoothCheck(deviceSettings) : new Ct007BluetoothCheck(deviceSettings, bluetoothDevices),
             new MeasurementDatabaseCheck(repository.DatabasePath),
@@ -78,15 +72,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Toasts = new ToastService();
         announcements = new StatusAnnouncements(Backend, Devices, Toasts);
 
-        // Real capture: the samples the connected detector writes to the local Gamma Guard database after each click
-        // (read-only). The Measurement page follows the drillhole selected on Core Information and starts empty.
-        var device = captureService ?? new DeviceCaptureService(new GammaGuardCaptureDevices(Devices));
         var alarm = alarmSettings is null
             ? null
             : new CpsAlarm(new AlarmTone(alarmSettings.ToneFrequency, TimeSpan.FromSeconds(alarmSettings.ToneDuration)).Play,
                 TimeSpan.FromSeconds(alarmSettings.ToneDuration));
         Measurement = new MeasurementViewModel(
-            device, new CsvExportService(), dialogs, repository, showDemoTsMs: false, toasts: Toasts,
+            captureService ?? new DeviceCaptureService(new GammaGuardCaptureDevices(Devices)), new CsvExportService(), dialogs, repository, showDemoTsMs: false, toasts: Toasts,
             durationSettings: new CaptureDurationSettings(CaptureDurationSettings.PathBeside(repository.DatabasePath)),
             alarm: alarm, defaultThreshold: alarmSettings?.DefaultThreshold);
         UploadData = new UploadDataViewModel(new MeasurementUploadClient(api), dialogs, Toasts);
@@ -148,41 +139,30 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Backend reachability for the sidebar indicator (independent of the local Device Status).</summary>
     public BackendConnection Backend { get; }
 
-    /// <summary>Local Device Status checks of this laptop.</summary>
     public DeviceStatusMonitor Devices { get; }
 
-    /// <summary>Toasts shown over every page (MainWindow).</summary>
     public ToastService Toasts { get; }
 
     public CoreInformationViewModel Core { get; }
 
     public MeasurementViewModel Measurement { get; }
 
-    /// <summary>Live CT008 detector status and 5-second samples.</summary>
     public MonitoringViewModel Monitoring { get; }
 
-    /// <summary>Import a measurement CSV, review it and upload it to the central database.</summary>
     public UploadDataViewModel UploadData { get; }
 
-    /// <summary>The measurements uploaded to the central database, by drillhole (read-only).</summary>
     public DataViewerViewModel DataViewer { get; }
 
-    /// <summary>What each button of the current page does (Help button, F1).</summary>
     public HelpPanel Help { get; }
 
-    /// <summary>The sidebar, in display order.</summary>
     public IReadOnlyList<NavigationItem> Pages { get; }
 
-    /// <summary>Shows a page; its parameter is a <see cref="NavigationItem"/> or a page view model.</summary>
+    /// <summary>Parameter: a <see cref="NavigationItem"/> or a page view model.</summary>
     public RelayCommand ShowPageCommand { get; }
 
-    /// <summary>
-    /// The page shown. The sidebar selection is derived from it (never a separate flag), so exactly one item is
-    /// selected after any navigation, also Save &amp; Continue, which opens Measurement.
-    /// </summary>
+    // Sidebar selection is derived from this, never stored separately, so exactly one item is ever selected.
     public ObservableObject CurrentPage
     {
         get => currentPage;
@@ -217,7 +197,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public bool IsShown(ObservableObject page) => CurrentPage == page;
 
-    /// <summary>Opens the Help panel for the page shown.</summary>
     public void ShowHelp() => Help.Open(CurrentTitle);
 
     private string CurrentTitle => Pages.FirstOrDefault(p => p.Page == CurrentPage)?.Title ?? "";
@@ -234,15 +213,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         api.Dispose();
     }
 
-    // At start-up and then every CheckInterval. The deletion runs off the UI thread; the toast and the refresh run
-    // back on it.
+    // At start-up, then every CheckInterval. Deletion runs off the UI thread; the toast and refresh run back on it.
     private async Task RunRetentionAsync(DataRetention job, CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
             try
             {
-                var keep = Measurement.SessionId;
+                var keep = Measurement.SessionId; // read on the UI thread, before Task.Run
                 var removed = await Task.Run(() => job.Run(keep), token);
 
                 if (removed > 0 && !token.IsCancellationRequested)

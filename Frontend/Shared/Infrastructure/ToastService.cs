@@ -10,7 +10,6 @@ public enum ToastKind
     Error
 }
 
-/// <summary>One toast: a short message with its styling kind and how long it stays.</summary>
 public sealed class Toast(ToastKind kind, string message, TimeSpan duration)
 {
     public ToastKind Kind { get; } = kind;
@@ -23,10 +22,8 @@ public sealed class Toast(ToastKind kind, string message, TimeSpan duration)
 }
 
 /// <summary>
-/// The app's one toast list (shown top-right over every page by MainWindow; it never blocks input or moves the
-/// layout). Durations: success and information 3 s; warnings 3 s; errors — validation and other failures — 5 s.
-/// A toast identical to one already shown is not added again (polling can never stack duplicates); it restarts the
-/// visible one's timer instead. Every toast can be dismissed. Publishing happens on the caller's (UI) thread.
+/// The app's toast list. A repeat of a visible toast restarts its timer instead of stacking, so polling never
+/// produces duplicates. Must be used from the UI thread.
 /// </summary>
 public sealed class ToastService
 {
@@ -38,7 +35,7 @@ public sealed class ToastService
 
     private readonly Func<TimeSpan, CancellationToken, Task> delay;
 
-    /// <param name="delay">Waits a toast's duration (tests pass a controllable delay).</param>
+    /// <param name="delay">Replaceable in tests.</param>
     public ToastService(Func<TimeSpan, CancellationToken, Task>? delay = null)
     {
         this.delay = delay ?? Task.Delay;
@@ -61,14 +58,12 @@ public sealed class ToastService
 
     public void Warning(string message) => Show(ToastKind.Warning, message);
 
-    /// <summary>Validation errors and failed operations (5 s).</summary>
     public void Error(string message) => Show(ToastKind.Error, message);
 
     public static TimeSpan DurationOf(ToastKind kind) => kind == ToastKind.Error ? ErrorDuration : ShortDuration;
 
     public void Show(ToastKind kind, string message)
     {
-        // The same message is already visible: keep one toast and give it its full time again.
         if (Items.FirstOrDefault(t => t.Kind == kind && t.Message == message) is { } shown)
         {
             Items.Remove(shown);

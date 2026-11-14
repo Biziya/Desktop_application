@@ -1,9 +1,6 @@
 namespace Frontend.Calculation.CoreInformation.MeasurementDatabase;
 
-/// <summary>
-/// Status of this app's own measurement database, at the path the measurement persistence service actually uses
-/// (<c>IMeasurementRepository.DatabasePath</c>). Read-only: a missing file is reported, never created.
-/// </summary>
+/// <summary>Status of this app's own measurement database. Read-only: a missing file is reported, never created.</summary>
 public sealed class MeasurementDatabaseCheck(string databasePath)
 {
     public string DatabasePath { get; } = databasePath;

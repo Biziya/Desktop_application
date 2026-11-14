@@ -4,10 +4,7 @@ using System.Text;
 
 namespace Backend.Models.Measurement;
 
-/// <summary>
-/// POST /api/measurements/upload: one measurement session imported from a CSV on the Upload Data page. Every field is
-/// nullable so that a missing value is reported by <see cref="Validate"/> with a clear message instead of becoming 0.
-/// </summary>
+// Every field is nullable so a missing value is reported by Validate() instead of silently becoming 0.
 public sealed record MeasurementUploadRequest(MeasurementUploadInformation? MeasurementInformation, IReadOnlyList<MeasurementUploadRecord>? Records)
 {
     public const int MaxRecords = 10_000;
@@ -18,7 +15,7 @@ public sealed record MeasurementUploadRequest(MeasurementUploadInformation? Meas
     // DECIMAL(10,3) in SQL Server; deeper than any drillhole.
     private const decimal MaxDepthMetres = 100_000m;
 
-    /// <summary>The first problem of the request in user-facing words (rows numbered from 1, as in the table), or null.</summary>
+    /// <summary>The first problem in user-facing words (rows numbered from 1), or null.</summary>
     public string? Validate()
     {
         if (MeasurementInformation is not { } info)
@@ -125,11 +122,8 @@ public sealed record MeasurementUploadRequest(MeasurementUploadInformation? Meas
         return null;
     }
 
-    /// <summary>
-    /// SHA-256 (hex) of the dataset's content: session, metadata and every record (in capture order). The uploading
-    /// user is left out, so the same data uploaded again by anyone, or retried after a timeout, has the same fingerprint.
-    /// Call only after <see cref="Validate"/> returned null.
-    /// </summary>
+    // SHA-256 of the dataset. The uploading user is left out so a re-upload by anyone, or a retry, matches.
+    // Call only after Validate() returned null.
     public string Fingerprint()
     {
         var info = MeasurementInformation!;
@@ -169,10 +163,7 @@ public sealed record MeasurementUploadRequest(MeasurementUploadInformation? Meas
         null;
 }
 
-/// <summary>
-/// Metadata of the uploaded session. CreatedUsername and UploadingUsername are declared by the desktop app and stored as
-/// declared; they are not an authenticated identity (see MeasurementUploadController).
-/// </summary>
+// User names are declared by the desktop app, not an authenticated identity.
 public sealed record MeasurementUploadInformation(
     Guid? SessionId,
     string? Drillhole,
@@ -183,7 +174,7 @@ public sealed record MeasurementUploadInformation(
     string? CreatedUsername,
     string? UploadingUsername);
 
-/// <summary>One measurement row. Depths in metres; Count0 is the CPS (counts per second); TsMs the device's Unix ms.</summary>
+/// <summary>Depths in metres; Count0 is CPS; TsMs is the device's Unix ms.</summary>
 public sealed record MeasurementUploadRecord(
     int? CaptureNumber,
     DateTimeOffset? StartTime,

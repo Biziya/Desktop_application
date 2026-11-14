@@ -14,7 +14,6 @@ public partial class MainWindow : Window
     {
     }
 
-    /// <summary>The window around a given view model (view tests pass one built from fakes).</summary>
     public MainWindow(MainViewModel viewModel)
     {
         this.viewModel = viewModel;
