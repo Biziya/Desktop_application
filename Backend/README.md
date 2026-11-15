@@ -11,7 +11,7 @@ cd Backend
 dotnet run
 ```
 
-Swagger is at http://localhost:5002/swagger. Use `dotnet run --launch-profile https` to also listen on
+Swagger is at http://localhost:7048/swagger. Use `dotnet run --launch-profile https` to also listen on
 https://localhost:7244.
 
 If Swagger shows "Fetch error - Not Found", an old build is still running. Stop it, delete `bin` and `obj`, and run

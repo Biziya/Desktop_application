@@ -48,31 +48,41 @@
                 </Style>
             </Border.Style>
             <!-- The 14 px side padding holds the selected item's accent bar, flush with the sidebar edge. -->
-            <DockPanel Margin="14,18,14,16">
-                <DockPanel DockPanel.Dock="Top" Height="32">
-                    <Button DockPanel.Dock="Right" Command="{Binding ToggleSidebarCommand}"
-                            ToolTip="Collapse or expand the sidebar" AutomationProperties.Name="Toggle sidebar">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
-                                <Style.Triggers>
-                                    <!-- Centred over the page icons when collapsed. -->
-                                    <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
-                                        <Setter Property="Margin" Value="0,0,6,0"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                        <Path Data="{StaticResource SidebarToggleIcon}" Width="16" Height="16" Stretch="Uniform" StrokeThickness="1.6"
-                              StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                    </Button>
-                    <StackPanel Orientation="Horizontal" Margin="6,0,0,0"
-                                Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBoolVisibility}}">
-                        <Image Source="{StaticResource AppIcon}" Width="28" Height="28" VerticalAlignment="Center"/>
-                        <TextBlock Text="{StaticResource ApplicationName}" FontSize="16" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </DockPanel>
-                <Border DockPanel.Dock="Top" Height="1" Margin="0,16,0,12" Background="{StaticResource Line}"/>
+            <DockPanel Margin="14,10,14,16">
+                <!-- Header: one big button (app icon, name and «) that collapses the sidebar; collapsed it shows » to
+                     expand again. Same rounded grey hover as the page items. -->
+                <Button DockPanel.Dock="Top" Style="{StaticResource NavigationButton}" Height="48" Margin="0"
+                        Foreground="{StaticResource TextPrimary}"
+                        Command="{Binding ToggleSidebarCommand}" AutomationProperties.Name="Toggle sidebar">
+                    <Button.ToolTip>
+                        <ToolTip>
+                            <ToolTip.Style>
+                                <Style TargetType="ToolTip">
+                                    <Setter Property="Content" Value="Collapse sidebar"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                                            <Setter Property="Content" Value="Expand sidebar"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ToolTip.Style>
+                        </ToolTip>
+                    </Button.ToolTip>
+                    <Grid>
+                        <DockPanel Margin="6,0,8,0" Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBoolVisibility}}">
+                            <Path DockPanel.Dock="Right" Data="{StaticResource CollapseLeftIcon}" Width="14" Height="14" Stretch="Uniform"
+                                  StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  Stroke="{StaticResource Muted}" VerticalAlignment="Center"/>
+                            <Image Source="{StaticResource AppIcon}" Width="28" Height="28" VerticalAlignment="Center"/>
+                            <TextBlock Text="{StaticResource ApplicationName}" FontSize="16" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <Path Data="{StaticResource ExpandRightIcon}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center"
+                              StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Stroke="{StaticResource Muted}" VerticalAlignment="Center"
+                              Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource BoolVisibility}}"/>
+                    </Grid>
+                </Button>
+                <Border DockPanel.Dock="Top" Height="1" Margin="0,10,0,12" Background="{StaticResource Line}"/>
 
                 <!-- Bottom, under a divider: backend API reachability (green Online, yellow Offline, grey while checking),
                      then the version. Collapsed: the dot only. -->

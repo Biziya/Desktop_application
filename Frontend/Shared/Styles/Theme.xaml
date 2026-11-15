@@ -69,8 +69,14 @@
     <Geometry x:Key="ChevronDownIcon">M1,1 L5,5 9,1</Geometry>
     <!-- Two curved arrows chasing each other around a circle. -->
     <Geometry x:Key="RefreshIcon">M20,11 A8,8 0 0 0 5.6,6.4 M4,3 L4,8 9,8 M4,13 A8,8 0 0 0 18.4,17.6 M20,21 L20,16 15,16</Geometry>
-    <!-- Sidebar collapse / expand: a panel with its left rail. -->
-    <Geometry x:Key="SidebarToggleIcon">M3,4 L21,4 21,20 3,20 Z M9,4 L9,20</Geometry>
+    <!-- Sidebar collapse («) / expand (»): double chevrons, as on most web sidebars. -->
+    <Geometry x:Key="CollapseLeftIcon">M11,6 L5,12 11,18 M19,6 L13,12 19,18</Geometry>
+    <Geometry x:Key="ExpandRightIcon">M5,6 L11,12 5,18 M13,6 L19,12 13,18</Geometry>
+    <!-- Scroll bar arrows (filled triangles). -->
+    <Geometry x:Key="ScrollUpArrow">M0,4 L3.5,0 7,4 Z</Geometry>
+    <Geometry x:Key="ScrollDownArrow">M0,0 L7,0 3.5,4 Z</Geometry>
+    <Geometry x:Key="ScrollLeftArrow">M4,0 L0,3.5 4,7 Z</Geometry>
+    <Geometry x:Key="ScrollRightArrow">M0,0 L4,3.5 0,7 Z</Geometry>
     <!-- Filled glyphs (Fill, not Stroke). -->
     <Geometry x:Key="PlayIcon">M6,4 L20,12 6,20 Z</Geometry>
     <Geometry x:Key="StopIcon">M5,5 L19,5 19,19 5,19 Z</Geometry>
@@ -810,7 +816,33 @@
         <Setter Property="CellStyle" Value="{StaticResource DataTableCell}"/>
         <Setter Property="RowStyle" Value="{StaticResource DataTableRow}"/>
     </Style>
-    <!-- ===== Scroll bars (every ScrollViewer): 8 px, no arrows, transparent track, rounded grey thumb. ===== -->
+    <!-- ===== Scroll bars (every ScrollViewer): 10 px, small grey arrows at both ends (darker on hover, one line per
+         click, repeats while held), transparent track, rounded grey thumb. ===== -->
+    <Style x:Key="ScrollBarArrowButton" TargetType="RepeatButton">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="Foreground" Value="{StaticResource ScrollThumbHover}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Border x:Name="Frame" Background="Transparent" CornerRadius="3">
+                        <Path Data="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" Fill="{TemplateBinding Foreground}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource SidebarHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource ScrollThumb}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
     <Style x:Key="ScrollBarPageButton" TargetType="RepeatButton">
         <Setter Property="Focusable" Value="False"/>
         <Setter Property="IsTabStop" Value="False"/>
@@ -847,14 +879,23 @@
         <Setter Property="OverridesDefaultStyle" Value="True"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Width" Value="8"/>
-        <Setter Property="MinWidth" Value="8"/>
+        <Setter Property="Width" Value="10"/>
+        <Setter Property="MinWidth" Value="10"/>
         <Setter Property="Height" Value="Auto"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ScrollBar">
-                    <Border Background="{TemplateBinding Background}">
-                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                    <Grid Background="{TemplateBinding Background}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="12"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="12"/>
+                        </Grid.RowDefinitions>
+                        <RepeatButton Style="{StaticResource ScrollBarArrowButton}" Command="ScrollBar.LineUpCommand"
+                                      Content="{StaticResource ScrollUpArrow}"/>
+                        <RepeatButton Grid.Row="2" Style="{StaticResource ScrollBarArrowButton}" Command="ScrollBar.LineDownCommand"
+                                      Content="{StaticResource ScrollDownArrow}"/>
+                        <Track x:Name="PART_Track" Grid.Row="1" IsDirectionReversed="True">
                             <Track.DecreaseRepeatButton>
                                 <RepeatButton Style="{StaticResource ScrollBarPageButton}" Command="ScrollBar.PageUpCommand"/>
                             </Track.DecreaseRepeatButton>
@@ -865,7 +906,7 @@
                                 <RepeatButton Style="{StaticResource ScrollBarPageButton}" Command="ScrollBar.PageDownCommand"/>
                             </Track.IncreaseRepeatButton>
                         </Track>
-                    </Border>
+                    </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -873,13 +914,22 @@
             <Trigger Property="Orientation" Value="Horizontal">
                 <Setter Property="Width" Value="Auto"/>
                 <Setter Property="MinWidth" Value="0"/>
-                <Setter Property="Height" Value="8"/>
-                <Setter Property="MinHeight" Value="8"/>
+                <Setter Property="Height" Value="10"/>
+                <Setter Property="MinHeight" Value="10"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ScrollBar">
-                            <Border Background="{TemplateBinding Background}">
-                                <Track x:Name="PART_Track" IsDirectionReversed="False">
+                            <Grid Background="{TemplateBinding Background}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                </Grid.ColumnDefinitions>
+                                <RepeatButton Style="{StaticResource ScrollBarArrowButton}" Command="ScrollBar.LineLeftCommand"
+                                              Content="{StaticResource ScrollLeftArrow}"/>
+                                <RepeatButton Grid.Column="2" Style="{StaticResource ScrollBarArrowButton}" Command="ScrollBar.LineRightCommand"
+                                              Content="{StaticResource ScrollRightArrow}"/>
+                                <Track x:Name="PART_Track" Grid.Column="1" IsDirectionReversed="False">
                                     <Track.DecreaseRepeatButton>
                                         <RepeatButton Style="{StaticResource ScrollBarPageButton}" Command="ScrollBar.PageLeftCommand"/>
                                     </Track.DecreaseRepeatButton>
@@ -890,7 +940,7 @@
                                         <RepeatButton Style="{StaticResource ScrollBarPageButton}" Command="ScrollBar.PageRightCommand"/>
                                     </Track.IncreaseRepeatButton>
                                 </Track>
-                            </Border>
+                            </Grid>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>

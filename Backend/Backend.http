@@ -1,4 +1,4 @@
-@Backend_HostAddress = http://localhost:5002
+@Backend_HostAddress = http://localhost:7048
 
 GET {{Backend_HostAddress}}/api/core-information/drillholes
 Accept: application/json

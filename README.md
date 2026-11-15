@@ -35,7 +35,7 @@ dotnet build CT007.slnx
 # Run the desktop app (Debug, reads Frontend\.env.local)
 dotnet run --project Frontend
 
-# Run the API (Swagger at http://localhost:5002/swagger)
+# Run the API (Swagger at http://localhost:7048/swagger)
 cd Backend; dotnet run
 
 # Run the tests
