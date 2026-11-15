@@ -28,6 +28,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly DataRetention? retention;
     private readonly CancellationTokenSource lifetime = new();
     private ObservableObject currentPage;
+    private bool isSidebarCollapsed;
 
     public MainViewModel()
         : this(new SqliteMeasurementRepository(SqliteMeasurementRepository.DefaultPath), ApiSettings.LoadConfigured(),
@@ -129,6 +130,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Pages[0].IsSelected = true;
 
         ShowPageCommand = new RelayCommand(p => ShowPage((p as NavigationItem)?.Page ?? p as ObservableObject));
+        ToggleSidebarCommand = new RelayCommand(_ => IsSidebarCollapsed = !IsSidebarCollapsed);
         Help = new HelpPanel(helpSettings);
         Backend.Start();
         Devices.Start();
@@ -161,6 +163,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>Parameter: a <see cref="NavigationItem"/> or a page view model.</summary>
     public RelayCommand ShowPageCommand { get; }
+
+    /// <summary>Sidebar shows icons only (expanded at start; not remembered).</summary>
+    public bool IsSidebarCollapsed { get => isSidebarCollapsed; private set => Set(ref isSidebarCollapsed, value); }
+
+    public RelayCommand ToggleSidebarCommand { get; }
 
     // Sidebar selection is derived from this, never stored separately, so exactly one item is ever selected.
     public ObservableObject CurrentPage

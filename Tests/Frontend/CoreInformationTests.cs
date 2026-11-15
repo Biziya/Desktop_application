@@ -63,6 +63,38 @@ public static class CoreInformationTests
         Assert.Equal("Bob", repository.Session("DH-002")!.Operator, "typed Operator trimmed");
     }
 
+    [Test("FE-020b", "Notes and Operator cannot start with spaces or line breaks; inner text is kept")]
+    public static async Task NoLeadingWhitespace()
+    {
+        using var folder = new TestFolder();
+        var (main, _, _, _) = await Start(folder);
+        using var _main = main;
+        var raised = 0;
+        main.Core.PropertyChanged += (_, e) => raised += e.PropertyName == nameof(main.Core.Notes) ? 1 : 0;
+
+        main.Core.Notes = "   ";
+        Assert.Equal("", main.Core.Notes, "only spaces: nothing stored");
+        Assert.True(raised > 0, "the box is told to drop the typed spaces");
+        main.Core.Notes = "\r\n  wet core\nbox 3 ";
+        Assert.Equal("wet core\nbox 3 ", main.Core.Notes, "leading whitespace dropped, the rest kept");
+        main.Core.Operator = "  Bob";
+        Assert.Equal("Bob", main.Core.Operator, "operator");
+    }
+
+    [Test("FE-UI-SB", "The sidebar collapses to icons and expands again")]
+    public static async Task SidebarToggle()
+    {
+        using var folder = new TestFolder();
+        var (main, _, _, _) = await Start(folder);
+        using var _main = main;
+
+        Assert.False(main.IsSidebarCollapsed, "expanded at start");
+        main.ToggleSidebarCommand.Execute(null);
+        Assert.True(main.IsSidebarCollapsed, "collapsed");
+        main.ToggleSidebarCommand.Execute(null);
+        Assert.False(main.IsSidebarCollapsed, "expanded again");
+    }
+
     [Test("FE-021", "Editing Notes after saving disarms measurement (UR-09)")]
     public static async Task EditDisarms()
     {

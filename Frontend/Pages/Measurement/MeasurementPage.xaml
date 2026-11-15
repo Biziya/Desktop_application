@@ -18,17 +18,9 @@
         </Grid>
 
         <Border Grid.Row="1" Style="{StaticResource Card}">
-            <StackPanel>
-                <capture:CapturePanelView/>
-
-                <!-- Shown while no drillhole is saved for measuring. Text and size: DrillholeInformation.yaml. -->
-                <TextBlock Text="{StaticResource DrillholeWarningText}"
-                           FontSize="{StaticResource DrillholeWarningFontSize}"
-                           Foreground="{StaticResource Warning}"
-                           TextWrapping="Wrap"
-                           Margin="{StaticResource DrillholeWarningMargin}"
-                           Visibility="{Binding NeedsCore, Converter={StaticResource BoolVisibility}}"/>
-            </StackPanel>
+            <!-- The "complete Core Information" warning is inside the panel, under the inputs, so the chart can use
+                 that height too. -->
+            <capture:CapturePanelView/>
         </Border>
 
         <table:MeasurementTableView Grid.Row="2"/>

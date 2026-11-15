@@ -7,7 +7,9 @@ public sealed record UploadedDrillhole(
     string? Campaign,
     int UploadCount,
     int RecordCount,
-    DateTimeOffset LastUploadedAt)
+    DateTimeOffset LastUploadedAt,
+    string? Operator = null,
+    string? Notes = null)
 {
     /// <summary>"Project · Campaign" under the Hole ID in the drillhole list.</summary>
     public string Details => string.Join(" · ", new[] { ProjectCode, Campaign }.Where(v => !string.IsNullOrWhiteSpace(v)));

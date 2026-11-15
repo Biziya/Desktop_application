@@ -102,11 +102,11 @@
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
                 <Setter Property="Padding" Value="{StaticResource StartStopButtonPadding}"/>
                 <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                <Setter Property="Background" Value="{StaticResource Success}"/>
+                <Setter Property="Background" Value="{StaticResource ButtonCreate}"/>
                 <Setter Property="AutomationProperties.Name" Value="Start measurement"/>
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding IsMeasurementModeActive}" Value="True">
-                        <Setter Property="Background" Value="{StaticResource Danger}"/>
+                        <Setter Property="Background" Value="{StaticResource ButtonDanger}"/>
                         <Setter Property="AutomationProperties.Name" Value="Stop measurement"/>
                     </DataTrigger>
                 </Style.Triggers>
@@ -140,6 +140,22 @@
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Shown while no drillhole is saved for measuring, under the inputs and the countdown; the chart beside it
+             runs down through this row. Text and size: DrillholeInformation.yaml. -->
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="2"
+                   Text="{StaticResource DrillholeWarningText}"
+                   FontSize="{StaticResource DrillholeWarningFontSize}"
+                   Foreground="{StaticResource Warning}"
+                   TextWrapping="Wrap"
+                   MaxWidth="480"
+                   HorizontalAlignment="Left"
+                   Margin="{StaticResource DrillholeWarningMargin}"
+                   Visibility="{Binding NeedsCore, Converter={StaticResource BoolVisibility}}"/>
 
         <!-- The first box's spacing is dropped so the column starts at its label. Invalid text gets a red border while
              typing; leaving the box (or Start) reports it in a toast. -->
@@ -286,7 +302,7 @@
             </Popup>
         </StackPanel>
 
-        <local:DepthBarChart Grid.Column="2"
+        <local:DepthBarChart Grid.Column="2" Grid.RowSpan="2"
                              MinHeight="{StaticResource ChartMinHeight}"
                              ItemsSource="{Binding Results}"
                              XAxisLabel="{StaticResource ChartXAxisLabel}"

@@ -6,7 +6,9 @@ public sealed record UploadedDrillholeResponse(
     string Campaign,
     int UploadCount,
     int RecordCount,
-    DateTimeOffset LastUploadedAt);
+    DateTimeOffset LastUploadedAt,
+    string Operator = "",
+    string Notes = "");
 
 /// <summary>Count0 is CPS; device values may be null.</summary>
 public sealed record UploadedRecordResponse(

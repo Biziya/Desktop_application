@@ -495,7 +495,7 @@ public static class StatusAndPresentationTests
         Problem("MeasurementTable.yaml: columns[6].format: 'cm' is not supported",
             Copy(("MeasurementTable.yaml", "format: centimetres", "format: cm")), "format");
         Problem("CapturePanel.yaml: chart.minHeight: must be a number greater than 0",
-            Copy(("CapturePanel.yaml", "minHeight: 200", "minHeight: 0")), "dimension");
+            Copy(("CapturePanel.yaml", "minHeight: 240", "minHeight: 0")), "dimension");
     }
 
     private static System.Windows.ResourceDictionary Load(string baseDirectory)

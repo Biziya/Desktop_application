@@ -147,7 +147,7 @@
                 </StackPanel>
                 <StackPanel Grid.Column="2" Style="{StaticResource FieldPanel}">
                     <TextBlock Text="{StaticResource CampaignLabel}" Style="{StaticResource FieldLabel}"/>
-                    <TextBox Style="{StaticResource AutofilledField}" Text="{Binding ProjectArea, Mode=OneWay}"
+                    <TextBox Style="{StaticResource AutofilledField}" Text="{Binding ProjectArea, Mode=OneWay}" TextAlignment="Right"
                              AutomationProperties.Name="{StaticResource CampaignLabel}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="3" Style="{StaticResource FieldPanel}">

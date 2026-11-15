@@ -7,7 +7,8 @@ namespace Ct007.Tests.FrontendTests;
 public static class DataViewerTests
 {
     private const string Drillholes = """
-        [{"holeId":"GTZO_0042_1","projectCode":"Gurvan","campaign":"2026","uploadCount":2,"recordCount":3,"lastUploadedAt":"2026-11-10T09:30:00+08:00"},
+        [{"holeId":"GTZO_0042_1","projectCode":"Gurvan","campaign":"2026","uploadCount":2,"recordCount":3,"lastUploadedAt":"2026-11-10T09:30:00+08:00",
+          "operator":"DOMAIN\\op","notes":"Core box 3 wet"},
          {"holeId":"KHAN_0007_2","projectCode":"Khan","campaign":null,"uploadCount":1,"recordCount":1,"lastUploadedAt":"2026-11-09T15:00:00+08:00"}]
         """;
 
@@ -44,7 +45,13 @@ public static class DataViewerTests
         Assert.Near(140.25, vm.Results[1].Reading.Count0!.Value, 1e-9, "CPS");
         Assert.Equal("Gurvan", vm.Project, "project");
         Assert.Equal("2026", vm.Campaign, "campaign");
+        Assert.Equal("DOMAIN\\op", vm.Operator, "operator of the latest upload");
+        Assert.Equal("Core box 3 wet", vm.Notes, "notes of the latest upload");
         Assert.Contains("2 uploads · 3 rows", vm.Summary, "summary");
+
+        vm.PickedDrillhole = vm.DrillholeOptions[1];
+        await Assert.Eventually(() => vm.Shown?.HoleId == "KHAN_0007_2", "second drillhole shown");
+        Assert.Equal("", vm.Notes, "no notes (older backend) reads empty");
     }
 
     [Test("FE-DV-02", "Search filters the uploaded drillholes; typing keeps the shown table")]

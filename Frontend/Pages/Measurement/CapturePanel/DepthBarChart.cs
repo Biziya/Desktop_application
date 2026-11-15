@@ -19,7 +19,7 @@ namespace Frontend.Pages.Measurement.CapturePanel;
 public sealed class DepthBarChart : FrameworkElement
 {
     private const double LeftMargin = 58;
-    private const double BottomMargin = 40;
+    private const double BottomMargin = 34;
     private const double TopMargin = 8;
     private const double RightMargin = 10;
 
@@ -115,7 +115,7 @@ public sealed class DepthBarChart : FrameworkElement
 
         // Axis titles.
         var xTitle = Text(XAxisLabel, AxisLabelFontSize);
-        drawing.DrawText(xTitle, new Point(plot.Left + (plot.Width - xTitle.Width) / 2, plot.Bottom + 22));
+        drawing.DrawText(xTitle, new Point(plot.Left + (plot.Width - xTitle.Width) / 2, plot.Bottom + 19));
         var yTitle = Text(YAxisLabel, AxisLabelFontSize);
         drawing.PushTransform(new RotateTransform(-90, 0, 0));
         drawing.DrawText(yTitle, new Point(-(plot.Top + (plot.Height + yTitle.Width) / 2), 0));

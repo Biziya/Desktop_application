@@ -80,6 +80,8 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
             {
                 Changed(nameof(Project));
                 Changed(nameof(Campaign));
+                Changed(nameof(Operator));
+                Changed(nameof(Notes));
                 Changed(nameof(Summary));
             }
         }
@@ -88,6 +90,11 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
     public string Project => Shown?.ProjectCode is { Length: > 0 } project ? project : "";
 
     public string Campaign => Shown?.Campaign is { Length: > 0 } campaign ? campaign : "";
+
+    /// <summary>Operator and Notes saved with the drillhole's latest upload.</summary>
+    public string Operator => Shown?.Operator is { Length: > 0 } name ? name : "";
+
+    public string Notes => Shown?.Notes is { Length: > 0 } notes ? notes : "";
 
     /// <summary>"2 uploads · 30 rows · last upload 2026-11-10 09:30".</summary>
     public string Summary => Shown is { } d

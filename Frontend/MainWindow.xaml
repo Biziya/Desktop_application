@@ -35,18 +35,49 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Sidebar: always open, icon and title for every page. -->
-        <Border Width="224" Background="{StaticResource SidebarBackground}" BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,1,0">
+        <!-- Sidebar: icon and title for every page; the toggle at the top collapses it to icons only (72 px). -->
+        <Border Background="{StaticResource SidebarBackground}" BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,0,1,0">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Width" Value="224"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                            <Setter Property="Width" Value="72"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <!-- The 14 px side padding holds the selected item's accent bar, flush with the sidebar edge. -->
             <DockPanel Margin="14,18,14,16">
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6,0,0,0">
-                    <Image Source="{StaticResource AppIcon}" Width="28" Height="28" VerticalAlignment="Center"/>
-                    <TextBlock Text="{StaticResource ApplicationName}" FontSize="16" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                </StackPanel>
+                <DockPanel DockPanel.Dock="Top" Height="32">
+                    <Button DockPanel.Dock="Right" Command="{Binding ToggleSidebarCommand}"
+                            ToolTip="Collapse or expand the sidebar" AutomationProperties.Name="Toggle sidebar">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                <Style.Triggers>
+                                    <!-- Centred over the page icons when collapsed. -->
+                                    <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
+                                        <Setter Property="Margin" Value="0,0,6,0"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <Path Data="{StaticResource SidebarToggleIcon}" Width="16" Height="16" Stretch="Uniform" StrokeThickness="1.6"
+                              StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </Button>
+                    <StackPanel Orientation="Horizontal" Margin="6,0,0,0"
+                                Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBoolVisibility}}">
+                        <Image Source="{StaticResource AppIcon}" Width="28" Height="28" VerticalAlignment="Center"/>
+                        <TextBlock Text="{StaticResource ApplicationName}" FontSize="16" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DockPanel>
                 <Border DockPanel.Dock="Top" Height="1" Margin="0,16,0,12" Background="{StaticResource Line}"/>
 
-                <!-- Bottom: backend API reachability (green Online, yellow Offline, grey while checking), then the version. -->
-                <StackPanel DockPanel.Dock="Bottom" Margin="15,0,0,0">
+                <!-- Bottom, under a divider: backend API reachability (green Online, yellow Offline, grey while checking),
+                     then the version. Collapsed: the dot only. -->
+                <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+                <StackPanel Margin="15,0,0,0">
                     <StackPanel Orientation="Horizontal" Background="Transparent"
                                 ToolTip="{Binding Backend.Tooltip}" AutomationProperties.Name="{Binding Backend.Tooltip}">
                         <Ellipse Width="9" Height="9" VerticalAlignment="Center">
@@ -61,11 +92,14 @@
                             </Ellipse.Style>
                         </Ellipse>
                         <TextBlock Text="{Binding Backend.StateText}" Margin="8,0,0,0" FontSize="13" VerticalAlignment="Center"
-                                   Foreground="{StaticResource SidebarText}"/>
+                                   Foreground="{StaticResource SidebarText}"
+                                   Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBoolVisibility}}"/>
                     </StackPanel>
                     <TextBlock Text="{StaticResource ApplicationVersionLabel}" Style="{StaticResource MutedText}" FontSize="12" Margin="0,8,0,0"
-                               AutomationProperties.Name="{StaticResource ApplicationTitle}"/>
+                               AutomationProperties.Name="{StaticResource ApplicationTitle}"
+                               Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBoolVisibility}}"/>
                 </StackPanel>
+                </Border>
 
                 <ItemsControl ItemsSource="{Binding Pages}" Focusable="False">
                     <ItemsControl.ItemTemplate>
@@ -74,6 +108,7 @@
                                     infra:SidebarItem.IsSelected="{Binding IsSelected}"
                                     Command="{Binding DataContext.ShowPageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                     CommandParameter="{Binding}"
+                                    ToolTip="{Binding Title}"
                                     AutomationProperties.Name="{Binding Title}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -83,7 +118,8 @@
                                     <Path Data="{Binding IconKey, Converter={StaticResource ResourceKey}}" Width="17" Height="18" Stretch="Uniform"
                                           StrokeThickness="1.6" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" Margin="4,0,8,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" Margin="4,0,8,0"
+                                               Visibility="{Binding DataContext.IsSidebarCollapsed, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolVisibility}}"/>
                                 </Grid>
                             </Button>
                         </DataTemplate>
@@ -130,21 +166,26 @@
             </DockPanel>
         </Border>
 
-        <!-- Toasts: top-right of the content area, stacked 8 px apart. They take no layout space and never block clicks
-             outside themselves. -->
-        <ItemsControl Grid.Column="1" ItemsSource="{Binding Toasts.Items}" Focusable="False"
-                      HorizontalAlignment="Right" VerticalAlignment="Top" Width="360" MaxWidth="360" Margin="0,16,16,0">
+        <!-- Toasts: bottom-right corner of the window (over the Help panel when it is open), stacked 8 px apart, newest
+             at the bottom. They take no layout space and never block clicks outside themselves. -->
+        <ItemsControl Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding Toasts.Items}" Focusable="False"
+                      HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="360" MaxWidth="360" Margin="0,0,20,20">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border Style="{StaticResource Toast}">
                         <DockPanel>
-                            <Border DockPanel.Dock="Left" Style="{StaticResource ToastAccent}"/>
-                            <Button DockPanel.Dock="Right" Style="{StaticResource ClearButton}" Margin="0,8,8,8" VerticalAlignment="Top"
+                            <Border DockPanel.Dock="Left" Style="{StaticResource ToastBadge}" VerticalAlignment="Top" Margin="0,2,12,0">
+                                <TextBlock Style="{StaticResource ToastGlyph}"/>
+                            </Border>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource ClearButton}" Margin="8,0,0,0" VerticalAlignment="Top"
                                     Command="{Binding DataContext.Toasts.DismissCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                     CommandParameter="{Binding}" ToolTip="Dismiss" AutomationProperties.Name="Dismiss notification"/>
-                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource ToastGlyph}"/>
-                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,11,4,11" VerticalAlignment="Center"
-                                       AutomationProperties.LiveSetting="Polite"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource ToastTitle}"/>
+                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="13" Margin="0,2,0,0"
+                                           Foreground="{StaticResource LabelText}"
+                                           AutomationProperties.LiveSetting="Polite"/>
+                            </StackPanel>
                         </DockPanel>
                     </Border>
                 </DataTemplate>

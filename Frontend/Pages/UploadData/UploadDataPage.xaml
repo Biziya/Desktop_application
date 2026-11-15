@@ -48,7 +48,7 @@
             </Grid.ColumnDefinitions>
             <TextBlock Text="Upload Data" Style="{StaticResource PageTitle}"/>
             <Button Grid.Column="1"
-                    Style="{StaticResource SecondaryButton}"
+                    Style="{StaticResource SuccessButton}"
                     FontSize="{StaticResource TableActionButtonFontSize}"
                     MinWidth="{StaticResource TableActionButtonMinWidth}"
                     MinHeight="{StaticResource TableActionButtonMinHeight}"
@@ -142,7 +142,8 @@
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Project" Style="{StaticResource InfoLabel}"/>
                     <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding Project}" Style="{StaticResource InfoValue}"/>
                     <TextBlock Grid.Row="3" Grid.Column="2" Text="Campaign" Style="{StaticResource InfoLabel}"/>
-                    <TextBlock Grid.Row="3" Grid.Column="3" Text="{Binding Campaign}" Style="{StaticResource InfoValue}"/>
+                    <TextBlock Grid.Row="3" Grid.Column="3" Text="{Binding Campaign}" Style="{StaticResource InfoValue}"
+                               TextAlignment="Right"/>
                     <TextBlock Grid.Row="4" Grid.Column="2" Text="Notes" Style="{StaticResource InfoLabel}"/>
                     <TextBlock Grid.Row="4" Grid.Column="3" Text="{Binding Notes}" Style="{StaticResource InfoValue}"
                                TextWrapping="Wrap" TextTrimming="WordEllipsis" MaxHeight="60"/>

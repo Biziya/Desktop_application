@@ -23,7 +23,7 @@
                 <!-- Starts a new measurement session (only while stopped). Start/Stop keeps the current one. -->
                 <Button Grid.Column="1"
                         Content="+   New Measurement"
-                        Style="{StaticResource SecondaryButton}"
+                        Style="{StaticResource SuccessButton}"
                         FontSize="{StaticResource TableActionButtonFontSize}"
                         MinHeight="{StaticResource TableActionButtonMinHeight}"
                         Margin="0,0,10,0"
@@ -31,7 +31,6 @@
                         Command="{Binding NewMeasurementCommand}"/>
                 <Button Grid.Column="2"
                         Content="↓   Export CSV"
-                        Style="{StaticResource SecondaryButton}"
                         FontSize="{StaticResource TableActionButtonFontSize}"
                         MinWidth="{StaticResource TableActionButtonMinWidth}"
                         MinHeight="{StaticResource TableActionButtonMinHeight}"

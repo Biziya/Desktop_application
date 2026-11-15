@@ -40,8 +40,13 @@
                         <ColumnDefinition Width="{StaticResource DrillholeColumnWidth}" MinWidth="{StaticResource DrillholeColumnMinWidth}"/>
                         <ColumnDefinition Width="{StaticResource ProjectColumnWidth}" MinWidth="{StaticResource ProjectColumnMinWidth}"/>
                         <ColumnDefinition Width="{StaticResource CampaignColumnWidth}"/>
+                        <ColumnDefinition Width="{StaticResource OperatorColumnWidth}" MinWidth="{StaticResource OperatorColumnMinWidth}"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
                     <!-- Text and SelectedItem are bound before ItemsSource, as on Core Information (navigation detaches
                          bindings in this order, so the emptied list cannot erase the pick). -->
                     <StackPanel Style="{StaticResource FieldPanel}">
@@ -66,12 +71,58 @@
                     </StackPanel>
                     <StackPanel Grid.Column="2" Style="{StaticResource FieldPanel}">
                         <TextBlock Text="{StaticResource CampaignLabel}" Style="{StaticResource FieldLabel}"/>
-                        <TextBox Style="{StaticResource ReadOnlyField}" Text="{Binding Campaign, Mode=OneWay}"
+                        <TextBox Style="{StaticResource ReadOnlyField}" Text="{Binding Campaign, Mode=OneWay}" TextAlignment="Right"
                                  AutomationProperties.Name="{StaticResource CampaignLabel}"/>
                     </StackPanel>
-                    <Button Grid.Column="3" Content="Refresh" Style="{StaticResource SecondaryButton}" VerticalAlignment="Bottom"
+                    <StackPanel Grid.Column="3" Style="{StaticResource FieldPanel}">
+                        <TextBlock Text="{StaticResource OperatorLabel}" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Style="{StaticResource ReadOnlyField}" Text="{Binding Operator, Mode=OneWay}"
+                                 AutomationProperties.Name="{StaticResource OperatorLabel}"/>
+                    </StackPanel>
+                    <!-- Refresh: two curved arrows; they turn while loading. -->
+                    <Button Grid.Column="4" Style="{StaticResource OutlinedIconButton}" VerticalAlignment="Bottom"
                             Margin="0,0,0,16" Command="{Binding RefreshCommand}"
-                            ToolTip="Load the uploaded data from the central database again"/>
+                            ToolTip="Load the uploaded data from the central database again"
+                            AutomationProperties.Name="Refresh">
+                        <Path Data="{StaticResource RefreshIcon}" Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.8"
+                              StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              RenderTransformOrigin="0.5,0.5">
+                            <Path.RenderTransform>
+                                <RotateTransform/>
+                            </Path.RenderTransform>
+                            <Path.Style>
+                                <Style TargetType="Path">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard x:Name="Spin">
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(RotateTransform.Angle)"
+                                                                         From="0" To="360" Duration="0:0:0.9" RepeatBehavior="Forever"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <StopStoryboard BeginStoryboardName="Spin"/>
+                                            </DataTrigger.ExitActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Path.Style>
+                        </Path>
+                    </Button>
+                    <!-- Notes saved with the latest upload; read-only, scrolls when long. -->
+                    <StackPanel Grid.Row="1" Grid.ColumnSpan="5" Style="{StaticResource FieldPanel}">
+                        <TextBlock Text="{StaticResource NotesLabel}" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Style="{StaticResource ReadOnlyField}" Text="{Binding Notes, Mode=OneWay}"
+                                 AutomationProperties.Name="{StaticResource NotesLabel}"
+                                 TextWrapping="Wrap"
+                                 Height="{StaticResource NotesHeight}"
+                                 Padding="{StaticResource NotesPadding}"
+                                 VerticalContentAlignment="Stretch"
+                                 VerticalScrollBarVisibility="Auto"/>
+                    </StackPanel>
                 </Grid>
                 <DockPanel>
                     <Button DockPanel.Dock="Right" Content="{StaticResource RetryDrillholesLabel}" Style="{StaticResource SmallButton}"

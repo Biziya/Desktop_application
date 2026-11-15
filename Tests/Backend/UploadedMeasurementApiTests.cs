@@ -15,7 +15,7 @@ public static class UploadedMeasurementApiTests
     {
         var repository = new FakeUploadedRepository
         {
-            Drillholes = [new UploadedDrillholeResponse("DH-001", "Project A", "2026", 2, 30, Uploaded)],
+            Drillholes = [new UploadedDrillholeResponse("DH-001", "Project A", "2026", 2, 30, Uploaded, "DOMAIN\\op", "Core box 3 wet")],
             Records =
             [
                 new UploadedRecordResponse(Guid.Parse("8c4e0000-0000-0000-0000-000000000001"), 1, Uploaded.AddHours(-1), Uploaded.AddHours(-1).AddSeconds(5),
@@ -29,6 +29,8 @@ public static class UploadedMeasurementApiTests
         Assert.Contains("\"holeId\":\"DH-001\"", drillholes, "hole id");
         Assert.Contains("\"projectCode\":\"Project A\"", drillholes, "project");
         Assert.Contains("\"uploadCount\":2", drillholes, "upload count");
+        Assert.Contains("\"notes\":\"Core box 3 wet\"", drillholes, "latest upload's notes");
+        Assert.Contains("\"operator\":", drillholes, "latest upload's operator");
 
         var records = await http.GetStringAsync(backend.BaseUrl + "/api/measurements/uploaded/records?drillhole=%20DH-001%20");
         Assert.Contains("\"captureNumber\":1", records, "capture number");

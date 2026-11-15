@@ -57,7 +57,7 @@ chart:
   xAxisLabel: Depth (m)
   yAxisLabel: CPS
   emptyText: Captured intervals appear here as bars.
-  minHeight: 200
+  minHeight: 240                                # the chart also runs down beside the Core Information warning
   axisLabelFontSize: 12
   tickFontSize: 11
 

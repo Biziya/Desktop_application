@@ -7,18 +7,19 @@ namespace Backend.Repositories.Measurement;
 /// <summary>Read-only access to <see cref="SppCt007Database.Table"/>.</summary>
 public sealed class UploadedMeasurementRepository(IConfiguration configuration) : IUploadedMeasurementRepository
 {
-    // A drillhole uploaded several times may have had its project or campaign corrected in between: the latest wins.
+    // A drillhole uploaded several times may have had its project, campaign, operator or notes corrected in between:
+    // the latest upload wins.
     private const string DrillholesQuery = $"""
         WITH totals AS (
             SELECT DRILLHOLE, COUNT(DISTINCT UPLOAD_ID) AS UPLOADS, COUNT(*) AS RECORDS, MAX(UPLOADED_AT) AS LAST_UPLOADED_AT
             FROM {SppCt007Database.Table}
             GROUP BY DRILLHOLE
         ), latest AS (
-            SELECT DRILLHOLE, PROJECT, CAMPAIGN,
+            SELECT DRILLHOLE, PROJECT, CAMPAIGN, OPERATOR, NOTES,
                    ROW_NUMBER() OVER (PARTITION BY DRILLHOLE ORDER BY UPLOADED_AT DESC, UPLOAD_ID DESC) AS N
             FROM {SppCt007Database.Table}
         )
-        SELECT t.DRILLHOLE, l.PROJECT, l.CAMPAIGN, t.UPLOADS, t.RECORDS, t.LAST_UPLOADED_AT
+        SELECT t.DRILLHOLE, l.PROJECT, l.CAMPAIGN, t.UPLOADS, t.RECORDS, t.LAST_UPLOADED_AT, l.OPERATOR, l.NOTES
         FROM totals t
         JOIN latest l ON l.DRILLHOLE = t.DRILLHOLE AND l.N = 1
         ORDER BY t.DRILLHOLE;
@@ -47,7 +48,9 @@ public sealed class UploadedMeasurementRepository(IConfiguration configuration) 
             Campaign: reader.IsDBNull(2) ? "" : reader.GetString(2),
             UploadCount: reader.GetInt32(3),
             RecordCount: reader.GetInt32(4),
-            LastUploadedAt: reader.GetDateTimeOffset(5)), cancellationToken);
+            LastUploadedAt: reader.GetDateTimeOffset(5),
+            Operator: reader.IsDBNull(6) ? "" : reader.GetString(6),
+            Notes: reader.IsDBNull(7) ? "" : reader.GetString(7)), cancellationToken);
 
     public Task<IReadOnlyList<UploadedRecordResponse>> GetRecordsAsync(string drillhole, int limit, CancellationToken cancellationToken) =>
         QueryAsync(RecordsQuery, parameters =>

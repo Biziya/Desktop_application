@@ -215,16 +215,18 @@ public sealed class CoreInformationViewModel : ObservableObject
     /// <summary>"Campaign" on the form (API campaign).</summary>
     public string ProjectArea => projectArea;
 
+    /// <summary>Leading spaces and line breaks are dropped as they are typed.</summary>
     public string Operator
     {
         get => operatorName;
-        set { if (Set(ref operatorName, value)) Update(); }
+        set => SetTrimmed(ref operatorName, value);
     }
 
+    /// <summary>Leading spaces and line breaks are dropped as they are typed; inner and trailing text is kept.</summary>
     public string Notes
     {
         get => notes;
-        set { if (Set(ref notes, value)) Update(); }
+        set => SetTrimmed(ref notes, value);
     }
 
     public string DrillholesMessage
@@ -582,6 +584,22 @@ public sealed class CoreInformationViewModel : ObservableObject
             ProjectArea.Trim(),
             Operator.Trim(),
             Notes.Trim()));
+    }
+
+    // A text field that cannot start with whitespace. When only leading whitespace was typed the stored value does not
+    // change, but the notification still goes out so the box drops what was typed.
+    private void SetTrimmed(ref string field, string? value, [System.Runtime.CompilerServices.CallerMemberName] string? name = null)
+    {
+        var trimmed = (value ?? "").TrimStart();
+
+        if (Set(ref field, trimmed, name))
+        {
+            Update();
+        }
+        else if (trimmed != value)
+        {
+            Changed(name);
+        }
     }
 
     private void Update()

@@ -40,6 +40,17 @@
     <SolidColorBrush x:Key="WarningSurface" Color="#FFF7E6"/>
     <!-- Sidebar "Offline" dot (yellow; the text beside it stays in the sidebar text colour). Online uses Success. -->
     <SolidColorBrush x:Key="OfflineIndicator" Color="#EAB308"/>
+    <!-- ===== Button colours (one role each) =====
+         Primary   blue  #2563EB  default Button      Save &amp; Continue, Upload Data, Export CSV
+         Create    green #16A34A  SuccessButton       New Measurement, Import CSV, Start
+         Danger    red   #C8283F  DangerButton        Stop, destructive confirmations
+         Neutral   white + grey   SecondaryButton     Cancel, Retry, Help, Refresh -->
+    <SolidColorBrush x:Key="ButtonPrimary" Color="#2563EB"/>
+    <SolidColorBrush x:Key="ButtonCreate" Color="#16A34A"/>
+    <SolidColorBrush x:Key="ButtonDanger" Color="#C8283F"/>
+    <!-- Scroll bar thumb: resting, and under the mouse / while dragged. -->
+    <SolidColorBrush x:Key="ScrollThumb" Color="#C9CED6"/>
+    <SolidColorBrush x:Key="ScrollThumbHover" Color="#9AA3AF"/>
 
     <CornerRadius x:Key="ControlRadius">8</CornerRadius>
     <CornerRadius x:Key="CardRadius">12</CornerRadius>
@@ -56,6 +67,10 @@
     <Geometry x:Key="ImportIcon">M12,3 L12,15 M7,10 L12,15 17,10 M4,15 L4,21 20,21 20,15</Geometry>
     <Geometry x:Key="CheckIcon">M4,12 L9,17 20,6</Geometry>
     <Geometry x:Key="ChevronDownIcon">M1,1 L5,5 9,1</Geometry>
+    <!-- Two curved arrows chasing each other around a circle. -->
+    <Geometry x:Key="RefreshIcon">M20,11 A8,8 0 0 0 5.6,6.4 M4,3 L4,8 9,8 M4,13 A8,8 0 0 0 18.4,17.6 M20,21 L20,16 15,16</Geometry>
+    <!-- Sidebar collapse / expand: a panel with its left rail. -->
+    <Geometry x:Key="SidebarToggleIcon">M3,4 L21,4 21,20 3,20 Z M9,4 L9,20</Geometry>
     <!-- Filled glyphs (Fill, not Stroke). -->
     <Geometry x:Key="PlayIcon">M6,4 L20,12 6,20 Z</Geometry>
     <Geometry x:Key="StopIcon">M5,5 L19,5 19,19 5,19 Z</Geometry>
@@ -454,27 +469,62 @@
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="VerticalAlignment" Value="Top"/>
     </Style>
-    <!-- "? Help" at the right of every page header. ApplicationCommands.Help is handled by MainWindow (F1 does the same). -->
-    <Style x:Key="HelpButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+    <!-- Green "create / import" action (New Measurement, Import CSV). -->
+    <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="{StaticResource ButtonCreate}"/>
+        <Setter Property="Foreground" Value="{StaticResource Surface}"/>
+    </Style>
+    <!-- Red destructive action. -->
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="{StaticResource ButtonDanger}"/>
+        <Setter Property="Foreground" Value="{StaticResource Surface}"/>
+    </Style>
+    <!-- Round "?" at the right of every page header. ApplicationCommands.Help is handled by MainWindow (F1 does the same). -->
+    <Style x:Key="HelpButton" TargetType="Button">
         <Setter Property="Command" Value="ApplicationCommands.Help"/>
         <Setter Property="HorizontalAlignment" Value="Right"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Width" Value="34"/>
+        <Setter Property="Height" Value="34"/>
         <Setter Property="Margin" Value="10,0,0,0"/>
-        <Setter Property="ToolTip" Value="What each button on this page does (F1)"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Foreground" Value="{StaticResource LabelText}"/>
+        <Setter Property="Background" Value="{StaticResource Surface}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource InputBorder}"/>
+        <Setter Property="Content" Value="?"/>
+        <Setter Property="ToolTip" Value="Help (F1)"/>
         <Setter Property="AutomationProperties.Name" Value="Help"/>
-        <Setter Property="ContentTemplate">
+        <Setter Property="Template">
             <Setter.Value>
-                <DataTemplate>
-                    <StackPanel Orientation="Horizontal">
-                        <Path Data="{StaticResource HelpIcon}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0"
-                              StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" VerticalAlignment="Center"/>
-                        <TextBlock Text="Help" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </DataTemplate>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Frame" CornerRadius="17" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1.5">
+                        <TextBlock Text="{TemplateBinding Content}" FontSize="16" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource SoftBlue}"/>
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Blue}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Blue}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource Line}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Blue}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+    <!-- Square icon button with the secondary frame, as tall as a text box (e.g. Data Viewer Refresh). -->
+    <Style x:Key="OutlinedIconButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+        <Setter Property="Width" Value="{StaticResource ControlHeight}"/>
+        <Setter Property="Height" Value="{StaticResource ControlHeight}"/>
+        <Setter Property="Padding" Value="0"/>
     </Style>
     <Style x:Key="DeleteButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Foreground" Value="{StaticResource Danger}"/>
@@ -564,41 +614,87 @@
         </Setter>
     </Style>
 
-    <!-- ===== Toasts (MainWindow, top-right over both pages): white card, coloured accent bar and glyph per kind
-         (success green, information blue, warning amber, error red), close button. ===== -->
+    <!-- ===== Toasts (MainWindow, bottom-right of the window): tinted card per kind (success green, information blue,
+         warning amber, error red) with a matching border, a round badge with the kind's glyph, the message and a close
+         button. Each toast fades and slides up into place. ===== -->
     <Style x:Key="Toast" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource Surface}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+        <Setter Property="BorderBrush" Value="#BFD3FF"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{StaticResource ControlRadius}"/>
-        <Setter Property="Margin" Value="0,0,0,8"/>
-        <Setter Property="Effect">
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="14,10,8,10"/>
+        <Setter Property="Margin" Value="0,8,0,0"/>
+        <Setter Property="RenderTransform">
             <Setter.Value>
-                <DropShadowEffect BlurRadius="16" ShadowDepth="3" Direction="270" Opacity="0.14"/>
+                <TranslateTransform/>
             </Setter.Value>
         </Setter>
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.16"/>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Kind}" Value="Success">
+                <Setter Property="BorderBrush" Value="#A7DFB8"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Warning">
+                <Setter Property="BorderBrush" Value="#F2D49B"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Error">
+                <Setter Property="BorderBrush" Value="#F5B5BF"/>
+            </DataTrigger>
+            <EventTrigger RoutedEvent="Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/>
+                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(TranslateTransform.Y)" From="12" To="0" Duration="0:0:0.2">
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode="EaseOut"/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Style.Triggers>
     </Style>
-    <Style x:Key="ToastAccent" TargetType="Border">
-        <Setter Property="Width" Value="4"/>
-        <Setter Property="CornerRadius" Value="8,0,0,8"/>
+    <!-- Round badge holding the glyph: white symbol on the kind's colour. -->
+    <Style x:Key="ToastBadge" TargetType="Border">
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Margin" Value="0,0,12,0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Background" Value="{StaticResource Blue}"/>
         <Style.Triggers>
             <DataTrigger Binding="{Binding Kind}" Value="Success"><Setter Property="Background" Value="{StaticResource Success}"/></DataTrigger>
-            <DataTrigger Binding="{Binding Kind}" Value="Warning"><Setter Property="Background" Value="{StaticResource Warning}"/></DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Warning"><Setter Property="Background" Value="{StaticResource OfflineIndicator}"/></DataTrigger>
             <DataTrigger Binding="{Binding Kind}" Value="Error"><Setter Property="Background" Value="{StaticResource Danger}"/></DataTrigger>
         </Style.Triggers>
     </Style>
     <Style x:Key="ToastGlyph" TargetType="TextBlock">
         <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="Width" Value="18"/>
-        <Setter Property="Margin" Value="12,0,8,0"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{StaticResource Surface}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="Foreground" Value="{StaticResource Blue}"/>
         <Setter Property="Text" Value="i"/>
         <Style.Triggers>
-            <DataTrigger Binding="{Binding Kind}" Value="Success"><Setter Property="Foreground" Value="{StaticResource Success}"/><Setter Property="Text" Value="✓"/></DataTrigger>
-            <DataTrigger Binding="{Binding Kind}" Value="Warning"><Setter Property="Foreground" Value="{StaticResource Warning}"/><Setter Property="Text" Value="!"/></DataTrigger>
-            <DataTrigger Binding="{Binding Kind}" Value="Error"><Setter Property="Foreground" Value="{StaticResource Danger}"/><Setter Property="Text" Value="✕"/></DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Success"><Setter Property="Text" Value="✓"/></DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Warning"><Setter Property="Text" Value="!"/></DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Error"><Setter Property="Text" Value="✕"/><Setter Property="FontSize" Value="11"/></DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <!-- Small title above the message ("Success", "Information", "Warning", "Error"). -->
+    <Style x:Key="ToastTitle" TargetType="TextBlock">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Text" Value="Information"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Kind}" Value="Success"><Setter Property="Text" Value="Success"/></DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Warning"><Setter Property="Text" Value="Warning"/></DataTrigger>
+            <DataTrigger Binding="{Binding Kind}" Value="Error"><Setter Property="Text" Value="Error"/></DataTrigger>
         </Style.Triggers>
     </Style>
     <!-- "Show" / "Hide" text toggle for an optional section (blue link style, focus ring). -->
@@ -714,6 +810,94 @@
         <Setter Property="CellStyle" Value="{StaticResource DataTableCell}"/>
         <Setter Property="RowStyle" Value="{StaticResource DataTableRow}"/>
     </Style>
+    <!-- ===== Scroll bars (every ScrollViewer): 8 px, no arrows, transparent track, rounded grey thumb. ===== -->
+    <Style x:Key="ScrollBarPageButton" TargetType="RepeatButton">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Border Background="Transparent"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="ScrollBarThumb" TargetType="Thumb">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border x:Name="Bar" CornerRadius="3" Background="{StaticResource ScrollThumb}" Margin="1"/>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bar" Property="Background" Value="{StaticResource ScrollThumbHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Bar" Property="Background" Value="{StaticResource ScrollThumbHover}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="ScrollBar">
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Width" Value="8"/>
+        <Setter Property="MinWidth" Value="8"/>
+        <Setter Property="Height" Value="Auto"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Border Background="{TemplateBinding Background}">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource ScrollBarPageButton}" Command="ScrollBar.PageUpCommand"/>
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource ScrollBarThumb}" MinHeight="24"/>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource ScrollBarPageButton}" Command="ScrollBar.PageDownCommand"/>
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="Auto"/>
+                <Setter Property="MinWidth" Value="0"/>
+                <Setter Property="Height" Value="8"/>
+                <Setter Property="MinHeight" Value="8"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ScrollBar">
+                            <Border Background="{TemplateBinding Background}">
+                                <Track x:Name="PART_Track" IsDirectionReversed="False">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Style="{StaticResource ScrollBarPageButton}" Command="ScrollBar.PageLeftCommand"/>
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Style="{StaticResource ScrollBarThumb}" MinWidth="24"/>
+                                    </Track.Thumb>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Style="{StaticResource ScrollBarPageButton}" Command="ScrollBar.PageRightCommand"/>
+                                    </Track.IncreaseRepeatButton>
+                                </Track>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- Numeric columns: header and values right-aligned on the same edge. -->
     <Style x:Key="NumberCell" TargetType="TextBlock">
         <Setter Property="TextAlignment" Value="Right"/>
