@@ -56,6 +56,39 @@ public sealed class CountdownRing : FrameworkElement
         set => SetValue(RingThicknessProperty, value);
     }
 
+    // Pens reused across progress updates; rebuilt when a brush or the thickness changes.
+    private Pen? trackPen;
+    private Pen? progressPen;
+
+    protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+
+        if (e.Property == TrackBrushProperty || e.Property == ProgressBrushProperty || e.Property == RingThicknessProperty)
+        {
+            trackPen = progressPen = null;
+        }
+    }
+
+    // Freezes a copy, never the brush itself (Theme brushes are shared).
+    private static Pen Frozen(Brush brush, double thickness, bool round)
+    {
+        var pen = new Pen(brush.IsFrozen ? brush : brush.CloneCurrentValue(), thickness);
+
+        if (round)
+        {
+            pen.StartLineCap = PenLineCap.Round;
+            pen.EndLineCap = PenLineCap.Round;
+        }
+
+        if (pen.CanFreeze)
+        {
+            pen.Freeze();
+        }
+
+        return pen;
+    }
+
     protected override void OnRender(DrawingContext drawing)
     {
         base.OnRender(drawing);
@@ -69,7 +102,7 @@ public sealed class CountdownRing : FrameworkElement
         }
 
         var center = new Point(ActualWidth / 2, ActualHeight / 2);
-        drawing.DrawEllipse(null, new Pen(TrackBrush, thickness), center, radius, radius);
+        drawing.DrawEllipse(null, trackPen ??= Frozen(TrackBrush, thickness, round: false), center, radius, radius);
 
         var progress = double.IsFinite(Progress) ? Math.Clamp(Progress, 0, 1) : 0;
 
@@ -78,11 +111,7 @@ public sealed class CountdownRing : FrameworkElement
             return;
         }
 
-        var pen = new Pen(ProgressBrush, thickness)
-        {
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round
-        };
+        var pen = progressPen ??= Frozen(ProgressBrush, thickness, round: true);
 
         if (progress >= 1)
         {

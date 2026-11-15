@@ -82,9 +82,13 @@ public sealed class MonitorEngine(MonitoringSettings settings)
         }
         else
         {
-            foreach (var sample in snapshot.Samples)
+            // Only the newest readings stay in the recent list; older ones of a backlog are never added and removed again.
+            var firstShown = snapshot.Samples.Count - settings.RecentReadingsShown;
+
+            for (var i = 0; i < snapshot.Samples.Count; i++)
             {
-                Process(sample);
+                var sample = snapshot.Samples[i];
+                Process(sample, showRecent: i >= firstShown);
                 Cursor = sample.SourceId;
             }
         }
@@ -137,7 +141,7 @@ public sealed class MonitorEngine(MonitoringSettings settings)
             .ToList();
     }
 
-    private void Process(DeviceSample sample)
+    private void Process(DeviceSample sample, bool showRecent)
     {
         if (sample.Serial.Length == 0)
         {
@@ -145,7 +149,11 @@ public sealed class MonitorEngine(MonitoringSettings settings)
         }
 
         RowFor(sample.Serial).Apply(sample);
-        AddRecent(sample);
+
+        if (showRecent)
+        {
+            AddRecent(sample);
+        }
 
         if (jobs.TryGetValue(sample.Serial, out var job) && sample.TsMs is { } ts && ts >= job.StartMs)
         {

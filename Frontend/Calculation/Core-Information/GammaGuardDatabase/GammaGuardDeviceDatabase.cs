@@ -103,7 +103,7 @@ public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
         command.CommandText = "SELECT COALESCE(MAX(id), 0) FROM samples";
         var maxId = Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
 
-        var detectors = ReadDetectorRows(command);
+        var detectors = ReadDetectorRows(command, schema);
 
         if (afterId is { } after)
         {
@@ -119,15 +119,29 @@ public sealed class GammaGuardDeviceDatabase(string path) : ISampleSource
         return new MonitorSnapshot(schema, maxId, detectors, ReadSamples(command, ""));
     }
 
+    // Whether a file (at a schema version) has response_time, learnt on the first poll: an older file then costs no
+    // failing query and exception on every poll.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(string Path, int Schema), bool> HasResponseTime = new();
+
     // response_time arrived with schema 3; older files are still shown, without it.
-    private static List<DetectorStatusRow> ReadDetectorRows(SqliteCommand command)
+    private List<DetectorStatusRow> ReadDetectorRows(SqliteCommand command, int schema)
     {
+        var key = (Path, schema);
+
+        if (HasResponseTime.TryGetValue(key, out var known))
+        {
+            return ReadDetectorRows(command, withResponseTime: known);
+        }
+
         try
         {
-            return ReadDetectorRows(command, withResponseTime: true);
+            var rows = ReadDetectorRows(command, withResponseTime: true);
+            HasResponseTime[key] = true;
+            return rows;
         }
         catch (SqliteException error) when (error.SqliteErrorCode == 1) // no such column
         {
+            HasResponseTime[key] = false;
             return ReadDetectorRows(command, withResponseTime: false);
         }
     }

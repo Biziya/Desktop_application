@@ -4,5 +4,5 @@
   "gammaGuardDatabasePath": "",
   "gammaGuardFileName": "*.sqlite",
   "checkIntervalSeconds": 5,
-  "bluetoothCheckIntervalSeconds": 1
+  "bluetoothCheckIntervalSeconds": 3
 }

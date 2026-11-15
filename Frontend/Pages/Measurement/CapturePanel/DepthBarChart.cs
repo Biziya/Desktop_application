@@ -41,6 +41,14 @@ public sealed class DepthBarChart : FrameworkElement
     private readonly List<(Rect Area, MeasurementResult Row)> bars = [];
     private readonly ToolTip tip = new() { Placement = PlacementMode.Relative };
 
+    // Drawing resources reused across renders (a resize renders many times); rebuilt when a brush, font or DPI changes.
+    private Pen? axisPen;
+    private Pen? gridPen;
+    private Pen? separatorPen;
+    private Typeface? typeface;
+    private double pixelsPerDip;
+    private MeasurementResult? hovered;
+
     public DepthBarChart()
     {
         tip.PlacementTarget = this;
@@ -94,10 +102,44 @@ public sealed class DepthBarChart : FrameworkElement
 
     private void OnItemsChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
 
+    protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+
+        if (e.Property == AxisBrushProperty || e.Property == GridBrushProperty || e.Property == BarSeparatorBrushProperty)
+        {
+            axisPen = gridPen = separatorPen = null;
+        }
+        else if (e.Property == TextElement.FontFamilyProperty)
+        {
+            typeface = null;
+        }
+    }
+
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        pixelsPerDip = newDpi.PixelsPerDip;
+    }
+
+    // Freezes a copy, never the brush itself (Theme brushes are shared).
+    private static Pen Frozen(Brush brush)
+    {
+        var pen = new Pen(brush.IsFrozen ? brush : brush.CloneCurrentValue(), 1);
+
+        if (pen.CanFreeze)
+        {
+            pen.Freeze();
+        }
+
+        return pen;
+    }
+
     protected override void OnRender(DrawingContext drawing)
     {
         base.OnRender(drawing);
         bars.Clear();
+        hovered = null; // the row values may have changed: the next hover rebuilds the tooltip text
 
         var plot = new Rect(LeftMargin, TopMargin,
             Math.Max(0, ActualWidth - LeftMargin - RightMargin), Math.Max(0, ActualHeight - TopMargin - BottomMargin));
@@ -110,8 +152,8 @@ public sealed class DepthBarChart : FrameworkElement
         var rows = (ItemsSource?.OfType<MeasurementResult>() ?? [])
             .Where(r => r is { FromMm: not null, ToMm: not null, Reading.Count0: >= 0 } && r.ToMm > r.FromMm)
             .ToList();
-        var axisPen = new Pen(AxisBrush, 1);
-        var gridPen = new Pen(GridBrush, 1);
+        var axisPen = this.axisPen ??= Frozen(AxisBrush);
+        var gridPen = this.gridPen ??= Frozen(GridBrush);
 
         // Axis titles.
         var xTitle = Text(XAxisLabel, AxisLabelFontSize);
@@ -131,11 +173,22 @@ public sealed class DepthBarChart : FrameworkElement
         }
 
         // X: depth range of all intervals, on round tick values. Y: 0 to a round value above the largest CPS.
-        var xStep = NiceStep((rows.Max(r => r.ToMm!.Value) - rows.Min(r => r.FromMm!.Value)) / 1000d, Math.Max(2, (int)(plot.Width / 80)));
-        var xMin = Math.Floor(rows.Min(r => r.FromMm!.Value) / 1000d / xStep) * xStep;
-        var xMax = Math.Max(xMin + xStep, Math.Ceiling(rows.Max(r => r.ToMm!.Value) / 1000d / xStep) * xStep);
-        var yStep = NiceStep(Math.Max(0.01, rows.Max(Cps)), Math.Max(2, (int)(plot.Height / 34)));
-        var yMax = Math.Max(yStep, Math.Ceiling(rows.Max(Cps) / yStep) * yStep);
+        // One pass for the depth range and the largest CPS.
+        long fromMin = long.MaxValue, toMax = long.MinValue;
+        var cpsMax = 0d;
+
+        foreach (var row in rows)
+        {
+            fromMin = Math.Min(fromMin, row.FromMm!.Value);
+            toMax = Math.Max(toMax, row.ToMm!.Value);
+            cpsMax = Math.Max(cpsMax, Cps(row));
+        }
+
+        var xStep = NiceStep((toMax - fromMin) / 1000d, Math.Max(2, (int)(plot.Width / 80)));
+        var xMin = Math.Floor(fromMin / 1000d / xStep) * xStep;
+        var xMax = Math.Max(xMin + xStep, Math.Ceiling(toMax / 1000d / xStep) * xStep);
+        var yStep = NiceStep(Math.Max(0.01, cpsMax), Math.Max(2, (int)(plot.Height / 34)));
+        var yMax = Math.Max(yStep, Math.Ceiling(cpsMax / yStep) * yStep);
         double X(double metres) => plot.Left + (metres - xMin) / (xMax - xMin) * plot.Width;
         double Y(double value) => plot.Bottom - value / yMax * plot.Height;
 
@@ -156,7 +209,7 @@ public sealed class DepthBarChart : FrameworkElement
         }
 
         // A thin separator keeps adjacent intervals distinguishable once bars are wide enough.
-        var separator = new Pen(BarSeparatorBrush, 1);
+        var separator = separatorPen ??= Frozen(BarSeparatorBrush);
 
         foreach (var row in rows)
         {
@@ -181,23 +234,36 @@ public sealed class DepthBarChart : FrameworkElement
         if (hit is null)
         {
             tip.IsOpen = false;
+            hovered = null;
             return;
         }
 
-        tip.Content =
-            $"From: {Depth.Format(hit.FromMm!.Value)} m\n" +
-            $"To: {Depth.Format(hit.ToMm!.Value)} m\n" +
-            $"Step: {(hit.StepMm is { } step ? Depth.FormatCentimetres(step) : "—")} cm\n" +
-            $"CPS: {MeasurementCellFormat.Decimal(Cps(hit))}";
+        // The text is rebuilt only when the pointer moves to another bar; within a bar only the position follows.
+        if (!ReferenceEquals(hit, hovered) || !tip.IsOpen)
+        {
+            hovered = hit;
+            tip.Content =
+                $"From: {Depth.Format(hit.FromMm!.Value)} m\n" +
+                $"To: {Depth.Format(hit.ToMm!.Value)} m\n" +
+                $"Step: {(hit.StepMm is { } step ? Depth.FormatCentimetres(step) : "—")} cm\n" +
+                $"CPS: {MeasurementCellFormat.Decimal(Cps(hit))}";
+        }
         tip.HorizontalOffset = point.X + 14;
         tip.VerticalOffset = point.Y + 14;
         tip.IsOpen = true;
     }
 
-    private FormattedText Text(string text, double size) => new(
-        text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-        new Typeface(TextElement.GetFontFamily(this), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
-        size, Foreground, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+    private FormattedText Text(string text, double size)
+    {
+        typeface ??= new Typeface(TextElement.GetFontFamily(this), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+
+        if (pixelsPerDip <= 0)
+        {
+            pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        }
+
+        return new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, size, Foreground, pixelsPerDip);
+    }
 
     // 1, 2 or 5 × a power of ten giving about <paramref name="count"/> ticks over <paramref name="range"/>.
     private static double NiceStep(double range, int count)

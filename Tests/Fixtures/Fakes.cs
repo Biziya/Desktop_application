@@ -94,6 +94,11 @@ public sealed class MemoryRepository(string databasePath) : IMeasurementReposito
 
     public DepthProgress? Progress(Guid session) { lock (gate) return progress.GetValueOrDefault(session); }
 
+    /// <summary>Number of rows passed to each successful save, in order (0 = a progress-only save).</summary>
+    public List<int> SavedRowCounts { get; } = [];
+
+    public int[] SaveSizes() { lock (gate) return SavedRowCounts.ToArray(); }
+
     /// <summary>Stores a session (and rows, as if loaded from SQLite) before the test.</summary>
     public MeasurementSession Seed(MeasurementSession session, params MeasurementResult[] stored)
     {
@@ -125,6 +130,7 @@ public sealed class MemoryRepository(string databasePath) : IMeasurementReposito
 
         lock (gate)
         {
+            SavedRowCounts.Add(list.Count);
             var stored = rows.GetValueOrDefault(session.Id) ?? [];
             var byNumber = stored.ToDictionary(r => r.CaptureNumber);
             var ordered = list.Select(r => byNumber.GetValueOrDefault(r.CaptureNumber) ?? r).ToList();

@@ -162,9 +162,22 @@ public sealed class DetectorRow(string serial) : ObservableObject
             _ => (CultureInfo.InvariantCulture.TextInfo.ToTitleCase(raw), StatusTone.Info)
         };
 
-        Changed(nameof(IsStale));
-        Changed(nameof(IsLive));
+        // Raised only on a change: every row is refreshed on every poll.
+        if (shownStale != IsStale)
+        {
+            shownStale = IsStale;
+            Changed(nameof(IsStale));
+        }
+
+        if (shownLive != IsLive)
+        {
+            shownLive = IsLive;
+            Changed(nameof(IsLive));
+        }
     }
+
+    private bool? shownStale;
+    private bool? shownLive;
 }
 
 /// <summary>Time and age formatting shared by the Monitoring page.</summary>

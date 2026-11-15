@@ -14,6 +14,10 @@
     <!-- Use custom Main() for Velopack initialization -->
     <StartupObject>Frontend.App</StartupObject>
 
+    <!-- Startup speed: the published app (build-installer.ps1, win-x64) ships precompiled code, so the app's own code
+         and its libraries are not compiled on first use at every start. Only affects dotnet publish. -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+
     <!-- release/ holds build output (build-installer.ps1), never source. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);release/**</DefaultItemExcludes>
   </PropertyGroup>

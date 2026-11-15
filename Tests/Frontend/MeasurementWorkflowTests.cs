@@ -392,6 +392,51 @@ public static class MeasurementWorkflowTests
         Assert.Equal(4, vm.Results.Max(r => r.CaptureNumber), "next capture number is never reused");
     }
 
+    [Test("FE-PERF-01", "Typing a depth saves only the progress: rows are not re-saved and Measured drillholes is not reloaded")]
+    public static async Task DepthTypingSavesProgressOnly()
+    {
+        using var folder = new TestFolder();
+        using var page = new Page(folder);
+        var vm = page.ViewModel;
+        await Make.Arm(vm, Make.Core);
+        await Make.Capture(vm, page.Device);
+        await Assert.Eventually(() => page.Repository.Rows(page.SessionId).Count == 1, "row saved");
+        vm.ToggleMeasurementCommand.Execute(null); // Stop: depths can be edited
+        await Task.Delay(100);
+        var before = page.Repository.SaveSizes().Length;
+        var refreshed = 0;
+        vm.MeasurementsSaved += () => refreshed++;
+
+        vm.NextFrom = "20";
+        vm.NextFrom = "20.5";
+        vm.Step = "50";
+
+        await Assert.Eventually(() => page.Repository.Progress(page.SessionId) == new DepthProgress(20_500, 500), "progress saved");
+        var typed = page.Repository.SaveSizes().Skip(before).ToArray();
+        Assert.True(typed.Length > 0 && typed.All(n => n == 0), $"only progress-only saves while typing ({string.Join(",", typed)})");
+        Assert.Equal(1, page.Repository.Rows(page.SessionId).Count, "rows unchanged");
+        Assert.Equal(0, refreshed, "typing raises no MeasurementsSaved");
+    }
+
+    [Test("FE-PERF-02", "Opening a drillhole fills the table with one Reset, not one Add per row")]
+    public static async Task OpenFillsTableInOneReset()
+    {
+        using var folder = new TestFolder();
+        using var page = new Page(folder);
+        var vm = page.ViewModel;
+        var session = Make.Session("DH-001");
+        var stored = page.Repository.Seed(session,
+            Make.Row(session.Id, 1, 0), Make.Row(session.Id, 2, 250), Make.Row(session.Id, 3, 500));
+        var actions = new List<System.Collections.Specialized.NotifyCollectionChangedAction>();
+        vm.Results.CollectionChanged += (_, e) => actions.Add(e.Action);
+
+        await Make.Arm(vm, Make.Core);
+
+        Assert.Equal(stored.Id, vm.SessionId, "stored session opened");
+        Assert.Equal(3, vm.Results.Count, "rows shown");
+        Assert.Sequence(new[] { System.Collections.Specialized.NotifyCollectionChangedAction.Reset }, actions, "one Reset");
+    }
+
     [Test("FE-035", "A failed save keeps the rows; the next change, Stop, switch or close saves them exactly once")]
     public static async Task SaveFailureRetry()
     {

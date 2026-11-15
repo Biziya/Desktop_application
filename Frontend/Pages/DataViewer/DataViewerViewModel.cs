@@ -110,7 +110,18 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
 
     public string EmptyText => Shown is null ? "Pick a drillhole to see its uploaded measurements." : "No measurements were uploaded for this drillhole.";
 
-    public void OnShown() => RefreshCommand.Execute(null);
+    /// <summary>Coming back to the page within this time shows the data already loaded; Refresh always reloads.</summary>
+    public static readonly TimeSpan ReloadAfter = TimeSpan.FromSeconds(60);
+
+    private DateTime loadedAt = DateTime.MinValue;
+
+    public void OnShown()
+    {
+        if (!hasLoaded || CanRetry || DateTime.UtcNow - loadedAt >= ReloadAfter)
+        {
+            RefreshCommand.Execute(null);
+        }
+    }
 
     public void OnHidden()
     {
@@ -139,6 +150,7 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
             }
 
             hasLoaded = true;
+            loadedAt = DateTime.UtcNow;
             CanRetry = false;
             drillholes = result.Value!;
             Filter();

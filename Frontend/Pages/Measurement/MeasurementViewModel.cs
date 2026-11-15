@@ -106,12 +106,12 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
         Results.CollectionChanged += (_, change) =>
         {
-            AssignDemoTsMs(change.NewItems);
+            AssignDemoTsMs(change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset ? Results : change.NewItems);
             ExportCommand.Refresh();
         };
     }
 
-    public ObservableCollection<MeasurementResult> Results { get; } = [];
+    public BulkObservableCollection<MeasurementResult> Results { get; } = [];
 
     /// <summary>Raised after measurement rows were saved successfully (e.g. to refresh "Measured drillholes").</summary>
     public event Action? MeasurementsSaved;
@@ -460,12 +460,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     {
         session = shown;
         nextCapture = rows.Count == 0 ? 1 : rows.Max(r => r.CaptureNumber) + 1;
-        Results.Clear();
-
-        foreach (var row in MeasurementOrder.Sort(rows))
-        {
-            Results.Add(row);
-        }
+        // One Reset instead of an Add per row: the grid and chart lay out once.
+        Results.ReplaceAll(MeasurementOrder.Sort(rows));
 
         Renumber();
         Changed(nameof(SessionId));
@@ -510,10 +506,18 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             depthsTypedWhileOpening = true;
         }
 
-        // A user change is stored as the progress of the drillhole's session (rows are re-saved unchanged).
+        // A user change is stored as the progress of the drillhole's session. Only the progress row is written,
+        // unless an earlier save failed: then the whole table is saved so those rows are retried.
         if (save && HasValidDepths && SessionMatchesCore && !openingSession)
         {
-            SaveSession();
+            if (hasUnsavedRows)
+            {
+                SaveSession();
+            }
+            else
+            {
+                _ = SaveProgressAsync();
+            }
         }
     }
 
@@ -897,6 +901,23 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         if (saved && rows.Length > 0)
         {
             MeasurementsSaved?.Invoke();
+        }
+    }
+
+    // One UPSERT of the depth progress (typing in From/Step); rows and "Measured drillholes" are left alone.
+    private async Task SaveProgressAsync()
+    {
+        if (session is not { } current || nextFromMm is not { } from || stepMm is not { } size)
+        {
+            return;
+        }
+
+        var saved = await Persist(() => repository.SaveAsync(current, [], new DepthProgress(from, size)));
+
+        // A failure makes the next save write the whole table; a success never clears a failed row save.
+        if (!saved && session == current)
+        {
+            hasUnsavedRows = true;
         }
     }
 

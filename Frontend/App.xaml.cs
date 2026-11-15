@@ -16,9 +16,27 @@ public partial class App : Application
         // Velopack must run before WPF starts (it may handle install/update hooks and exit).
         VelopackApp.Build().Run();
 
+        StartJitProfile();
+
         App app = new();
         app.InitializeComponent();
         app.Run();
+    }
+
+    // Multi-core JIT: start-up methods recorded on the previous run are compiled in the background on the next one.
+    // Optional: a folder that cannot be written only loses the speed-up.
+    private static void StartJitProfile()
+    {
+        try
+        {
+            var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CT007_Measurement_Studio");
+            Directory.CreateDirectory(folder);
+            System.Runtime.ProfileOptimization.SetProfileRoot(folder);
+            System.Runtime.ProfileOptimization.StartProfile("startup.jitprofile");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     // A configuration error closes the app instead of opening it half-configured.

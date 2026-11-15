@@ -115,7 +115,31 @@ public static class LocalFilesTests
         locker.Execute("ROLLBACK");
     }
 
-    [Test("BE-029", "Gamma Guard discovery: 'GammaGuard' folder, Database subfolder, newest wins, cached, rediscovered (UR-16)")]
+    [Test("FE-PERF-03", "An unchanged database keeps its check result; a changed or deleted file is checked again")]
+    public static void FileCheckCache()
+    {
+        using var folder = new TestFolder();
+        var path = folder.Path("cached.db");
+        using (new FakeGammaGuard(path))
+        {
+        }
+
+        Assert.Equal(LocalState.Available, SqliteFileCheck.Check(path, "x").State, "first check opens the file");
+        var written = File.GetLastWriteTimeUtc(path);
+
+        // Same size and write time: the cached result is returned, even though the contents now differ.
+        File.WriteAllBytes(path, new byte[new FileInfo(path).Length]);
+        File.SetLastWriteTimeUtc(path, written);
+        Assert.Equal(LocalState.Available, SqliteFileCheck.Check(path, "x").State, "unchanged file: cached");
+
+        File.SetLastWriteTimeUtc(path, written.AddSeconds(5));
+        Assert.Equal(LocalState.Inaccessible, SqliteFileCheck.Check(path, "x").State, "changed file: checked again");
+
+        File.Delete(path);
+        Assert.Equal(LocalState.Missing, SqliteFileCheck.Check(path, "x").State, "deleted file: missing");
+    }
+
+    [Test("BE-029","Gamma Guard discovery: 'GammaGuard' folder, Database subfolder, newest wins, cached, rediscovered (UR-16)")]
     public static void Discovery()
     {
         using var folder = new TestFolder();

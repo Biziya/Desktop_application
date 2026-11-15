@@ -34,16 +34,65 @@ public static class SqliteFileCheck
         }
     }
 
+    // A readable (or wrong) database keeps its result while the file is unchanged, so the periodic Device Status check
+    // does not open it every few seconds. Busy or unreadable results are never kept: they are checked again each time.
+    public static readonly TimeSpan CacheLifetime = TimeSpan.FromSeconds(60);
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(string Path, bool Verified), (string Stamp, DateTime CheckedAt, LocalStatus Status)> Results = new();
+
     /// <param name="verify">Optional: returns why the file is the wrong database ("Wrong database"), or null.</param>
     public static LocalStatus Check(string path, string missingDetail, Func<SqliteConnection, string?>? verify = null)
     {
+        var key = (path, verify is not null);
+
         try
         {
-            if (!File.Exists(path))
+            var file = new FileInfo(path);
+
+            if (!file.Exists)
             {
+                Results.TryRemove(key, out _);
                 return new LocalStatus(LocalState.Missing, "File not found", missingDetail, path);
             }
 
+            var stamp = Stamp(file);
+
+            if (Results.TryGetValue(key, out var kept) && kept.Stamp == stamp && DateTime.UtcNow - kept.CheckedAt < CacheLifetime)
+            {
+                return kept.Status;
+            }
+
+            var status = Open(path, verify);
+
+            if (status.State is LocalState.Available || status.Text == "Wrong database")
+            {
+                Results[key] = (stamp, DateTime.UtcNow, status);
+            }
+            else
+            {
+                Results.TryRemove(key, out _);
+            }
+
+            return status;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            Results.TryRemove(key, out _);
+            return new LocalStatus(LocalState.Inaccessible, "Cannot be opened", error.Message, path);
+        }
+    }
+
+    // Size and write time of the database and its WAL file: a write in WAL mode changes only the -wal file.
+    private static string Stamp(FileInfo file)
+    {
+        var wal = new FileInfo(file.FullName + "-wal");
+        return $"{file.Length}|{file.LastWriteTimeUtc.Ticks}|{(wal.Exists ? $"{wal.Length}|{wal.LastWriteTimeUtc.Ticks}" : "-")}";
+    }
+
+    private static LocalStatus Open(string path, Func<SqliteConnection, string?>? verify)
+    {
+        try
+        {
             using var connection = OpenReadOnly(path);
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'";

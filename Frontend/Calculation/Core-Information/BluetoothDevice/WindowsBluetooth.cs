@@ -40,6 +40,15 @@ internal sealed class WindowsBluetooth : IBluetoothReader
             }
         }
 
+        // A device Windows no longer lists (unpaired, removed) is not kept open.
+        lock (gate)
+        {
+            foreach (var gone in opened.Keys.Where(id => !candidates.ContainsKey(id)).ToList())
+            {
+                Forget(gone);
+            }
+        }
+
         var devices = new List<KnownBluetoothDevice>();
 
         foreach (var (id, (info, lowEnergy)) in candidates)
@@ -75,16 +84,51 @@ internal sealed class WindowsBluetooth : IBluetoothReader
         return lowEnergyDevice is null ? null : Read(lowEnergyDevice);
     }
 
-    private static KnownBluetoothDevice? Open(string id, bool lowEnergy)
-    {
-        if (lowEnergy)
-        {
-            using var device = Wait(BluetoothLEDevice.FromIdAsync(id));
-            return device is null ? null : Read(device);
-        }
+    // Opened devices are kept: WinRT keeps ConnectionStatus live on the object, so a repeat check is one property
+    // read instead of a blocking FromIdAsync. A device whose read fails is dropped and reopened next time.
+    private readonly object gate = new();
+    private readonly Dictionary<string, IDisposable> opened = new(StringComparer.OrdinalIgnoreCase);
+    private Radio? radio;
 
-        using var classic = Wait(WinBluetoothDevice.FromIdAsync(id));
-        return classic is null ? null : Read(classic);
+    private KnownBluetoothDevice? Open(string id, bool lowEnergy)
+    {
+        lock (gate)
+        {
+            try
+            {
+                if (!opened.TryGetValue(id, out var device))
+                {
+                    device = lowEnergy ? Wait(BluetoothLEDevice.FromIdAsync(id)) : Wait(WinBluetoothDevice.FromIdAsync(id));
+
+                    if (device is null)
+                    {
+                        return null;
+                    }
+
+                    opened[id] = device;
+                }
+
+                return device switch
+                {
+                    BluetoothLEDevice le => Read(le),
+                    WinBluetoothDevice classic => Read(classic),
+                    _ => null
+                };
+            }
+            catch
+            {
+                Forget(id);
+                throw;
+            }
+        }
+    }
+
+    private void Forget(string id)
+    {
+        if (opened.Remove(id, out var device))
+        {
+            device.Dispose();
+        }
     }
 
     private static KnownBluetoothDevice Read(WinBluetoothDevice device) =>
@@ -96,15 +140,27 @@ internal sealed class WindowsBluetooth : IBluetoothReader
             device.DeviceInformation?.Pairing?.IsPaired == true, device.DeviceId, true);
 
     // Without an adapter whose radio is on, the device state cannot be known: the check fails (Status unavailable).
-    private static void EnsureRadioOn()
+    // The radio is looked up once (its State stays live) and again only after a failed or "off" check.
+    private void EnsureRadioOn()
     {
-        var adapter = Wait(BluetoothAdapter.GetDefaultAsync())
-                      ?? throw new InvalidOperationException("No Bluetooth adapter is available on this laptop.");
-        var radio = Wait(adapter.GetRadioAsync());
-
-        if (radio?.State != RadioState.On)
+        lock (gate)
         {
-            throw new InvalidOperationException("Bluetooth is turned off on this laptop.");
+            if (radio?.State == RadioState.On)
+            {
+                return;
+            }
+
+            radio = null;
+            var adapter = Wait(BluetoothAdapter.GetDefaultAsync())
+                          ?? throw new InvalidOperationException("No Bluetooth adapter is available on this laptop.");
+            var found = Wait(adapter.GetRadioAsync());
+
+            if (found?.State != RadioState.On)
+            {
+                throw new InvalidOperationException("Bluetooth is turned off on this laptop.");
+            }
+
+            radio = found;
         }
     }
 
