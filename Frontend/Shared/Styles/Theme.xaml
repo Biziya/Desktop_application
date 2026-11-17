@@ -216,6 +216,13 @@
         <Setter Property="TextElement.Foreground" Value="{StaticResource Warning}"/>
     </Style>
 
+    <!-- Same shape as WarningBanner in the blue accent: a hint for what to do next, not a problem. -->
+    <Style x:Key="InfoBanner" TargetType="Border" BasedOn="{StaticResource WarningBanner}">
+        <Setter Property="Background" Value="{StaticResource SoftBlue}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Blue}"/>
+        <Setter Property="TextElement.Foreground" Value="{StaticResource TextPrimary}"/>
+    </Style>
+
     <!-- ===== Inputs: 40 px, white, light border, 8 px corners; darker border on hover, blue on focus. ===== -->
     <!-- Text boxes and dropdowns share Height (ControlHeight), left padding (11), font, 1 px border and corners,
          so a dropdown next to a text box lines up exactly. Multi-line boxes (Notes) set their own Height. -->

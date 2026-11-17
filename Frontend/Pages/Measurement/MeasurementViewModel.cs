@@ -141,6 +141,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             if (Set(ref state, value))
             {
                 Changed(nameof(IsMeasurementModeActive));
+                Changed(nameof(ShowCaptureHint));
                 RefreshCommands();
             }
         }
@@ -149,6 +150,11 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     public bool IsMeasurementModeActive => State != MeasurementState.Idle;
 
     public bool IsCapturing => State is MeasurementState.Capturing or MeasurementState.Processing;
+
+    /// <summary>Measurement mode is on and waiting for a right-click: the capture panel shows how to take a capture.</summary>
+    public bool ShowCaptureHint => State == MeasurementState.Ready;
+
+    public const string CaptureHint = "Measurement in progress — right-click anywhere in the window to capture the next interval.";
 
     public bool CanTrigger =>
         State == MeasurementState.Ready && SessionMatchesCore && HasValidDepths && activeCapture is null && !isEditingDuration;
@@ -586,6 +592,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
         ResetCountdown();
         State = MeasurementState.Ready;
+        Notify(ToastKind.Information, CaptureHint);
     }
 
     // Sessions follow the Drillhole ID, so a new measurement means entering the next drillhole: this closes the

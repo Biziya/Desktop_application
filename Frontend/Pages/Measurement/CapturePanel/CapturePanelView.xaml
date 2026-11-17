@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Frontend.Pages.Measurement.CapturePanel"
-             xmlns:calc="clr-namespace:Frontend.Calculation.Measurement">
+             xmlns:calc="clr-namespace:Frontend.Calculation.Measurement"
+             xmlns:measurement="clr-namespace:Frontend.Pages.Measurement">
     <!-- Control row: control column (Starting Depth, Step, Threshold, Start / Stop toggle — all the same width) | countdown | bar chart
          (remaining width). "to" is calculated (from + step), so there is no To input. Depth edits, also during acquisition,
          apply from the next capture. The chart takes the remaining width (about 205 px at the smallest window).
@@ -156,6 +157,17 @@
                    HorizontalAlignment="Left"
                    Margin="{StaticResource DrillholeWarningMargin}"
                    Visibility="{Binding NeedsCore, Converter={StaticResource BoolVisibility}}"/>
+
+        <!-- Shown while measurement mode waits for a right-click, so the capture gesture is visible when it is needed
+             (Start also shows the same text in a toast). Never shown together with the warning above: Start needs Core. -->
+        <Border Grid.Row="1" Grid.ColumnSpan="2"
+                Style="{StaticResource InfoBanner}"
+                HorizontalAlignment="Left"
+                MaxWidth="480"
+                Margin="0,12,0,0"
+                Visibility="{Binding ShowCaptureHint, Converter={StaticResource BoolVisibility}}">
+            <TextBlock Text="{x:Static measurement:MeasurementViewModel.CaptureHint}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+        </Border>
 
         <!-- The first box's spacing is dropped so the column starts at its label. Invalid text gets a red border while
              typing; leaving the box (or Start) reports it in a toast. -->

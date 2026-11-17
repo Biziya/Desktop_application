@@ -67,8 +67,19 @@ public static class YamlSettings
     // Sizes must be greater than 0 and margins not negative; nested settings and lists are checked the same way.
     private static void CheckValues(object settings, string path, string file)
     {
+        // Lists of plain text (e.g. help.yaml "important") have nothing to check; indexers have no single value.
+        if (settings is string)
+        {
+            return;
+        }
+
         foreach (var property in settings.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
+            if (property.GetIndexParameters().Length > 0)
+            {
+                continue;
+            }
+
             var key = path + char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
             var value = property.GetValue(settings);
 

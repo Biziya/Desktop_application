@@ -81,6 +81,22 @@ public static class AlarmBellAndHelpTests
         Assert.False(main.Help.IsOpen, "closed");
     }
 
+    [Test("FE-HELP-03", "Blocking information comes first: Measurement's important notes and Start / Stop lead its help")]
+    public static void HelpImportantFirst()
+    {
+        var help = HelpSettings.Load(AppContext.BaseDirectory);
+        var measurement = help.For("Measurement")!;
+
+        Assert.True(measurement.HasImportant, "Measurement has important notes");
+        Assert.True(measurement.Important.Any(n => n.Contains("right-click", StringComparison.OrdinalIgnoreCase)), "names the right-click capture");
+        Assert.Equal("Start / Stop", measurement.Items[0].Control, "most important control first");
+
+        using var folder = new TestFolder();
+        Directory.CreateDirectory(folder.Path("Config"));
+        File.WriteAllText(folder.Path(HelpSettings.File), "pages:\n  - page: Measurement\n    purpose: x\n    items:\n      - control: Start\n        does: y\n");
+        Assert.False(HelpSettings.Load(folder.Root).Pages[0].HasImportant, "'important' is optional");
+    }
+
     [Test("FE-HELP-02", "An invalid help.yaml fails start-up naming the file and the key")]
     public static void InvalidHelp()
     {

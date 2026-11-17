@@ -161,6 +161,23 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
                     <StackPanel>
                         <TextBlock Text="{Binding Help.Page.Purpose, FallbackValue=''}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <!-- What blocks the work on this page, before the controls (help.yaml "important"). -->
+                        <Border Style="{StaticResource WarningBanner}"
+                                Visibility="{Binding Help.Page.HasImportant, Converter={StaticResource BoolVisibility}, FallbackValue=Collapsed}">
+                            <StackPanel>
+                                <TextBlock Text="Important" FontWeight="Bold" Margin="0,0,0,6"/>
+                                <ItemsControl ItemsSource="{Binding Help.Page.Important}" Focusable="False">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <DockPanel Margin="0,0,0,6">
+                                                <TextBlock DockPanel.Dock="Left" Text="•" Margin="0,0,6,0"/>
+                                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}"/>
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
                         <ItemsControl ItemsSource="{Binding Help.Page.Items}" Focusable="False">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>

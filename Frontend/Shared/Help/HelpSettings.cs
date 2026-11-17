@@ -49,6 +49,11 @@ public sealed class HelpSettings
 
         public required string Purpose { get; init; }
 
+        /// <summary>What blocks the work on this page; shown first, in a highlighted box. Optional.</summary>
+        public List<string> Important { get; init; } = [];
+
+        public bool HasImportant => Important.Count > 0;
+
         public required List<HelpItem> Items { get; init; }
     }
 

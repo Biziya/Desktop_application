@@ -119,6 +119,35 @@ public static class CoreInformationTests
         await Assert.Remains(() => main.Measurement.Results.Count == 0, "the cancelled capture adds no row");
     }
 
+    [Test("FE-HINT-01", "Start tells the user to right-click: one information toast, and a banner only while waiting for a capture")]
+    public static async Task StartShowsCaptureHint()
+    {
+        using var folder = new TestFolder();
+        var (main, _, device, _) = await Start(folder);
+        using var _main = main;
+        await Make.Pick(main.Core, "DH-001");
+        main.Core.SaveCommand.Execute(null);
+        await Assert.Eventually(() => main.Measurement.ToggleMeasurementCommand.CanExecute(null), "session open");
+        main.Measurement.NextFrom = "10.00";
+        main.Measurement.Step = "25";
+        main.Toasts.Items.Clear();
+        Assert.False(main.Measurement.ShowCaptureHint, "no banner before Start");
+
+        main.Measurement.ToggleMeasurementCommand.Execute(null);
+
+        Assert.Equal(1, main.Toasts.Items.Count(t => t is { Kind: ToastKind.Information } && t.Message.Contains("right-click")), "one hint toast");
+        Assert.True(main.Measurement.ShowCaptureHint, "banner while armed");
+
+        main.Measurement.TriggerCommand.Execute(DateTimeOffset.Now);
+        Assert.False(main.Measurement.ShowCaptureHint, "banner hidden while capturing");
+        device.Complete();
+        await Assert.Eventually(() => main.Measurement.State == MeasurementState.Ready, "capture done");
+        Assert.True(main.Measurement.ShowCaptureHint, "banner back for the next capture");
+
+        main.Measurement.ToggleMeasurementCommand.Execute(null);
+        Assert.False(main.Measurement.ShowCaptureHint, "banner hidden after Stop");
+    }
+
     [Test("FE-022", "The drillhole cannot change while measuring")]
     public static async Task SelectionLock()
     {
