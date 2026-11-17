@@ -2,7 +2,7 @@ using Frontend.Shared.Infrastructure;
 
 namespace Frontend.Shared.Help;
 
-/// <summary>The Help panel beside the page, filled from Config/help.yaml.</summary>
+/// <summary>State of the floating Help window (Shared/Help/HelpWindow), filled from Config/help.yaml.</summary>
 public sealed class HelpPanel : ObservableObject
 {
     private readonly HelpSettings? settings;

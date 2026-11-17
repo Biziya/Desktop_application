@@ -3,15 +3,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:drillhole="clr-namespace:Frontend.Pages.CoreInformation.DrillholeInformation"
              xmlns:device="clr-namespace:Frontend.Pages.CoreInformation.DeviceStatus">
-    <!-- Both sections share this page's DataContext (CoreInformationViewModel). -->
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel>
-            <Grid Style="{StaticResource PageHeader}">
-                <TextBlock Text="Core Information" Style="{StaticResource PageTitle}"/>
-                <Button Style="{StaticResource HelpButton}"/>
-            </Grid>
-            <drillhole:DrillholeInformationView/>
-            <device:DeviceStatusView/>
-        </StackPanel>
-    </ScrollViewer>
+    <!-- Both sections share this page's DataContext (CoreInformationViewModel): Drillhole Information, then Device Status.
+         The title stays fixed; only the cards scroll, with the scroll bar in the page margin. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" Style="{StaticResource PageHeader}">
+            <TextBlock Text="Core Information" Style="{StaticResource PageTitle}"/>
+            <Button Style="{StaticResource HelpButton}"/>
+        </Grid>
+        <ScrollViewer Style="{StaticResource PageScroll}">
+            <StackPanel Margin="{StaticResource PageScrollContentMargin}">
+                <drillhole:DrillholeInformationView/>
+                <device:DeviceStatusView/>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
 </UserControl>

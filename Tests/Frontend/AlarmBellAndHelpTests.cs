@@ -97,7 +97,29 @@ public static class AlarmBellAndHelpTests
         Assert.False(HelpSettings.Load(folder.Root).Pages[0].HasImportant, "'important' is optional");
     }
 
-    [Test("FE-HELP-02", "An invalid help.yaml fails start-up naming the file and the key")]
+    [Test("FE-HELP-04", "Help stays short: every 'does' is at most 90 characters, every purpose and important line at most 100")]
+    public static void HelpIsShort()
+    {
+        var help = HelpSettings.Load(AppContext.BaseDirectory);
+
+        foreach (var page in help.Pages)
+        {
+            Assert.True(page.Purpose.Length <= 100, $"{page.Page} purpose is {page.Purpose.Length} characters");
+            Assert.True(page.Important.Count <= 2, $"{page.Page} has at most 2 important lines");
+
+            foreach (var line in page.Important)
+            {
+                Assert.True(line.Length <= 100, $"{page.Page} important line is {line.Length} characters: {line}");
+            }
+
+            foreach (var item in page.Items)
+            {
+                Assert.True(item.Does.Length <= 90, $"{page.Page} / {item.Control} is {item.Does.Length} characters");
+            }
+        }
+    }
+
+    [Test("FE-HELP-02","An invalid help.yaml fails start-up naming the file and the key")]
     public static void InvalidHelp()
     {
         using var folder = new TestFolder();

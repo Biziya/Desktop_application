@@ -10,9 +10,6 @@ labels:
   selectDatabaseToolTip: Choose the Gamma Guard SQLite database file
   statusDot: "●  "                              # in front of the status text ("●  Connected"); keep the quotes
 
-sizes:
-  bluetoothDropdownMaxWidth: 360                # left-aligned, narrower when the window is
-
 spacing:
   title: 0,0,0,8                                # below "Device Status"
   rowPadding: 14,12

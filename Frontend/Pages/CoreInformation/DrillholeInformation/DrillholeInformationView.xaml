@@ -79,9 +79,14 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
+    <!-- One row of four fields (Drillhole, Project, Campaign, Operator), then Notes across; Save &amp; Continue at the end. -->
     <Border Style="{StaticResource Card}">
-        <StackPanel>
-            <TextBlock Text="{StaticResource DrillholeSectionTitle}" Style="{StaticResource SectionTitle}"/>
+        <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="{StaticResource DrillholeSectionTitle}" Style="{StaticResource SectionTitle}"/>
+            <!-- Saving belongs to this form, so the action sits at its end. A missing drillhole is reported (red border and
+                 toast) only after Save & Continue. -->
+            <Button DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="{StaticResource SaveAndContinueMargin}"
+                    Content="{StaticResource SaveAndContinueLabel}" Command="{Binding SaveCommand}"/>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="{StaticResource DrillholeColumnWidth}" MinWidth="{StaticResource DrillholeColumnMinWidth}"/>
@@ -155,9 +160,10 @@
                     <TextBox Text="{Binding Operator, UpdateSourceTrigger=PropertyChanged}"
                              AutomationProperties.Name="{StaticResource OperatorLabel}"/>
                 </StackPanel>
-                <StackPanel Grid.Row="1" Grid.ColumnSpan="4" Style="{StaticResource FieldPanel}">
-                    <TextBlock Text="{StaticResource NotesLabel}" Style="{StaticResource FieldLabel}"/>
-                    <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                <DockPanel Grid.Row="1" Grid.ColumnSpan="4" Margin="{StaticResource DrillholeFieldMargin}">
+                    <TextBlock DockPanel.Dock="Top" Text="{StaticResource NotesLabel}" Style="{StaticResource FieldLabel}"/>
+                    <TextBox
+                             Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
                              AutomationProperties.Name="{StaticResource NotesLabel}"
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
@@ -165,13 +171,8 @@
                              Padding="{StaticResource NotesPadding}"
                              VerticalContentAlignment="Stretch"
                              VerticalScrollBarVisibility="Auto"/>
-                </StackPanel>
+                </DockPanel>
             </Grid>
-
-            <!-- Saving belongs to this form, so the action sits at its end. A missing drillhole is reported (red border and
-                 toast) only after Save & Continue. -->
-            <Button HorizontalAlignment="Right" Margin="{StaticResource SaveAndContinueMargin}"
-                    Content="{StaticResource SaveAndContinueLabel}" Command="{Binding SaveCommand}"/>
-        </StackPanel>
+        </DockPanel>
     </Border>
 </UserControl>

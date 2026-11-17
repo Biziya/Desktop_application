@@ -1,6 +1,9 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Frontend.Shared.Help;
+using Frontend.Shared.Infrastructure;
 using Frontend.ViewModels;
 
 namespace Frontend;
@@ -8,6 +11,7 @@ namespace Frontend;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel viewModel;
+    private HelpWindow? helpWindow;
 
     public MainWindow()
         : this(new MainViewModel())
@@ -19,14 +23,18 @@ public partial class MainWindow : Window
         this.viewModel = viewModel;
         InitializeComponent();
         DataContext = viewModel;
+        WindowCaption.Apply(this);
 
         // One window-level tunnel registration, including events already handled by controls.
         // The handler lives as long as the window, so it needs no explicit removal.
         AddHandler(Mouse.PreviewMouseDownEvent, new MouseButtonEventHandler(OnMeasurementMouseDown), handledEventsToo: true);
+        viewModel.Help.PropertyChanged += OnHelpChanged;
     }
 
+    // The Help window counts as part of the app: right-click captures while either window is active.
     private bool AcceptMeasurementMouseInput =>
-        IsActive && IsEnabled && WindowState != WindowState.Minimized && viewModel.Measurement.IsMeasurementModeActive;
+        (IsActive || helpWindow?.IsActive == true) && IsEnabled && WindowState != WindowState.Minimized
+        && viewModel.Measurement.IsMeasurementModeActive;
 
     private void OnMeasurementMouseDown(object sender, MouseButtonEventArgs e)
     {
@@ -48,6 +56,48 @@ public partial class MainWindow : Window
 
     private void ShowHelp(object sender, ExecutedRoutedEventArgs e) => viewModel.ShowHelp();
 
+    private void OnHelpChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(HelpPanel.IsOpen))
+        {
+            return;
+        }
+
+        if (!viewModel.Help.IsOpen)
+        {
+            helpWindow?.Hide();
+            return;
+        }
+
+        if (helpWindow is null)
+        {
+            helpWindow = new HelpWindow(viewModel.Help, OnMeasurementMouseDown, () => AcceptMeasurementMouseInput)
+            {
+                Owner = this,
+                ShowActivated = false,
+                WindowStartupLocation = WindowStartupLocation.Manual,
+            };
+            PlaceHelpWindow(helpWindow);
+        }
+
+        helpWindow.Show();
+    }
+
+    // First time only: near the top-right corner, inside the main window. Later it opens where the user left it.
+    private void PlaceHelpWindow(Window window)
+    {
+        var source = PresentationSource.FromVisual(this);
+
+        if (source?.CompositionTarget is null)
+        {
+            return;
+        }
+
+        var topRight = source.CompositionTarget.TransformFromDevice.Transform(PointToScreen(new Point(ActualWidth, 0)));
+        window.Left = topRight.X - window.Width - 32;
+        window.Top = topRight.Y + 72;
+    }
+
     protected override void OnContextMenuOpening(ContextMenuEventArgs e)
     {
         base.OnContextMenuOpening(e);
@@ -59,8 +109,19 @@ public partial class MainWindow : Window
         }
     }
 
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        base.OnClosing(e);
+
+        if (!e.Cancel && helpWindow is not null)
+        {
+            helpWindow.AllowClose = true;
+        }
+    }
+
     protected override void OnClosed(EventArgs e)
     {
+        viewModel.Help.PropertyChanged -= OnHelpChanged;
         viewModel.Dispose();
         base.OnClosed(e);
     }

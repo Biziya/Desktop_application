@@ -52,9 +52,13 @@ function Read-ApplicationYaml([string]$Path) {
     if ($values.id -notmatch '^[A-Za-z0-9._-]+$') {
         throw "${Path}: application.id '$($values.id)' may only contain letters, digits, '.', '-' and '_'."
     }
-    if ($values.version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$') {
-        throw "${Path}: application.version '$($values.version)' is not a SemVer version (for example 1.0.0)."
+    # major.minor.patch.build (the build number is optional), with an optional -prerelease and +metadata suffix.
+    if ($values.version -notmatch '^(\d+\.\d+\.\d+)(\.\d+)?(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$') {
+        throw "${Path}: application.version '$($values.version)' is not a valid version (for example 1.2.1.0)."
     }
+    # Velopack only takes SemVer, so the package uses major.minor.patch (plus any -prerelease): 1.2.1.0 -> 1.2.1.
+    # The updater therefore ignores the build number; a release users must receive changes major, minor or patch.
+    $values.packVersion = $Matches[1] + $Matches[3]
     return $values
 }
 
@@ -104,7 +108,7 @@ function Test-ProductionEnv([string]$Path) {
 }
 
 $app = Read-ApplicationYaml $applicationYaml
-Write-Host "Application: $($app.name) ($($app.id)) version $($app.version)"
+Write-Host "Application: $($app.name) ($($app.id)) version $($app.version), package version $($app.packVersion)"
 
 $productionUrl = Test-ProductionEnv $productionEnv
 Write-Host "Production API: $($productionUrl.GetLeftPart([UriPartial]::Authority))"
@@ -140,7 +144,7 @@ if ($envFiles.Count -gt 0) {
 }
 
 Invoke-Step 'Velopack pack' {
-    vpk pack --packId $app.id --packVersion $app.version --packTitle $app.name --packDir $publishDir `
+    vpk pack --packId $app.id --packVersion $app.packVersion--packTitle $app.name --packDir $publishDir `
         --mainExe $mainExe --icon $icon --runtime $Runtime --outputDir $installerDir
 }
 
@@ -149,5 +153,5 @@ $installer = $assets | Where-Object { $_.Type -eq 'Installer' } | Select-Object 
 if (-not $installer) { throw "Velopack reported no installer in $installerDir\assets.win.json." }
 
 Write-Host "`nInstaller: $(Join-Path $installerDir $installer.RelativeFileName)" -ForegroundColor Green
-Write-Host "Version:   $($app.version)"
+Write-Host "Version:   $($app.version) (package $($app.packVersion))"
 $assets | Where-Object { $_.Type -ne 'Installer' } | ForEach-Object { Write-Host "  $($_.Type): $($_.RelativeFileName)" }

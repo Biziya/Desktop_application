@@ -98,7 +98,7 @@
                         <TextBlock Text="{StaticResource BluetoothLabel}" Style="{StaticResource FieldLabel}"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" MaxWidth="{StaticResource BluetoothDropdownMaxWidth}"/>
+                                <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <ComboBox DisplayMemberPath="Display"

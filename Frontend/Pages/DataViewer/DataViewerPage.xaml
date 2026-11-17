@@ -79,7 +79,7 @@
                         <TextBox Style="{StaticResource ReadOnlyField}" Text="{Binding Operator, Mode=OneWay}"
                                  AutomationProperties.Name="{StaticResource OperatorLabel}"/>
                     </StackPanel>
-                    <!-- Refresh: two curved arrows; they turn while loading. -->
+                    <!-- Refresh: two curved arrows; they turn counter-clockwise (the way the arrows point) while loading. -->
                     <Button Grid.Column="4" Style="{StaticResource OutlinedIconButton}" VerticalAlignment="Bottom"
                             Margin="0,0,0,16" Command="{Binding RefreshCommand}"
                             ToolTip="Load the uploaded data from the central database again"
@@ -99,7 +99,7 @@
                                                 <BeginStoryboard x:Name="Spin">
                                                     <Storyboard>
                                                         <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(RotateTransform.Angle)"
-                                                                         From="0" To="360" Duration="0:0:0.9" RepeatBehavior="Forever"/>
+                                                                         From="0" To="-360" Duration="0:0:0.9" RepeatBehavior="Forever"/>
                                                     </Storyboard>
                                                 </BeginStoryboard>
                                             </DataTrigger.EnterActions>

@@ -10,26 +10,32 @@
     <sys:Double x:Key="ControlHeight">40</sys:Double>
     <!-- Width of the blue bar beside the current page in the sidebar (its height is always the item's). -->
     <sys:Double x:Key="SidebarIndicatorWidth">5</sys:Double>
-    <!-- ===== Palette: white sidebar and cards on a light grey page, one blue accent. ===== -->
+    <!-- ===== Palette: dark navy sidebar; white cards on a soft blue-grey page; one blue accent. ===== -->
     <SolidColorBrush x:Key="TextPrimary" Color="#1F2937" po:Freeze="True"/>
     <SolidColorBrush x:Key="Blue" Color="#2563EB" po:Freeze="True"/>
     <SolidColorBrush x:Key="Muted" Color="#6B7280" po:Freeze="True"/>
     <!-- Form and status labels: between Muted and body text. -->
     <SolidColorBrush x:Key="LabelText" Color="#374151" po:Freeze="True"/>
-    <SolidColorBrush x:Key="Line" Color="#E6E8EC" po:Freeze="True"/>
+    <SolidColorBrush x:Key="Line" Color="#E2E7EF" po:Freeze="True"/>
     <SolidColorBrush x:Key="Surface" Color="#FFFFFF" po:Freeze="True"/>
-    <!-- Main page background; the sidebar and cards are white on it. -->
-    <SolidColorBrush x:Key="Canvas" Color="#F3F4F6" po:Freeze="True"/>
+    <!-- Main page background; cards are white on it. -->
+    <SolidColorBrush x:Key="Canvas" Color="#EEF2F7" po:Freeze="True"/>
     <!-- Very light fill: alternating table rows, read-only fields. -->
-    <SolidColorBrush x:Key="SubtleSurface" Color="#F9FAFB" po:Freeze="True"/>
-    <SolidColorBrush x:Key="ReadOnlySurface" Color="#F7F8FA" po:Freeze="True"/>
-    <SolidColorBrush x:Key="SidebarBackground" Color="#FFFFFF" po:Freeze="True"/>
-    <SolidColorBrush x:Key="SidebarBorder" Color="#E6E8EC" po:Freeze="True"/>
-    <SolidColorBrush x:Key="SidebarHover" Color="#F3F4F6" po:Freeze="True"/>
-    <!-- Unselected navigation text: about 7.6:1 on the white sidebar. -->
-    <SolidColorBrush x:Key="SidebarText" Color="#4B5563" po:Freeze="True"/>
-    <!-- Selected navigation item / highlighted list item. -->
-    <SolidColorBrush x:Key="SoftBlue" Color="#EEF3FE" po:Freeze="True"/>
+    <SolidColorBrush x:Key="SubtleSurface" Color="#F8FAFC" po:Freeze="True"/>
+    <SolidColorBrush x:Key="ReadOnlySurface" Color="#F5F7FA" po:Freeze="True"/>
+    <!-- Sidebar: dark navy. Only the sidebar uses these brushes. -->
+    <SolidColorBrush x:Key="SidebarBackground" Color="#14213D" po:Freeze="True"/>
+    <SolidColorBrush x:Key="SidebarBorder" Color="#24345A" po:Freeze="True"/>
+    <SolidColorBrush x:Key="SidebarHover" Color="#1F2E52" po:Freeze="True"/>
+    <!-- Unselected navigation text: about 10:1 on the navy sidebar. -->
+    <SolidColorBrush x:Key="SidebarText" Color="#C5CEDF" po:Freeze="True"/>
+    <SolidColorBrush x:Key="SidebarTextStrong" Color="#FFFFFF" po:Freeze="True"/>
+    <SolidColorBrush x:Key="SidebarMuted" Color="#8E9AB3" po:Freeze="True"/>
+    <!-- Current page in the sidebar: lighter navy fill, white text, light-blue bar at the edge. -->
+    <SolidColorBrush x:Key="SidebarSelected" Color="#2A3F78" po:Freeze="True"/>
+    <SolidColorBrush x:Key="SidebarAccent" Color="#60A5FA" po:Freeze="True"/>
+    <!-- Highlighted list item, info banners and chips. -->
+    <SolidColorBrush x:Key="SoftBlue" Color="#EAF1FF" po:Freeze="True"/>
     <SolidColorBrush x:Key="HoverSurface" Color="#F5F7FA" po:Freeze="True"/>
     <SolidColorBrush x:Key="InputBorder" Color="#DDE1E7" po:Freeze="True"/>
     <SolidColorBrush x:Key="InputHoverBorder" Color="#B9C0CB" po:Freeze="True"/>
@@ -135,6 +141,31 @@
         <Setter Property="Padding" Value="20"/>
         <Setter Property="Margin" Value="0,0,0,16"/>
     </Style>
+    <!-- Whole-page scrolling below a fixed page header. The scroll bar sits in the page margin (the gutter), so the
+         cards keep the header's right edge and the bar never touches or covers a card. Put the content inside a
+         Border/panel with Margin="{StaticResource PageScrollContentMargin}". -->
+    <Thickness x:Key="PageScrollContentMargin">0,0,18,0</Thickness>
+    <Style x:Key="PageScroll" TargetType="ScrollViewer">
+        <Setter Property="Margin" Value="0,0,-18,0"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="Focusable" Value="False"/>
+        <!-- The bar is laid over the right edge instead of taking a column, so the content keeps the same width whether
+             or not the bar is shown; the content margin leaves that edge free. -->
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollViewer">
+                    <Grid>
+                        <ScrollContentPresenter CanContentScroll="{TemplateBinding CanContentScroll}"/>
+                        <ScrollBar x:Name="PART_VerticalScrollBar" HorizontalAlignment="Right" Cursor="Arrow"
+                                   Value="{TemplateBinding VerticalOffset}" Maximum="{TemplateBinding ScrollableHeight}"
+                                   ViewportSize="{TemplateBinding ViewportHeight}"
+                                   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
     <!-- Label above an input or value; the same on every page. -->
     <Style x:Key="FieldLabel" TargetType="TextBlock">
         <Setter Property="FontSize" Value="13"/>
@@ -158,7 +189,7 @@
     </Style>
     <Style x:Key="PageTitle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="22"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <!-- Card heading row: title on the left, a short count or note on the right. -->
@@ -346,7 +377,7 @@
                         </Trigger>
                         <!-- Mouse or arrow-key highlight. -->
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter TargetName="Item" Property="Background" Value="{StaticResource SidebarHover}"/>
+                            <Setter TargetName="Item" Property="Background" Value="{StaticResource HoverSurface}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -572,27 +603,27 @@
                 <ControlTemplate TargetType="Button">
                     <Grid>
                         <!-- Sits in the sidebar padding (14 px), flush with the sidebar edge, and stretches over the item's full
-                             height (no top/bottom margin), so it always matches the soft-blue fill beside it. -->
+                             height (no top/bottom margin), so it always matches the selected fill beside it. -->
                         <Border x:Name="Accent" Width="{StaticResource SidebarIndicatorWidth}" Margin="-14,0,0,0" HorizontalAlignment="Left" CornerRadius="0,3,3,0"
-                                Background="{StaticResource Blue}" Visibility="Collapsed"/>
+                                Background="{StaticResource SidebarAccent}" Visibility="Collapsed"/>
                         <Border x:Name="Frame" CornerRadius="{StaticResource ControlRadius}" Background="{TemplateBinding Background}">
                             <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
                         </Border>
-                        <Border x:Name="FocusRing" CornerRadius="{StaticResource ControlRadius}" BorderBrush="{StaticResource Blue}"
+                        <Border x:Name="FocusRing" CornerRadius="{StaticResource ControlRadius}" BorderBrush="{StaticResource SidebarAccent}"
                                 BorderThickness="1.5" Visibility="Collapsed" IsHitTestVisible="False"/>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Frame" Property="Background" Value="{StaticResource SidebarHover}"/>
-                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                            <Setter Property="Foreground" Value="{StaticResource SidebarTextStrong}"/>
                         </Trigger>
-                        <!-- Current page (infra:SidebarItem.IsSelected, from MainViewModel): soft blue fill, blue icon and
+                        <!-- Current page (infra:SidebarItem.IsSelected, from MainViewModel): lighter navy fill, white icon and
                              semibold text, accent bar. Declared after the hover trigger so it wins over hover; it does not
                              depend on focus or the pointer, and in the collapsed sidebar the fill and bar stay around the icon. -->
                         <Trigger Property="infra:SidebarItem.IsSelected" Value="True">
-                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource SoftBlue}"/>
+                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource SidebarSelected}"/>
                             <Setter TargetName="Accent" Property="Visibility" Value="Visible"/>
-                            <Setter Property="Foreground" Value="{StaticResource Blue}"/>
+                            <Setter Property="Foreground" Value="{StaticResource SidebarTextStrong}"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
@@ -620,7 +651,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource SidebarHover}"/>
+                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource HoverSurface}"/>
                             <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
@@ -848,7 +879,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource SidebarHover}"/>
+                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource HoverSurface}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{StaticResource ScrollThumb}"/>

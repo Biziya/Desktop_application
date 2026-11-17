@@ -33,7 +33,7 @@ public sealed partial class ApplicationSettings
 
         if (!SemanticVersion().IsMatch(application.Version))
         {
-            throw YamlSettings.Invalid(File, "application.version", $"'{application.Version}' is not a SemVer version (for example 1.0.0).");
+            throw YamlSettings.Invalid(File, "application.version", $"'{application.Version}' is not a valid version (for example 1.2.1.0).");
         }
 
         return settings;
@@ -58,6 +58,7 @@ public sealed partial class ApplicationSettings
     [GeneratedRegex(@"^[A-Za-z0-9._-]+$")]
     private static partial Regex PackageId();
 
-    [GeneratedRegex(@"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$")]
+    // major.minor.patch with an optional .build number, -prerelease and +metadata (1.2.1.0, 1.2.1, 1.3.0-beta.1).
+    [GeneratedRegex(@"^\d+\.\d+\.\d+(\.\d+)?(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$")]
     private static partial Regex SemanticVersion();
 }

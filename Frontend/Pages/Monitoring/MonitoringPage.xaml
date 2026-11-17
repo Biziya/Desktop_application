@@ -13,13 +13,21 @@
         </Style>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel>
-            <Grid Style="{StaticResource PageHeader}">
-                <TextBlock Text="Monitoring" Style="{StaticResource PageTitle}"/>
-                <Button Style="{StaticResource HelpButton}"/>
-            </Grid>
-
+    <!-- The title stays fixed; the cards scroll, with the scroll bar in the page margin. The body is at least as tall as
+         the visible area, so the Detectors card grows to fill the page; when the cards need more room, the page scrolls. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" Style="{StaticResource PageHeader}">
+            <TextBlock Text="Monitoring" Style="{StaticResource PageTitle}"/>
+            <Button Style="{StaticResource HelpButton}"/>
+        </Grid>
+    <ScrollViewer Style="{StaticResource PageScroll}">
+        <Grid Margin="{StaticResource PageScrollContentMargin}"
+              MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <StackPanel>
             <Border Style="{StaticResource WarningBanner}">
                 <Border.Visibility>
                     <Binding Path="ErrorText" Converter="{StaticResource NonEmptyVisibility}"/>
@@ -43,14 +51,20 @@
                     <Button Content="Open Core Information" HorizontalAlignment="Center" Command="{Binding ShowCoreInformationCommand}"/>
                 </StackPanel>
             </Border>
+            </StackPanel>
 
-            <StackPanel Visibility="{Binding HasDatabase, Converter={StaticResource BoolVisibility}}">
-                <!-- Detectors -->
-                <Border Style="{StaticResource Card}" Padding="0">
-                    <StackPanel>
-                        <TextBlock Text="Detectors" Style="{StaticResource CardTitle}" Margin="20,16"/>
+            <Grid Grid.Row="1" Visibility="{Binding HasDatabase, Converter={StaticResource BoolVisibility}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <!-- Detectors: takes the height the other cards leave. -->
+                <Border Style="{StaticResource Card}" Padding="0" MinHeight="220">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="Detectors" Style="{StaticResource CardTitle}" Margin="20,16"/>
                         <Grid>
-                            <DataGrid Style="{StaticResource DataTable}" ItemsSource="{Binding Engine.Detectors}" MaxHeight="420"
+                            <DataGrid Style="{StaticResource DataTable}" ItemsSource="{Binding Engine.Detectors}"
                                       RowDetailsVisibilityMode="VisibleWhenSelected" AutomationProperties.Name="Detectors">
                                 <DataGrid.Columns>
                                     <DataGridTemplateColumn Header="Detector" Width="1.4*" SortMemberPath="DisplayName">
@@ -154,11 +168,11 @@
                                        Style="{StaticResource EmptyStateText}" Margin="24,48,24,24"
                                        Visibility="{Binding Engine.Detectors.Count, Converter={StaticResource ZeroVisibility}}"/>
                         </Grid>
-                    </StackPanel>
+                    </DockPanel>
                 </Border>
 
                 <!-- Completed 5-second samples -->
-                <Border Style="{StaticResource Card}" Padding="0">
+                <Border Grid.Row="1" Style="{StaticResource Card}" Padding="0">
                     <StackPanel>
                         <TextBlock Text="5-second samples" Style="{StaticResource CardTitle}" Margin="20,16"/>
                         <Grid>
@@ -206,7 +220,7 @@
                 </Border>
 
                 <!-- Recent readings: diagnostic, collapsed by default. -->
-                <Border Style="{StaticResource Card}" Padding="0">
+                <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0">
                     <StackPanel>
                         <Grid Margin="20,12">
                             <Grid.ColumnDefinitions>
@@ -235,7 +249,8 @@
                         </DataGrid>
                     </StackPanel>
                 </Border>
-            </StackPanel>
-        </StackPanel>
+            </Grid>
+        </Grid>
     </ScrollViewer>
+    </DockPanel>
 </UserControl>

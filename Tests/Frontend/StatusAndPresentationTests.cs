@@ -551,7 +551,8 @@ public static class StatusAndPresentationTests
         var cases = new (string Name, string From, string To, string Expected)[]
         {
             ("missing version", $"  version: \"{shipped.Version}\"\n", "", "version"),
-            ("not SemVer", $"version: \"{shipped.Version}\"", "version: \"1.0\"", "application.version: '1.0' is not a SemVer version"),
+            ("too few numbers", $"version: \"{shipped.Version}\"", "version: \"1.0\"", "application.version: '1.0' is not a valid version"),
+            ("too many numbers", $"version: \"{shipped.Version}\"", "version: \"1.2.1.0.1\"", "application.version: '1.2.1.0.1' is not a valid version"),
             ("invalid id", "id: \"CT007.MeasurementStudio\"", "id: \"CT007 Measurement\"", "application.id"),
             ("empty name", $"name: \"{shipped.Name}\"", "name: \" \"", "application.name")
         };

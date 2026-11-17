@@ -20,7 +20,7 @@
         <DataTemplate DataType="{x:Type viewer:DataViewerViewModel}"><viewer:DataViewerPage/></DataTemplate>
     </Window.Resources>
 
-    <!-- The Help button of every page header sends ApplicationCommands.Help (F1 does too); Esc closes the panel. -->
+    <!-- The Help button of every page header sends ApplicationCommands.Help (F1 does too); Esc closes the Help window. -->
     <Window.CommandBindings>
         <CommandBinding Command="ApplicationCommands.Help" Executed="ShowHelp"/>
     </Window.CommandBindings>
@@ -32,7 +32,6 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar: icon and title for every page; the toggle at the top collapses it to icons only (72 px). -->
@@ -52,7 +51,7 @@
                 <!-- Header: one big button (app icon, name and «) that collapses the sidebar; collapsed it shows » to
                      expand again. Same rounded grey hover as the page items. -->
                 <Button DockPanel.Dock="Top" Style="{StaticResource NavigationButton}" Height="48" Margin="0"
-                        Foreground="{StaticResource TextPrimary}"
+                        Foreground="{StaticResource SidebarTextStrong}"
                         Command="{Binding ToggleSidebarCommand}" AutomationProperties.Name="Toggle sidebar">
                     <Button.ToolTip>
                         <ToolTip>
@@ -72,28 +71,28 @@
                         <DockPanel Margin="6,0,8,0" Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBoolVisibility}}">
                             <Path DockPanel.Dock="Right" Data="{StaticResource CollapseLeftIcon}" Width="14" Height="14" Stretch="Uniform"
                                   StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                  Stroke="{StaticResource Muted}" VerticalAlignment="Center"/>
+                                  Stroke="{StaticResource SidebarMuted}" VerticalAlignment="Center"/>
                             <Image Source="{StaticResource AppIcon}" Width="28" Height="28" VerticalAlignment="Center"/>
                             <TextBlock Text="{StaticResource ApplicationName}" FontSize="16" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
                         </DockPanel>
                         <Path Data="{StaticResource ExpandRightIcon}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center"
                               StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                              Stroke="{StaticResource Muted}" VerticalAlignment="Center"
+                              Stroke="{StaticResource SidebarMuted}" VerticalAlignment="Center"
                               Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource BoolVisibility}}"/>
                     </Grid>
                 </Button>
-                <Border DockPanel.Dock="Top" Height="1" Margin="0,10,0,12" Background="{StaticResource Line}"/>
+                <Border DockPanel.Dock="Top" Height="1" Margin="0,10,0,12" Background="{StaticResource SidebarBorder}"/>
 
                 <!-- Bottom, under a divider: backend API reachability (green Online, yellow Offline, grey while checking),
                      then the version. Collapsed: the dot only. -->
-                <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+                <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
                 <StackPanel Margin="15,0,0,0">
                     <StackPanel Orientation="Horizontal" Background="Transparent"
                                 ToolTip="{Binding Backend.Tooltip}" AutomationProperties.Name="{Binding Backend.Tooltip}">
                         <Ellipse Width="9" Height="9" VerticalAlignment="Center">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse">
-                                    <Setter Property="Fill" Value="{StaticResource Muted}"/>
+                                    <Setter Property="Fill" Value="{StaticResource SidebarMuted}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding Backend.State}" Value="Online"><Setter Property="Fill" Value="{StaticResource Success}"/></DataTrigger>
                                         <DataTrigger Binding="{Binding Backend.State}" Value="Offline"><Setter Property="Fill" Value="{StaticResource OfflineIndicator}"/></DataTrigger>
@@ -105,7 +104,7 @@
                                    Foreground="{StaticResource SidebarText}"
                                    Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBoolVisibility}}"/>
                     </StackPanel>
-                    <TextBlock Text="{StaticResource ApplicationVersionLabel}" Style="{StaticResource MutedText}" FontSize="12" Margin="0,8,0,0"
+                    <TextBlock Text="{StaticResource ApplicationVersionLabel}" Foreground="{StaticResource SidebarMuted}" FontSize="12" Margin="0,8,0,0"
                                AutomationProperties.Name="{StaticResource ApplicationTitle}"
                                Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBoolVisibility}}"/>
                 </StackPanel>
@@ -140,62 +139,9 @@
 
         <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" Margin="24" Focusable="False"/>
 
-        <!-- Help panel: beside the page (the page narrows instead of being covered), current page's buttons. -->
-        <Border Grid.Column="2" Width="320" Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="1,0,0,0"
-                Visibility="{Binding Help.IsOpen, Converter={StaticResource BoolVisibility}}"
-                AutomationProperties.Name="Help">
-            <DockPanel Margin="20,20,12,16">
-                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                    <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Command="{Binding Help.CloseCommand}"
-                            ToolTip="Close Help (Esc)" AutomationProperties.Name="Close Help">
-                        <Path Data="{StaticResource CloseIcon}" Width="12" Height="12" Stretch="Uniform" StrokeThickness="1.8"
-                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                    </Button>
-                    <TextBlock Text="{Binding Help.Page.Page, StringFormat=Help · {0}, FallbackValue=Help, TargetNullValue=Help}"
-                               Style="{StaticResource CardTitle}" VerticalAlignment="Center"/>
-                </DockPanel>
-
-                <TextBlock DockPanel.Dock="Bottom" Text="{StaticResource ApplicationTitle}" Style="{StaticResource MutedText}" FontSize="12" Margin="0,12,0,0"/>
-
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
-                    <StackPanel>
-                        <TextBlock Text="{Binding Help.Page.Purpose, FallbackValue=''}" TextWrapping="Wrap" Margin="0,0,0,16"/>
-                        <!-- What blocks the work on this page, before the controls (help.yaml "important"). -->
-                        <Border Style="{StaticResource WarningBanner}"
-                                Visibility="{Binding Help.Page.HasImportant, Converter={StaticResource BoolVisibility}, FallbackValue=Collapsed}">
-                            <StackPanel>
-                                <TextBlock Text="Important" FontWeight="Bold" Margin="0,0,0,6"/>
-                                <ItemsControl ItemsSource="{Binding Help.Page.Important}" Focusable="False">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <DockPanel Margin="0,0,0,6">
-                                                <TextBlock DockPanel.Dock="Left" Text="•" Margin="0,0,6,0"/>
-                                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="{StaticResource TextPrimary}"/>
-                                            </DockPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </Border>
-                        <ItemsControl ItemsSource="{Binding Help.Page.Items}" Focusable="False">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Margin="0,0,0,14">
-                                        <TextBlock Text="{Binding Control}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                        <TextBlock Text="{Binding Does}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </ScrollViewer>
-            </DockPanel>
-        </Border>
-
-        <!-- Toasts: bottom-right corner of the window (over the Help panel when it is open), stacked 8 px apart, newest
+        <!-- Toasts: bottom-right corner of the window, stacked 8 px apart, newest
              at the bottom. They take no layout space and never block clicks outside themselves. -->
-        <ItemsControl Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding Toasts.Items}" Focusable="False"
+        <ItemsControl Grid.Column="1" ItemsSource="{Binding Toasts.Items}" Focusable="False"
                       HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="360" MaxWidth="360" Margin="0,0,20,20">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>

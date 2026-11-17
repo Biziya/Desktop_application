@@ -144,26 +144,31 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Shown while no drillhole is saved for measuring, under the inputs and the countdown; the chart beside it
-             runs down through this row. Text and size: DrillholeInformation.yaml. -->
-        <TextBlock Grid.Row="1" Grid.ColumnSpan="2"
+        <!-- Measures the input + countdown columns. The warning and the capture hint below take this width, so they wrap
+             under those columns (the chart runs down beside them) without ever widening them. -->
+        <Border x:Name="ControlsWidth" Grid.ColumnSpan="2" IsHitTestVisible="False"/>
+
+        <!-- Shown while no drillhole is saved for measuring, under the inputs and countdown, beside the chart.
+             Text and size: DrillholeInformation.yaml. -->
+        <TextBlock Grid.Row="2" Grid.ColumnSpan="2"
+                   Width="{Binding ActualWidth, ElementName=ControlsWidth}"
                    Text="{StaticResource DrillholeWarningText}"
                    FontSize="{StaticResource DrillholeWarningFontSize}"
                    Foreground="{StaticResource Warning}"
                    TextWrapping="Wrap"
-                   MaxWidth="480"
                    HorizontalAlignment="Left"
                    Margin="{StaticResource DrillholeWarningMargin}"
                    Visibility="{Binding NeedsCore, Converter={StaticResource BoolVisibility}}"/>
 
         <!-- Shown while measurement mode waits for a right-click, so the capture gesture is visible when it is needed
              (Start also shows the same text in a toast). Never shown together with the warning above: Start needs Core. -->
-        <Border Grid.Row="1" Grid.ColumnSpan="2"
-                Style="{StaticResource InfoBanner}"
+        <Border Grid.Row="2" Grid.ColumnSpan="2"
+                Width="{Binding ActualWidth, ElementName=ControlsWidth}"
                 HorizontalAlignment="Left"
-                MaxWidth="480"
+                Style="{StaticResource InfoBanner}"
                 Margin="0,12,0,0"
                 Visibility="{Binding ShowCaptureHint, Converter={StaticResource BoolVisibility}}">
             <TextBlock Text="{x:Static measurement:MeasurementViewModel.CaptureHint}" TextWrapping="Wrap" FontWeight="SemiBold"/>
@@ -314,7 +319,7 @@
             </Popup>
         </StackPanel>
 
-        <local:DepthBarChart Grid.Column="2" Grid.RowSpan="2"
+        <local:DepthBarChart Grid.Column="2" Grid.RowSpan="3"
                              MinHeight="{StaticResource ChartMinHeight}"
                              ItemsSource="{Binding Results}"
                              XAxisLabel="{StaticResource ChartXAxisLabel}"
