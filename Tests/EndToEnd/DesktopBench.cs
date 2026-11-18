@@ -252,7 +252,7 @@ public sealed class DesktopApp(Process process, AutomationElement window) : IAsy
         await Task.Delay(500); // the page filters 150 ms after the last keystroke
         box.SetFocus();
         Key(0x0D);
-        var project = await Find("Project");
+        var project = await Find("Project", ControlType.Edit); // the read-only box, not a "Project" label or column header
         await WaitAsync(() => Text(project) == expectedProject ? project : null, $"Project '{expectedProject}' filled");
     }
 
