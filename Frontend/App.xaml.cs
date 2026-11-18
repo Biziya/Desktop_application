@@ -4,6 +4,7 @@ using System.Windows;
 using Frontend.Config;
 using Frontend.Pages;
 using Frontend.Shared.Help;
+using Frontend.Shared.Infrastructure;
 using Velopack;
 
 namespace Frontend;
@@ -43,6 +44,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        CatchUnhandledExceptions();
         MainWindow window;
 
         try
@@ -68,6 +70,51 @@ public partial class App : Application
         }
 
         window.Show();
+    }
+
+    // Every unhandled exception goes to the crash log. One on the UI thread is reported and the app keeps running;
+    // when they repeat quickly (an error on every layout pass), the app closes instead of showing message after message.
+    private readonly Queue<DateTime> recentErrors = new();
+
+    private void CatchUnhandledExceptions()
+    {
+        DispatcherUnhandledException += (_, e) =>
+        {
+            var log = CrashLog.Write("UI thread", e.Exception);
+            var now = DateTime.UtcNow;
+            recentErrors.Enqueue(now);
+
+            while (recentErrors.Peek() < now.AddSeconds(-10))
+            {
+                recentErrors.Dequeue();
+            }
+
+            if (recentErrors.Count > 3)
+            {
+                return; // not handled: the app closes
+            }
+
+            e.Handled = true;
+            MessageBox.Show(
+                $"Something went wrong: {e.Exception.Message}\n\nThe app keeps running. If it happens again, send this file to support:\n{log ?? "(the log could not be written)"}",
+                ApplicationName,
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        };
+
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            if (e.ExceptionObject is Exception error)
+            {
+                CrashLog.Write("Unhandled", error);
+            }
+        };
+
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            CrashLog.Write("Unobserved task", e.Exception);
+            e.SetObserved();
+        };
     }
 
     // From application.yaml once loaded; otherwise the product name compiled from the same file.

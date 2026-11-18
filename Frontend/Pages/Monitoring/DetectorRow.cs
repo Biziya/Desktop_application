@@ -89,9 +89,16 @@ public sealed class DetectorRow(string serial) : ObservableObject
             if (Set(ref latest, value))
             {
                 Changed(nameof(LatestTime));
+                Changed(nameof(LatestCps));
+                Changed(nameof(LatestCpsRaw));
             }
         }
     }
+
+    /// <summary>The latest reading in counts per second (Gamma Guard stores counts per minute).</summary>
+    public double? LatestCps => SampleAveraging.PerSecond(latest?.Count0);
+
+    public double? LatestCpsRaw => SampleAveraging.PerSecond(latest?.Count0Raw);
 
     public string LatestTime => latest?.TsMs is { } ts ? MonitorFormat.Time(ts) : "–";
 

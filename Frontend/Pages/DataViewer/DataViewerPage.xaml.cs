@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using Frontend.Api.Measurements;
 
 namespace Frontend.Pages.DataViewer;
 
@@ -11,6 +12,12 @@ public partial class DataViewerPage : UserControl
     {
         if (sender is not ComboBox { IsKeyboardFocusWithin: true } box ||
             box.Template.FindName("PART_EditableTextBox", box) is not TextBox editor)
+        {
+            return;
+        }
+
+        // A pick sets the text to its Hole ID: that is not typing, so the list stays closed.
+        if (box.SelectedItem is UploadedDrillhole picked && picked.HoleId == editor.Text)
         {
             return;
         }

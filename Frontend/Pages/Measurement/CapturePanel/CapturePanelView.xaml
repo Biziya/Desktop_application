@@ -244,6 +244,15 @@
                                         <Setter Property="Stroke" Value="{StaticResource Danger}"/>
                                         <Setter Property="Fill" Value="{StaticResource DangerSurface}"/>
                                     </DataTrigger>
+                                    <!-- Went off, then muted: the crossed bell, still red. -->
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding Alarm}" Value="{x:Static calc:AlarmState.Triggered}"/>
+                                            <Condition Binding="{Binding IsAlarmMuted}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Data" Value="{StaticResource BellOffIcon}"/>
+                                        <Setter Property="Fill" Value="{x:Null}"/>
+                                    </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Path.Style>

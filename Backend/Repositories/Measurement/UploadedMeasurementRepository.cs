@@ -72,7 +72,7 @@ public sealed class UploadedMeasurementRepository(IConfiguration configuration) 
             HdmRaw: NullableDouble(reader, 11),
             DoseRate: NullableDouble(reader, 12),
             UploadId: reader.GetInt64(13),
-            Operator: reader.GetString(14),
+            Operator: reader.IsDBNull(14) ? "" : reader.GetString(14),
             UploadedAt: reader.GetDateTimeOffset(15)), cancellationToken);
 
     private async Task<IReadOnlyList<T>> QueryAsync<T>(

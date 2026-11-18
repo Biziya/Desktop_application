@@ -104,7 +104,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             retention = new DataRetention(repository.DatabasePath, retentionSettings);
         }
 
-        DataViewer = new DataViewerViewModel(new UploadedMeasurementsClient(api), Backend);
+        DataViewer = new DataViewerViewModel(new UploadedMeasurementsClient(api), Backend, Toasts);
 
         // While measuring, the drillhole cannot be changed or cleared (Stop first).
         Measurement.PropertyChanged += (_, e) =>

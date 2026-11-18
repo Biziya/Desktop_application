@@ -52,6 +52,7 @@ public static class DataViewerTests
         vm.PickedDrillhole = vm.DrillholeOptions[1];
         await Assert.Eventually(() => vm.Shown?.HoleId == "KHAN_0007_2", "second drillhole shown");
         Assert.Equal("", vm.Notes, "no notes (older backend) reads empty");
+        Assert.Equal("DOMAIN\\op", vm.Operator, "no operator with the drillhole (older backend): the newest record's operator");
     }
 
     [Test("FE-DV-02", "Search filters the uploaded drillholes; typing keeps the shown table")]
@@ -111,6 +112,81 @@ public static class DataViewerTests
         Assert.True(new MeasurementGrid().ShowDelete, "shown by default");
     }
 
+    [Test("FE-DV-05", "Switching drillholes quickly: each pick cancels the one loading, the last pick is shown, errors never escape")]
+    public static async Task FastSwitching()
+    {
+        using var stub = new UploadedStub();
+        var vm = new DataViewerViewModel(stub.Client);
+        await vm.RefreshAsync();
+        var (a, b) = (vm.DrillholeOptions[0], vm.DrillholeOptions[1]);
+        stub.HoldRecords = true;
+
+        vm.PickedDrillhole = a;
+        vm.PickedDrillhole = b;
+        vm.PickedDrillhole = a;
+        await Assert.Eventually(() => stub.Held.Count == 3, "three record requests");
+        Assert.True(stub.Held[0].Token.IsCancellationRequested && stub.Held[1].Token.IsCancellationRequested, "earlier requests cancelled");
+        Assert.False(stub.Held[2].Token.IsCancellationRequested, "the last one runs");
+
+        stub.Release(2);
+        await Assert.Eventually(() => vm.Shown?.HoleId == a.HoleId && vm.Results.Count == 3, "last pick shown");
+        Assert.False(vm.IsLoading, "loading ends");
+        Assert.Equal("", vm.Message, "no message");
+
+        stub.HoldRecords = false;
+        stub.Respond = () => throw new InvalidOperationException("boom");
+        vm.PickedDrillhole = b;
+        await Assert.Eventually(() => vm.Message.Contains("boom", StringComparison.Ordinal), "a failing load shows its message");
+        Assert.True(vm.CanRetry, "retry offered");
+        Assert.Equal(a.HoleId, vm.Shown?.HoleId, "the table shown before is kept");
+    }
+
+    [Test("FE-DV-06", "A refresh while a pick is loading reloads the picked drillhole, not the one shown before")]
+    public static async Task RefreshKeepsLatestPick()
+    {
+        using var stub = new UploadedStub();
+        var vm = new DataViewerViewModel(stub.Client);
+        await vm.RefreshAsync();
+        vm.PickedDrillhole = vm.DrillholeOptions[0];
+        await Assert.Eventually(() => vm.Results.Count == 3, "first drillhole shown");
+
+        stub.HoldRecords = true;
+        vm.PickedDrillhole = vm.DrillholeOptions[1];
+        await Assert.Eventually(() => stub.Held.Count == 1, "pick loading");
+        var refresh = vm.RefreshAsync();
+        await Assert.Eventually(() => stub.Held.Count == 2, "refresh loads records");
+        Assert.True(stub.Held[0].Token.IsCancellationRequested, "the pick's request is replaced");
+        Assert.Equal("drillhole=KHAN_0007_2", stub.Held[1].Query, "refresh loads the picked drillhole");
+
+        stub.Release(1);
+        await refresh;
+        Assert.Equal("KHAN_0007_2", vm.Shown?.HoleId, "picked drillhole shown");
+    }
+
+    [Test("FE-DV-07", "A Refresh click says it worked; opening the page does not; the pick's own text does not reset the list")]
+    public static async Task RefreshToast()
+    {
+        using var stub = new UploadedStub();
+        var toasts = new ToastService((_, token) => Task.Delay(Timeout.Infinite, token));
+        var vm = new DataViewerViewModel(stub.Client, toasts: toasts);
+
+        vm.OnShown();
+        await Assert.Eventually(() => vm.DrillholeOptions.Count == 2 && !vm.IsLoading, "page opened");
+        Assert.Equal(0, toasts.Items.Count, "no toast when the page loads by itself");
+
+        var resets = 0;
+        vm.DrillholeOptions.CollectionChanged += (_, _) => resets++;
+        vm.PickedDrillhole = vm.DrillholeOptions[0];
+        vm.DrillholeSearch = "GTZO_0042_1";
+        Assert.Equal(0, resets, "the list is not reset by the pick's text");
+        await Assert.Eventually(() => vm.Results.Count == 3 && !vm.IsLoading, "records load");
+
+        vm.RefreshCommand.Execute(null);
+        await Assert.Eventually(() => toasts.Items.Count == 1, "toast after Refresh");
+        Assert.Equal(ToastKind.Success, toasts.Items[0].Kind, "success");
+        Assert.Equal("Refreshed: 2 uploaded drillholes. GTZO_0042_1: 3 rows.", toasts.Items[0].Message, "says what was loaded");
+    }
+
     private static T? Find<T>(System.Windows.DependencyObject root) where T : System.Windows.DependencyObject
     {
         if (root is T found)
@@ -155,6 +231,13 @@ public static class DataViewerTests
 
         public string? LastQuery { get; private set; }
 
+        /// <summary>Record requests wait in <see cref="Held"/> until released (or cancelled).</summary>
+        public bool HoldRecords { get; set; }
+
+        public List<(string Query, CancellationToken Token, TaskCompletionSource<HttpResponseMessage> Answer)> Held { get; } = [];
+
+        public void Release(int index) => Held[index].Answer.TrySetResult(Json(Records));
+
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             await Task.Yield();
@@ -169,6 +252,19 @@ public static class DataViewerTests
             if (path == UploadedMeasurementsClient.RecordsPath)
             {
                 LastQuery = Uri.UnescapeDataString(request.RequestUri.Query.TrimStart('?'));
+
+                if (HoldRecords)
+                {
+                    var answer = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    cancellationToken.Register(() => answer.TrySetCanceled(cancellationToken));
+                    lock (Held)
+                    {
+                        Held.Add((LastQuery, cancellationToken, answer));
+                    }
+
+                    return await answer.Task;
+                }
+
                 return Json(Records);
             }
 
@@ -184,5 +280,29 @@ public static class DataViewerTests
 
             base.Dispose(disposing);
         }
+    }
+}
+
+/// <summary>FE-LOG: the crash log.</summary>
+public static class CrashLogTests
+{
+    [Test("FE-LOG-01", "Unhandled exceptions are appended to Logs/crash-yyyyMMdd.log; a folder that cannot be written returns null")]
+    public static void WritesCrashLog()
+    {
+        using var folder = new TestFolder();
+        var logs = folder.Path("Logs");
+        var day = new DateTime(2026, 11, 18, 9, 30, 0);
+
+        var path = CrashLog.Write("UI thread", new InvalidOperationException("first"), logs, day);
+        CrashLog.Write("Unobserved task", new InvalidOperationException("second"), logs, day);
+
+        Assert.Equal(Path.Combine(logs, "crash-20261118.log"), path, "one file per day");
+        var text = File.ReadAllText(path!);
+        Assert.Contains("2026-11-18 09:30:00.000  UI thread", text, "time and source");
+        Assert.Contains("InvalidOperationException: first", text, "first exception");
+        Assert.Contains("second", text, "appended, not overwritten");
+
+        File.WriteAllText(folder.Path("file"), "");
+        Assert.Equal(null, CrashLog.Write("UI thread", new Exception("x"), folder.Path("file")), "a file where the folder should be: nothing written, no throw");
     }
 }

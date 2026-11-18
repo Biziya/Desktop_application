@@ -59,6 +59,69 @@ public static class AlarmBellAndHelpTests
         Assert.Equal(AlarmState.Muted, vm.Alarm, "threshold change clears the trigger");
     }
 
+    [Test("FE-ALM-03", "The bell icon: crossed when muted, also after the alarm went off; plain bell again when unmuted")]
+    public static async Task BellIconShowsMute()
+    {
+        Wpf.EnsureResources();
+        using var folder = new TestFolder();
+        var device = new ControlledMeasurements();
+        using var vm = new MeasurementViewModel(device, new FakeExport(), new FakeDialogs(), new MemoryRepository(folder.Path("m.db")),
+            durationSettings: new CaptureDurationSettings(null), alarm: new CpsAlarm(() => { }, TimeSpan.Zero), defaultThreshold: 150);
+        await Make.Arm(vm, Make.Core);
+        var panel = new Frontend.Pages.Measurement.CapturePanel.CapturePanelView { DataContext = vm };
+        var window = new System.Windows.Window
+        {
+            Content = panel, Width = 900, Height = 400, ShowActivated = false, WindowStyle = System.Windows.WindowStyle.None, Left = -10_000
+        };
+        var bell = System.Windows.Application.Current.FindResource("BellIcon");
+        var bellOff = System.Windows.Application.Current.FindResource("BellOffIcon");
+
+        try
+        {
+            window.Show();
+            await Task.Delay(50);
+            var button = Descendants<System.Windows.Controls.Button>(panel).Single(b => b.Command == vm.ToggleAlarmMuteCommand);
+            var icon = Descendants<System.Windows.Shapes.Path>(button).Single();
+
+            Assert.True(ReferenceEquals(bell, icon.Data), "armed: bell");
+            vm.ToggleAlarmMuteCommand.Execute(null);
+            Assert.True(ReferenceEquals(bellOff, icon.Data), "muted: crossed bell");
+            vm.ToggleAlarmMuteCommand.Execute(null);
+
+            await Make.Capture(vm, device, d => d.CompleteWith(new CaptureData(
+                d.LastStart, d.LastStart + d.LastDuration, [1.0], "cps", d.LastStart + d.LastDuration, new DeviceReading(Count0: 175))));
+            Assert.Equal(AlarmState.Triggered, vm.Alarm, "above the threshold");
+            Assert.True(ReferenceEquals(bell, icon.Data), "went off: bell");
+
+            vm.ToggleAlarmMuteCommand.Execute(null);
+            Assert.True(ReferenceEquals(bellOff, icon.Data), "went off, then muted: crossed bell");
+            vm.ToggleAlarmMuteCommand.Execute(null);
+            Assert.True(ReferenceEquals(bell, icon.Data), "unmuted: bell again");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static IEnumerable<T> Descendants<T>(System.Windows.DependencyObject root) where T : System.Windows.DependencyObject
+    {
+        for (var i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+
+            if (child is T match)
+            {
+                yield return match;
+            }
+
+            foreach (var nested in Descendants<T>(child))
+            {
+                yield return nested;
+            }
+        }
+    }
+
     [Test("FE-HELP-01", "help.yaml has a non-empty section for every sidebar page; the panel follows navigation")]
     public static void HelpCoversEveryPage()
     {

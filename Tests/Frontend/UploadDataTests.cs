@@ -534,6 +534,9 @@ public static class UploadDataTests
                 Assert.True(texts.Contains(shown), $"shows '{shown}'");
             }
 
+            var campaign = Descendants<TextBlock>(page).Single(t => t.IsVisible && t.Text == upload.ViewModel.Campaign && t.Text.Length > 0);
+            Assert.Equal(TextAlignment.Left, campaign.TextAlignment, "Campaign value left-aligned like the other values");
+
             Assert.False(texts.Any(t => t.Contains("Created Username", StringComparison.Ordinal) || t == "CORP\\creator"), "Created Username is not shown");
             Assert.False(texts.Any(t => t.Contains('\\') && t.EndsWith(".csv", StringComparison.Ordinal)), "no local path shown");
         }

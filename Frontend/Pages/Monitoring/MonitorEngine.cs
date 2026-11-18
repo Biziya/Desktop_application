@@ -196,8 +196,8 @@ public sealed class MonitorEngine(MonitoringSettings settings)
             coverage,
             n,
             ReadingsPerSample,
-            Mean(readings, s => s.Count0),
-            Mean(readings, s => s.Count0Raw),
+            Mean(readings, s => SampleAveraging.PerSecond(s.Count0)),
+            Mean(readings, s => SampleAveraging.PerSecond(s.Count0Raw)),
             Mean(readings, s => s.Hdm),
             Mean(readings, s => s.DoseRate),
             Mean(readings, s => s.Temperature));
@@ -205,7 +205,7 @@ public sealed class MonitorEngine(MonitoringSettings settings)
         row.SampleStatus = n == 0
             ? $"No readings within {SampleTimeoutMs / 1000} s"
             : result.IsComplete
-                ? $"Done: mean {result.Cpm:0} CPM"
+                ? $"Done: mean {result.Cps:0.00} CPS"
                 : $"Incomplete: {n} of {ReadingsPerSample} readings";
         row.IsSampling = false;
 
@@ -241,7 +241,7 @@ public sealed class MonitorEngine(MonitoringSettings settings)
     {
         RecentReadings.Insert(0, new ReadingRow(
             s.SourceId, s.TsMs is { } ts ? MonitorFormat.Time(ts) : "–", s.Serial, s.Seq,
-            s.Count0, s.Count0Raw, s.Hdm, s.DoseRate, s.Temperature, s.DeviceSessionId));
+            SampleAveraging.PerSecond(s.Count0), SampleAveraging.PerSecond(s.Count0Raw), s.Hdm, s.DoseRate, s.Temperature, s.DeviceSessionId));
         Trim(RecentReadings, settings.RecentReadingsShown);
     }
 

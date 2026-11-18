@@ -88,7 +88,7 @@
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
                                     <DataGridTextColumn Header="Last reading" Binding="{Binding LastReadingAge}" Width="0.8*"/>
-                                    <DataGridTextColumn Header="CPM" Binding="{Binding Latest.Count0, StringFormat=0}" Width="0.8*"
+                                    <DataGridTextColumn Header="CPS" Binding="{Binding LatestCps, StringFormat=0.00}" Width="0.8*"
                                                         ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
                                     <DataGridTextColumn Header="Dose rate" Binding="{Binding Latest.DoseRate, StringFormat=0.###}" Width="0.9*"
                                                         ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
@@ -154,8 +154,8 @@
                                             <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Latest.Seq, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
                                             <TextBlock Grid.Row="2" Grid.Column="2" Text="Heartbeat" Style="{StaticResource DetailLabel}"/>
                                             <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding HeartbeatAge, StringFormat={}{0} ago}" Style="{StaticResource DetailValue}"/>
-                                            <TextBlock Grid.Column="4" Text="CPM raw" Style="{StaticResource DetailLabel}"/>
-                                            <TextBlock Grid.Column="5" Text="{Binding Latest.Count0Raw, StringFormat=0, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
+                                            <TextBlock Grid.Column="4" Text="CPS raw" Style="{StaticResource DetailLabel}"/>
+                                            <TextBlock Grid.Column="5" Text="{Binding LatestCpsRaw, StringFormat=0.00, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
                                             <TextBlock Grid.Row="1" Grid.Column="4" Text="HDM" Style="{StaticResource DetailLabel}"/>
                                             <TextBlock Grid.Row="1" Grid.Column="5" Text="{Binding Latest.Hdm, StringFormat=0.###, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
                                             <TextBlock Grid.Row="2" Grid.Column="4" Text="HDM raw" Style="{StaticResource DetailLabel}"/>
@@ -202,9 +202,9 @@
                                     <DataGridTextColumn Header="Window" Binding="{Binding Window}" Width="1.8*"/>
                                     <DataGridTextColumn Header="Coverage (s)" Binding="{Binding CoverageSeconds, StringFormat=0.0}" Width="0.8*"
                                                         ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
-                                    <DataGridTextColumn Header="CPM" Binding="{Binding Cpm, StringFormat=0.0}" Width="0.8*"
+                                    <DataGridTextColumn Header="CPS" Binding="{Binding Cps, StringFormat=0.00}" Width="0.8*"
                                                         ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
-                                    <DataGridTextColumn Header="CPM raw" Binding="{Binding CpmRaw, StringFormat=0.0}" Width="0.8*"
+                                    <DataGridTextColumn Header="CPS raw" Binding="{Binding CpsRaw, StringFormat=0.00}" Width="0.8*"
                                                         ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
                                     <DataGridTextColumn Header="Dose rate" Binding="{Binding DoseRate, StringFormat=0.###}" Width="0.8*"
                                                         ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
@@ -239,8 +239,8 @@
                                 <DataGridTextColumn Header="Time" Binding="{Binding Time}" Width="0.8*"/>
                                 <DataGridTextColumn Header="Detector" Binding="{Binding Serial}" Width="*"/>
                                 <DataGridTextColumn Header="Seq" Binding="{Binding Seq}" Width="0.6*"/>
-                                <DataGridTextColumn Header="CPM" Binding="{Binding Cpm, StringFormat=0}" Width="0.7*" ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
-                                <DataGridTextColumn Header="CPM raw" Binding="{Binding CpmRaw, StringFormat=0}" Width="0.7*" ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                <DataGridTextColumn Header="CPS" Binding="{Binding Cps, StringFormat=0.00}" Width="0.7*" ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
+                                <DataGridTextColumn Header="CPS raw" Binding="{Binding CpsRaw, StringFormat=0.00}" Width="0.7*" ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
                                 <DataGridTextColumn Header="HDM" Binding="{Binding Hdm, StringFormat=0.###}" Width="0.7*" ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
                                 <DataGridTextColumn Header="Dose rate" Binding="{Binding DoseRate, StringFormat=0.###}" Width="0.8*" ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>
                                 <DataGridTextColumn Header="Temp. (°C)" Binding="{Binding Temperature, StringFormat=0.0}" Width="0.8*" ElementStyle="{StaticResource NumberCell}" HeaderStyle="{StaticResource NumberHeader}"/>

@@ -1,6 +1,6 @@
 namespace Frontend.Pages.Monitoring;
 
-/// <summary>One completed 5-second sample; values are null when no reading arrived.</summary>
+/// <summary>One completed 5-second sample; values are null when no reading arrived. Cps/CpsRaw are counts per second.</summary>
 public sealed record SampleResult(
     string Serial,
     DateTimeOffset TakenAt,
@@ -8,8 +8,8 @@ public sealed record SampleResult(
     double? CoverageSeconds,
     int Readings,
     int Expected,
-    double? Cpm,
-    double? CpmRaw,
+    double? Cps,
+    double? CpsRaw,
     double? Hdm,
     double? DoseRate,
     double? Temperature)
@@ -25,8 +25,8 @@ public sealed record ReadingRow(
     string Time,
     string Serial,
     long? Seq,
-    double? Cpm,
-    double? CpmRaw,
+    double? Cps,
+    double? CpsRaw,
     double? Hdm,
     double? DoseRate,
     double? Temperature,

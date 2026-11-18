@@ -39,7 +39,11 @@ public sealed record CaptureSummary(
 
 public static class SampleAveraging
 {
-    private const double SecondsPerMinute = 60.0;
+    /// <summary>Gamma Guard counts per minute; CPS = count / this.</summary>
+    public const double SecondsPerMinute = 60.0;
+
+    /// <summary>Counts per minute (Gamma Guard count0 / count0_raw) as counts per second.</summary>
+    public static double? PerSecond(double? perMinute) => perMinute / SecondsPerMinute;
 
     public static CaptureSummary Summarize(IReadOnlyList<DeviceSample> samples)
     {

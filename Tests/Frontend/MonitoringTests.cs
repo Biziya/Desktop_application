@@ -89,7 +89,8 @@ public static class MonitoringTests
 
         var result = engine.Samples.Single();
         Assert.True(result.IsComplete, "5 of 5 readings");
-        Assert.Near(30, result.Cpm, 1e-12, "mean of 10..50; the discarded 1000 and the earlier 999 are not included");
+        Assert.Near(0.5, result.Cps, 1e-12, "mean of 10..50 counts/min = 30/60 CPS; the discarded 1000 and the earlier 999 are not included");
+        Assert.Contains("0.50 CPS", engine.Detectors.Single().SampleStatus, "result in CPS");
         Assert.Near(5.0, result.CoverageSeconds, 1e-9, "coverage runs from the discarded reading to the last one");
         Assert.True(engine.Detectors.Single().CanSample, "the detector can be sampled again");
     }
@@ -107,7 +108,7 @@ public static class MonitoringTests
         var result = engine.Samples.Single();
         Assert.False(result.IsComplete, "incomplete");
         Assert.Equal(2, result.Readings, "two readings after the discarded one");
-        Assert.Near(30, result.Cpm, 1e-12, "mean of what arrived");
+        Assert.Near(0.5, result.Cps, 1e-12, "mean of what arrived, in CPS");
         Assert.Contains("Incomplete", engine.Detectors.Single().SampleStatus, "row says so");
     }
 

@@ -19,12 +19,18 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
     private bool isLoading;
     private bool hasLoaded;
     private int loadVersion;
+    private CancellationTokenSource? loads;
+    private string? recordOperator;
+    private bool widening;
 
     /// <param name="backend">Reloads after the backend comes back online; null in tests.</param>
-    public DataViewerViewModel(UploadedMeasurementsClient client, BackendConnection? backend = null)
+    /// <param name="toasts">Says when a Refresh or Retry click worked; null in tests that do not check it.</param>
+    public DataViewerViewModel(UploadedMeasurementsClient client, BackendConnection? backend = null, ToastService? toasts = null)
     {
         this.client = client;
-        RefreshCommand = new AsyncCommand(RefreshAsync, error => ShowProblem($"Could not load the uploaded data ({error.Message})."));
+        Toasts = toasts ?? new ToastService();
+        RefreshCommand = new AsyncCommand(() => RefreshAsync(announce: true), LoadFailed);
+        reloadCommand = new AsyncCommand(() => RefreshAsync(), LoadFailed);
 
         if (backend is not null)
         {
@@ -32,11 +38,16 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
             {
                 if (CanRetry)
                 {
-                    RefreshCommand.Execute(null);
+                    reloadCommand.Execute(null);
                 }
             };
         }
     }
+
+    public ToastService Toasts { get; }
+
+    // Loads the page starts by itself (opening it, the backend coming back): no success toast.
+    private readonly AsyncCommand reloadCommand;
 
     /// <summary>Drillholes matching the search text (all of them when it is empty or is the shown Hole ID).</summary>
     public BulkObservableCollection<UploadedDrillhole> DrillholeOptions { get; } = [];
@@ -91,8 +102,9 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
 
     public string Campaign => Shown?.Campaign is { Length: > 0 } campaign ? campaign : "";
 
-    /// <summary>Operator and Notes saved with the drillhole's latest upload.</summary>
-    public string Operator => Shown?.Operator is { Length: > 0 } name ? name : "";
+    /// <summary>Operator and Notes saved with the drillhole's latest upload. An older backend sends no Operator with the
+    /// drillhole; the newest uploaded record's Operator is shown then.</summary>
+    public string Operator => Shown?.Operator is { Length: > 0 } name ? name : Shown is null ? "" : recordOperator ?? "";
 
     public string Notes => Shown?.Notes is { Length: > 0 } notes ? notes : "";
 
@@ -119,7 +131,7 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
     {
         if (!hasLoaded || CanRetry || DateTime.UtcNow - loadedAt >= ReloadAfter)
         {
-            RefreshCommand.Execute(null);
+            reloadCommand.Execute(null);
         }
     }
 
@@ -127,16 +139,18 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
     {
     }
 
-    /// <summary>Reloads the drillhole list, then the shown drillhole's rows.</summary>
-    public async Task RefreshAsync()
+    /// <summary>Reloads the drillhole list, then the picked (or shown) drillhole's rows.</summary>
+    /// <param name="announce">A Refresh or Retry click: say so when it worked.</param>
+    public async Task RefreshAsync(bool announce = false)
     {
         var version = ++loadVersion;
+        var token = NextLoad();
         IsLoading = true;
         Message = hasLoaded ? "" : "Loading uploaded drillholes…";
 
         try
         {
-            var result = await client.GetDrillholesAsync(CancellationToken.None);
+            var result = await client.GetDrillholesAsync(token);
 
             if (version != loadVersion)
             {
@@ -156,19 +170,31 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
             Filter();
             Message = drillholes.Count == 0 ? "No measurements have been uploaded yet. Upload a CSV on the Upload Data page." : "";
 
-            // Keep the shown drillhole (with its fresh counts); it may also have been removed from the database.
-            var current = Shown is null ? null : drillholes.FirstOrDefault(d => d.HoleId == Shown.HoleId);
+            // Keep the drillhole picked last (with its fresh counts); it may also have been removed from the database.
+            var wanted = PickedDrillhole ?? Shown;
+            var current = wanted is null ? null : drillholes.FirstOrDefault(d => d.HoleId == wanted.HoleId);
 
             if (current is null)
             {
+                recordOperator = null;
                 Shown = null;
                 Results.ReplaceAll([]);
                 Changed(nameof(EmptyText));
             }
-            else
+            else if (!await LoadRecordsAsync(current, version, token))
             {
-                await ShowAsync(current);
+                return;
             }
+
+            if (announce)
+            {
+                var listed = $"Refreshed: {Count(drillholes.Count, "uploaded drillhole")}.";
+                Toasts.Success(Shown is { } d ? $"{listed} {d.HoleId}: {Count(Results.Count, "row")}." : listed);
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            // A newer pick or refresh took over.
         }
         finally
         {
@@ -207,32 +233,27 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
         return rows;
     }
 
+    // A pick loads the drillhole's rows. Never throws: it runs unobserved from the PickedDrillhole setter.
     private async Task ShowAsync(UploadedDrillhole drillhole)
     {
         var version = ++loadVersion;
+        var token = NextLoad();
         IsLoading = true;
 
         try
         {
-            var result = await client.GetRecordsAsync(drillhole.HoleId, CancellationToken.None);
-
-            if (version != loadVersion)
+            await LoadRecordsAsync(drillhole, version, token);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            // A newer pick or refresh took over.
+        }
+        catch (Exception error)
+        {
+            if (version == loadVersion)
             {
-                return;
+                ShowProblem($"Could not load {drillhole.HoleId} ({error.Message}).");
             }
-
-            if (!result.IsOk)
-            {
-                ShowProblem(Problem(result));
-                return;
-            }
-
-            CanRetry = false;
-            Message = "";
-            Results.ReplaceAll(ToRows(result.Value!));
-            Shown = drillhole;
-            Changed(nameof(Summary));
-            Changed(nameof(EmptyText));
         }
         finally
         {
@@ -243,11 +264,86 @@ public sealed class DataViewerViewModel : ObservableObject, INavigationAware
         }
     }
 
+    /// <summary>Loads and shows the drillhole's rows; false when a newer load took over or the request failed.</summary>
+    private async Task<bool> LoadRecordsAsync(UploadedDrillhole drillhole, int version, CancellationToken token)
+    {
+        var result = await client.GetRecordsAsync(drillhole.HoleId, token);
+
+        if (version != loadVersion)
+        {
+            return false;
+        }
+
+        if (!result.IsOk)
+        {
+            ShowProblem(Problem(result));
+            return false;
+        }
+
+        // Up to 10,000 rows: sorted and built off the UI thread, then shown in one go.
+        var records = result.Value!;
+        var rows = await Task.Run(() => ToRows(records), token);
+
+        if (version != loadVersion)
+        {
+            return false;
+        }
+
+        CanRetry = false;
+        Message = "";
+        recordOperator = records.OrderByDescending(r => r.UploadedAt).Select(r => r.Operator).FirstOrDefault(o => !string.IsNullOrWhiteSpace(o));
+        Results.ReplaceAll(rows);
+        Shown = drillhole;
+        Changed(nameof(Operator));
+        Changed(nameof(Summary));
+        Changed(nameof(EmptyText));
+        return true;
+    }
+
+    // A new load cancels the one in progress: its request and its result.
+    private CancellationToken NextLoad()
+    {
+        loads?.Cancel();
+        loads = new CancellationTokenSource();
+        return loads.Token;
+    }
+
+    private void LoadFailed(Exception error) => ShowProblem($"Could not load the uploaded data ({error.Message}).");
+
     private void Filter()
     {
         var text = DrillholeSearch.Trim();
         var all = text.Length == 0 || text == Shown?.HoleId || text == PickedDrillhole?.HoleId;
-        DrillholeOptions.ReplaceAll(all ? drillholes : drillholes.Where(d => d.HoleId.Contains(text, StringComparison.OrdinalIgnoreCase)));
+        IReadOnlyList<UploadedDrillhole> wanted = all ? drillholes : drillholes.Where(d => d.HoleId.Contains(text, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        // Unchanged: no reset, so the open dropdown is left alone.
+        if (DrillholeOptions.SequenceEqual(wanted, ReferenceEqualityComparer.Instance))
+        {
+            return;
+        }
+
+        // A pick sets the text to its Hole ID while the dropdown is still selecting; resetting its list in the middle of
+        // that can make the selection jump. The list widens back to every drillhole just after.
+        if (all && text.Length > 0 && text == PickedDrillhole?.HoleId && SynchronizationContext.Current is { } ui)
+        {
+            if (!widening)
+            {
+                widening = true;
+                ui.Post(_ =>
+                {
+                    widening = false;
+
+                    if (DrillholeSearch.Trim() == text)
+                    {
+                        DrillholeOptions.ReplaceAll(drillholes);
+                    }
+                }, null);
+            }
+
+            return;
+        }
+
+        DrillholeOptions.ReplaceAll(wanted);
     }
 
     private void ShowProblem(string text)

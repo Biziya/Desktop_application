@@ -71,7 +71,7 @@
                     </StackPanel>
                     <StackPanel Grid.Column="2" Style="{StaticResource FieldPanel}">
                         <TextBlock Text="{StaticResource CampaignLabel}" Style="{StaticResource FieldLabel}"/>
-                        <TextBox Style="{StaticResource ReadOnlyField}" Text="{Binding Campaign, Mode=OneWay}" TextAlignment="Right"
+                        <TextBox Style="{StaticResource ReadOnlyField}" Text="{Binding Campaign, Mode=OneWay}"
                                  AutomationProperties.Name="{StaticResource CampaignLabel}"/>
                     </StackPanel>
                     <StackPanel Grid.Column="3" Style="{StaticResource FieldPanel}">
