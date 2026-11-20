@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Builds the SPP CT007 Windows installer with Velopack.
+    Builds the Gamma Core Log Windows installer with Velopack.
 
 .DESCRIPTION
     Publishes Frontend for win-x64 (self-contained, production) into release\publish and packs it into
@@ -144,7 +144,9 @@ if ($envFiles.Count -gt 0) {
 }
 
 Invoke-Step 'Velopack pack' {
-    vpk pack --packId $app.id --packVersion $app.packVersion--packTitle $app.name --packDir $publishDir `
+    # --packTitle sets the name users see (Start menu shortcut, Apps & features). The package id and the main exe
+    # (Frontend.exe) stay the same so installed copies keep auto-updating.
+    vpk pack --packId $app.id --packVersion $app.packVersion --packTitle $app.name --packDir $publishDir `
         --mainExe $mainExe --icon $icon --runtime $Runtime --outputDir $installerDir
 }
 
@@ -152,6 +154,11 @@ $assets = Get-Content -Path (Join-Path $installerDir 'assets.win.json') -Raw | C
 $installer = $assets | Where-Object { $_.Type -eq 'Installer' } | Select-Object -First 1
 if (-not $installer) { throw "Velopack reported no installer in $installerDir\assets.win.json." }
 
-Write-Host "`nInstaller: $(Join-Path $installerDir $installer.RelativeFileName)" -ForegroundColor Green
+# Velopack names Setup.exe after the package id; hand out a copy named after the app ("GammaCoreLog-Setup.exe").
+$namedInstaller = Join-Path $installerDir ("{0}-Setup.exe" -f ($app.name -replace '[^A-Za-z0-9]', ''))
+Copy-Item -Path (Join-Path $installerDir $installer.RelativeFileName) -Destination $namedInstaller -Force
+
+Write-Host "`nInstaller: $namedInstaller" -ForegroundColor Green
+Write-Host "           (same file as $(Join-Path $installerDir $installer.RelativeFileName))"
 Write-Host "Version:   $($app.version) (package $($app.packVersion))"
 $assets | Where-Object { $_.Type -ne 'Installer' } | ForEach-Object { Write-Host "  $($_.Type): $($_.RelativeFileName)" }

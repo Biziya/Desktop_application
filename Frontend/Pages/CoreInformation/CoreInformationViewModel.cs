@@ -44,6 +44,14 @@ public sealed class CoreInformationViewModel : ObservableObject
     private Task? drillholesLoad;
     private ApiStatus? drillholesStatus;
     private string drillholesError = "";
+    private IReadOnlyList<DrillholeResponse> localDrillholes = [];
+    private bool isCreatingDrillhole;
+    private bool showNewDrillholeErrors;
+    private bool savingNewDrillhole;
+    private string newDrillholeId = "";
+    private string newProject = "";
+    private string newCampaign = "";
+    private string newDrillholeIdTaken = "";
 
     /// <param name="searchDelay">Pause after the last keystroke before the list is filtered (default 150 ms).</param>
     public CoreInformationViewModel(
@@ -72,6 +80,9 @@ public sealed class CoreInformationViewModel : ObservableObject
         RefreshGammaGuardDatabaseCommand = new RelayCommand(_ => _ = devices.CheckGammaGuardDatabaseAsync(rediscover: true));
         SelectGammaGuardDatabaseCommand = new AsyncCommand(SelectGammaGuardDatabaseAsync,
             error => Toasts.Error($"The Gamma Guard database could not be changed: {error.Message}"));
+        NewDrillholeCommand = new RelayCommand(_ => BeginNewDrillhole(), _ => !isSelectionLocked && !isCreatingDrillhole);
+        SaveNewDrillholeCommand = new RelayCommand(_ => _ = SaveNewDrillholeAsync(), _ => isCreatingDrillhole && !savingNewDrillhole);
+        CancelNewDrillholeCommand = new RelayCommand(_ => IsCreatingDrillhole = false, _ => isCreatingDrillhole);
 
         // A drillhole list that failed because the backend was offline loads again as soon as it is back.
         backend.CameOnline += () =>
@@ -108,8 +119,190 @@ public sealed class CoreInformationViewModel : ObservableObject
             {
                 Changed(nameof(CanClearDrillhole));
                 ClearDrillholeCommand.Refresh();
+
+                if (value)
+                {
+                    IsCreatingDrillhole = false;
+                }
+
+                NewDrillholeCommand.Refresh();
             }
         }
+    }
+
+    /// <summary>Opens the New drillhole form (Drillhole ID, Campaign and Project, all required).</summary>
+    public RelayCommand NewDrillholeCommand { get; }
+
+    public RelayCommand SaveNewDrillholeCommand { get; }
+
+    public RelayCommand CancelNewDrillholeCommand { get; }
+
+    /// <summary>The New drillhole form is open. Closing it discards what was typed.</summary>
+    public bool IsCreatingDrillhole
+    {
+        get => isCreatingDrillhole;
+        private set
+        {
+            if (Set(ref isCreatingDrillhole, value))
+            {
+                NewDrillholeCommand.Refresh();
+                SaveNewDrillholeCommand.Refresh();
+                CancelNewDrillholeCommand.Refresh();
+            }
+        }
+    }
+
+    public string NewDrillholeId
+    {
+        get => newDrillholeId;
+        set
+        {
+            if (Set(ref newDrillholeId, value ?? ""))
+            {
+                NewDrillholeInputChanged();
+            }
+        }
+    }
+
+    /// <summary>Project of the new drillhole (stored like the API projectCode).</summary>
+    public string NewProject
+    {
+        get => newProject;
+        set
+        {
+            if (Set(ref newProject, value ?? ""))
+            {
+                NewDrillholeInputChanged();
+            }
+        }
+    }
+
+    /// <summary>Campaign of the new drillhole (stored like the API campaign).</summary>
+    public string NewCampaign
+    {
+        get => newCampaign;
+        set
+        {
+            if (Set(ref newCampaign, value ?? ""))
+            {
+                NewDrillholeInputChanged();
+            }
+        }
+    }
+
+    /// <summary>Shown under the Drillhole ID box after a save attempt; empty when valid.</summary>
+    public string NewDrillholeIdError =>
+        !showNewDrillholeErrors ? "" :
+        newDrillholeId.Trim().Length == 0 ? "Drillhole ID is required." :
+        newDrillholeIdTaken.Length > 0 && string.Equals(newDrillholeId.Trim(), newDrillholeIdTaken, StringComparison.OrdinalIgnoreCase)
+            ? $"{newDrillholeIdTaken} already exists. Pick it from the Drillhole list." : "";
+
+    public string NewCampaignError => showNewDrillholeErrors && newCampaign.Trim().Length == 0 ? "Campaign is required." : "";
+
+    public string NewProjectError => showNewDrillholeErrors && newProject.Trim().Length == 0 ? "Project is required." : "";
+
+    public bool HasNewDrillholeErrors => IsNewDrillholeIdInvalid || IsNewCampaignInvalid || IsNewProjectInvalid;
+
+    public bool IsNewDrillholeIdInvalid => NewDrillholeIdError.Length > 0;
+
+    public bool IsNewCampaignInvalid => NewCampaignError.Length > 0;
+
+    public bool IsNewProjectInvalid => NewProjectError.Length > 0;
+
+    private void BeginNewDrillhole()
+    {
+        if (isSelectionLocked)
+        {
+            RejectWhileLocked();
+            return;
+        }
+
+        showNewDrillholeErrors = false;
+        newDrillholeIdTaken = "";
+        newDrillholeId = drillholeSearch.Trim().Length > 0 && catalog.Find(drillholeSearch) is null ? drillholeSearch.Trim() : "";
+        newProject = "";
+        newCampaign = "";
+        NewDrillholeInputChanged();
+        Changed(nameof(NewDrillholeId));
+        Changed(nameof(NewProject));
+        Changed(nameof(NewCampaign));
+        IsCreatingDrillhole = true;
+    }
+
+    private void NewDrillholeInputChanged()
+    {
+        Changed(nameof(NewDrillholeIdError));
+        Changed(nameof(NewCampaignError));
+        Changed(nameof(NewProjectError));
+        Changed(nameof(IsNewDrillholeIdInvalid));
+        Changed(nameof(IsNewCampaignInvalid));
+        Changed(nameof(IsNewProjectInvalid));
+        Changed(nameof(HasNewDrillholeErrors));
+    }
+
+    /// <summary>
+    /// Validates and stores the new drillhole, then selects it. Saving is refused (false, with a message under each
+    /// empty box and one error toast) while Drillhole ID, Campaign or Project is empty, or when the ID already exists.
+    /// </summary>
+    public async Task<bool> SaveNewDrillholeAsync()
+    {
+        if (!isCreatingDrillhole || savingNewDrillhole)
+        {
+            return false;
+        }
+
+        var id = newDrillholeId.Trim();
+        var project = newProject.Trim();
+        var campaign = newCampaign.Trim();
+        newDrillholeIdTaken = id.Length > 0 && catalog.Find(id) is { } existing ? existing.HoleId! : "";
+        showNewDrillholeErrors = true;
+        NewDrillholeInputChanged();
+
+        if (HasNewDrillholeErrors)
+        {
+            var missing = new[] { id.Length == 0 ? "Drillhole ID" : null, campaign.Length == 0 ? "Campaign" : null, project.Length == 0 ? "Project" : null }
+                .OfType<string>().ToList();
+            Toasts.Error(missing.Count > 0
+                ? $"The drillhole was not saved: {string.Join(" and ", missing)} {(missing.Count == 1 ? "is" : "are")} required."
+                : NewDrillholeIdError);
+            return false;
+        }
+
+        var entry = new DrillholeResponse(id, project, campaign);
+        savingNewDrillhole = true;
+        SaveNewDrillholeCommand.Refresh();
+
+        try
+        {
+            await cache.AddLocalAsync(entry);
+        }
+        catch (InvalidOperationException)
+        {
+            newDrillholeIdTaken = id;
+            NewDrillholeInputChanged();
+            Toasts.Error(NewDrillholeIdError);
+            return false;
+        }
+        catch (Exception error)
+        {
+            Toasts.Error($"The drillhole could not be saved: {error.Message}");
+            return false;
+        }
+        finally
+        {
+            savingNewDrillhole = false;
+            SaveNewDrillholeCommand.Refresh();
+        }
+
+        localDrillholes = [.. localDrillholes, entry];
+        var previous = catalog;
+        catalog = DrillholeCatalog.Build(previous.All.Append(entry), previous);
+        IsCreatingDrillhole = false;
+        ShowDrillholes();
+        Choose(catalog.Find(id)!);
+        await WhenOptionsUpdated();
+        Toasts.Success($"Drillhole {id} created and selected.");
+        return true;
     }
 
     /// <summary>Highlighted best match for the typed text; picked only on Enter (<see cref="CommitClosest"/>) or a click.</summary>
@@ -321,12 +514,22 @@ public sealed class CoreInformationViewModel : ObservableObject
 
             try
             {
+                localDrillholes = await cache.LoadLocalAsync();
+            }
+            catch (Exception)
+            {
+                // Unreadable: no local drillholes are listed; creating one reports the error.
+            }
+
+            try
+            {
                 var cached = await cache.LoadAsync();
 
-                if (catalog.Count == 0 && cached.Count > 0)
+                if (catalog.Count == 0 && (cached.Count > 0 || localDrillholes.Count > 0))
                 {
                     var previous = catalog;
-                    catalog = await Task.Run(() => DrillholeCatalog.Build(cached, previous));
+                    var local = localDrillholes;
+                    catalog = await Task.Run(() => DrillholeCatalog.Build(cached.Concat(local), previous));
                     ShowDrillholes();
                 }
             }
@@ -336,7 +539,8 @@ public sealed class CoreInformationViewModel : ObservableObject
             }
         }
 
-        // Only a successful, non-empty response replaces the list and the cache.
+        // Only a successful, non-empty response replaces the list and the cache. Drillholes created on this laptop
+        // are always added (the backend entry wins when the same Hole ID exists there).
         var result = await drillholesApi.GetAsync(CancellationToken.None);
         emptyResponse = false;
 
@@ -344,11 +548,12 @@ public sealed class CoreInformationViewModel : ObservableObject
         {
             var current = catalog;
             var fresh = await Task.Run(() => DrillholeCatalog.Build(result.Value!, current));
-            emptyResponse = fresh.Count == 0 && catalog.Count > 0;
+            emptyResponse = fresh.Count == 0 && catalog.Count > localDrillholes.Count;
 
-            if (fresh.Count > 0 || catalog.Count == 0)
+            if (fresh.Count > 0 || catalog.Count <= localDrillholes.Count)
             {
-                catalog = fresh;
+                var local = localDrillholes;
+                catalog = await Task.Run(() => DrillholeCatalog.Build(fresh.All.Concat(local), current));
             }
 
             if (fresh.Count > 0)

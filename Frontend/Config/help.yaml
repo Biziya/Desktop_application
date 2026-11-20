@@ -1,18 +1,24 @@
-# Help window text: opened with the ? button at the top right of every page, or with F1.
+# Help window text: opened with the ? button at the top right of every page, or with F1 (F1 again or Esc closes it).
+# The window shows every page as a section and scrolls to the page you are on.
 # One entry per sidebar page; "page" must match the sidebar title exactly.
 # "important" (optional): what must be done first on that page; shown at the top, in a highlighted box.
+# "image" (optional): screenshot of the page, relative to the app folder (Frontend/Help/Images in the source).
 # "items": the buttons and fields on that page, most important first, and what they do.
+# "shortcuts": the last section, Keyboard shortcuts.
 # Keep it short: one plain sentence each ("does" at most 90 characters, "purpose" at most 100).
 # Changes take effect after a restart.
 pages:
   - page: Core Information
     purpose: Pick the drillhole and check that this laptop is ready to measure.
+    image: Help/Images/core-information.png
     important:
       - Open GammaGuard and connect the SPP first.
       - Press Save & Continue before you can measure.
     items:
       - control: Drillhole
         does: Type part of the ID, then pick it. Drillholes you already measured come first.
+      - control: + New drillhole
+        does: Creates a drillhole that is not in the list. Campaign and Project are required.
       - control: Save & Continue
         does: Saves your choice and opens the Measurement page.
       - control: Device Status
@@ -28,12 +34,17 @@ pages:
 
   - page: Measurement
     purpose: Measure the drillhole one interval at a time.
+    image: Help/Images/measurement.png
     important:
-      - Press Start, then right-click anywhere to capture each interval.
+      - Press Start, then right-click on this page to capture. Right-click does nothing on other pages.
       - Readings stay on this laptop until you export and upload them.
     items:
       - control: Start / Stop
-        does: Turns measuring on or off. While on, each right-click captures one interval.
+        does: Turns measuring on or off. While on, each right-click here captures one interval.
+      - control: Live CPS
+        does: The newest CPS reading from the detector, under the countdown. Updates every second.
+      - control: Show / Hide threshold
+        does: Shows or hides the dashed threshold line on the graph.
       - control: Starting Depth (m)
         does: Where the first interval starts. The next one follows on its own.
       - control: Step (cm)
@@ -53,6 +64,7 @@ pages:
 
   - page: Monitoring
     purpose: Live readings from every detector connected in GammaGuard.
+    image: Help/Images/monitoring.png
     important:
       - GammaGuard must be running, with a database picked on Core Information.
     items:
@@ -71,6 +83,7 @@ pages:
 
   - page: Upload Data
     purpose: Send an exported CSV to the central database.
+    image: Help/Images/upload-data.png
     important:
       - This is the only way readings reach the central database.
       - You need to be online (green dot in the sidebar).
@@ -84,6 +97,7 @@ pages:
 
   - page: Data Viewer
     purpose: See what has been uploaded to the central database, by drillhole.
+    image: Help/Images/data-viewer.png
     important:
       - Only uploaded readings show here.
     items:
@@ -95,3 +109,17 @@ pages:
         does: Loads the latest data again.
       - control: Project / Campaign
         does: Project and campaign of the chosen drillhole.
+
+shortcuts:
+  - keys: "F1"
+    does: Opens Help at the page you are on, or closes it. Works on every page and in Help.
+  - keys: "Esc"
+    does: Closes Help.
+  - keys: "? button"
+    does: Opens Help, or brings it to the front if it is already open.
+  - keys: "Right-click"
+    does: Captures one interval, on the Measurement page only, after Start.
+  - keys: "Enter / Esc"
+    does: In the capture duration editor (click the countdown) - saves / cancels.
+  - keys: "↑ ↓ Enter"
+    does: In the Drillhole box - move through the list and pick a drillhole.

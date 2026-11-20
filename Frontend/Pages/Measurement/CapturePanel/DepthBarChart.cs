@@ -38,6 +38,12 @@ public sealed class DepthBarChart : FrameworkElement
     public static readonly DependencyProperty AxisLabelFontSizeProperty = Register(nameof(AxisLabelFontSize), 12d);
     public static readonly DependencyProperty TickFontSizeProperty = Register(nameof(TickFontSize), 11d);
 
+    /// <summary>CPS of the horizontal threshold line; NaN (default) or a negative value draws no line.</summary>
+    public static readonly DependencyProperty ThresholdProperty = Register(nameof(Threshold), double.NaN);
+    public static readonly DependencyProperty ShowThresholdProperty = Register(nameof(ShowThreshold), true);
+    public static readonly DependencyProperty ThresholdBrushProperty = Register<Brush>(nameof(ThresholdBrush), Brushes.Firebrick);
+    public static readonly DependencyProperty ThresholdLabelProperty = Register(nameof(ThresholdLabel), "Threshold");
+
     private readonly List<(Rect Area, MeasurementResult Row)> bars = [];
     private readonly ToolTip tip = new() { Placement = PlacementMode.Relative };
 
@@ -45,6 +51,7 @@ public sealed class DepthBarChart : FrameworkElement
     private Pen? axisPen;
     private Pen? gridPen;
     private Pen? separatorPen;
+    private Pen? thresholdPen;
     private Typeface? typeface;
     private double pixelsPerDip;
     private MeasurementResult? hovered;
@@ -81,6 +88,19 @@ public sealed class DepthBarChart : FrameworkElement
 
     public double TickFontSize { get => (double)GetValue(TickFontSizeProperty); set => SetValue(TickFontSizeProperty, value); }
 
+    public double Threshold { get => (double)GetValue(ThresholdProperty); set => SetValue(ThresholdProperty, value); }
+
+    public bool ShowThreshold { get => (bool)GetValue(ShowThresholdProperty); set => SetValue(ShowThresholdProperty, value); }
+
+    public Brush ThresholdBrush { get => (Brush)GetValue(ThresholdBrushProperty); set => SetValue(ThresholdBrushProperty, value); }
+
+    public string ThresholdLabel { get => (string)GetValue(ThresholdLabelProperty); set => SetValue(ThresholdLabelProperty, value); }
+
+    /// <summary>Y position of the threshold line in the last render, or null when no line was drawn.</summary>
+    public double? DrawnThresholdY { get; private set; }
+
+    private bool HasThreshold => ShowThreshold && double.IsFinite(Threshold) && Threshold >= 0;
+
     private static DependencyProperty Register<T>(string name, T fallback) => DependencyProperty.Register(
         name, typeof(T), typeof(DepthBarChart), new FrameworkPropertyMetadata(fallback, FrameworkPropertyMetadataOptions.AffectsRender));
 
@@ -110,6 +130,10 @@ public sealed class DepthBarChart : FrameworkElement
         {
             axisPen = gridPen = separatorPen = null;
         }
+        else if (e.Property == ThresholdBrushProperty)
+        {
+            thresholdPen = null;
+        }
         else if (e.Property == TextElement.FontFamilyProperty)
         {
             typeface = null;
@@ -135,10 +159,23 @@ public sealed class DepthBarChart : FrameworkElement
         return pen;
     }
 
+    private static Pen DashedPen(Brush brush)
+    {
+        var pen = new Pen(brush.IsFrozen ? brush : brush.CloneCurrentValue(), 1.5) { DashStyle = new DashStyle([6, 3], 0) };
+
+        if (pen.CanFreeze)
+        {
+            pen.Freeze();
+        }
+
+        return pen;
+    }
+
     protected override void OnRender(DrawingContext drawing)
     {
         base.OnRender(drawing);
         bars.Clear();
+        DrawnThresholdY = null;
         hovered = null; // the row values may have changed: the next hover rebuilds the tooltip text
 
         var plot = new Rect(LeftMargin, TopMargin,
@@ -184,6 +221,12 @@ public sealed class DepthBarChart : FrameworkElement
             cpsMax = Math.Max(cpsMax, Cps(row));
         }
 
+        // A visible threshold is always inside the y range, even above every bar.
+        if (HasThreshold)
+        {
+            cpsMax = Math.Max(cpsMax, Threshold);
+        }
+
         var xStep = NiceStep((toMax - fromMin) / 1000d, Math.Max(2, (int)(plot.Width / 80)));
         var xMin = Math.Floor(fromMin / 1000d / xStep) * xStep;
         var xMax = Math.Max(xMin + xStep, Math.Ceiling(toMax / 1000d / xStep) * xStep);
@@ -218,6 +261,17 @@ public sealed class DepthBarChart : FrameworkElement
             var area = new Rect(left, Y(Cps(row)), Math.Max(1, right - left), plot.Bottom - Y(Cps(row)));
             drawing.DrawRectangle(BarBrush, area.Width >= 4 ? separator : null, area);
             bars.Add((area, row));
+        }
+
+        // Threshold: a dashed horizontal line over the bars, labelled at its right end.
+        if (HasThreshold)
+        {
+            var y = Math.Round(Y(Threshold)) + 0.5;
+            drawing.DrawLine(thresholdPen ??= DashedPen(ThresholdBrush), new Point(plot.Left, y), new Point(plot.Right, y));
+            var label = new FormattedText($"{ThresholdLabel} {Compact(Threshold)}", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                typeface!, TickFontSize, ThresholdBrush, pixelsPerDip);
+            drawing.DrawText(label, new Point(plot.Right - label.Width - 4, Math.Max(plot.Top, y - label.Height - 2)));
+            DrawnThresholdY = y;
         }
 
         drawing.DrawLine(axisPen, plot.BottomLeft, plot.BottomRight);

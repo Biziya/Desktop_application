@@ -55,7 +55,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         IDialogService? dialogs = null,
         MonitoringSettings? monitoringSettings = null,
         DataRetentionSettings? retentionSettings = null,
-        HelpSettings? helpSettings = null)
+        HelpSettings? helpSettings = null,
+        ILiveCpsReader? liveCps = null)
     {
         dialogs ??= new DialogService();
 
@@ -77,10 +78,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             ? null
             : new CpsAlarm(new AlarmTone(alarmSettings.ToneFrequency, TimeSpan.FromSeconds(alarmSettings.ToneDuration)).Play,
                 TimeSpan.FromSeconds(alarmSettings.ToneDuration));
+        var captureDevices = new GammaGuardCaptureDevices(Devices);
         Measurement = new MeasurementViewModel(
-            captureService ?? new DeviceCaptureService(new GammaGuardCaptureDevices(Devices)), new CsvExportService(), dialogs, repository, showDemoTsMs: false, toasts: Toasts,
+            captureService ?? new DeviceCaptureService(captureDevices), new CsvExportService(), dialogs, repository, showDemoTsMs: false, toasts: Toasts,
             durationSettings: new CaptureDurationSettings(CaptureDurationSettings.PathBeside(repository.DatabasePath)),
-            alarm: alarm, defaultThreshold: alarmSettings?.DefaultThreshold);
+            alarm: alarm, defaultThreshold: alarmSettings?.DefaultThreshold,
+            liveCps: liveCps ?? (captureService is null ? new GammaGuardLiveCps(captureDevices) : null));
         UploadData = new UploadDataViewModel(new MeasurementUploadClient(api), dialogs, Toasts);
         Core = new CoreInformationViewModel(
             core =>
@@ -128,6 +131,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ];
         currentPage = Core;
         Pages[0].IsSelected = true;
+
+        // The app opens on Core Information: the Measurement page accepts no captures or device data until shown.
+        Measurement.OnHidden();
 
         ShowPageCommand = new RelayCommand(p => ShowPage((p as NavigationItem)?.Page ?? p as ObservableObject));
         ToggleSidebarCommand = new RelayCommand(_ => IsSidebarCollapsed = !IsSidebarCollapsed);
@@ -191,8 +197,13 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
             (previous as INavigationAware)?.OnHidden();
             (value as INavigationAware)?.OnShown();
+            Changed(nameof(IsMeasurementPageActive));
+            Changed(nameof(CurrentTitle));
         }
     }
+
+    /// <summary>Right-click captures and device data are only accepted while this is true.</summary>
+    public bool IsMeasurementPageActive => CurrentPage == Measurement;
 
     public void ShowPage(ObservableObject? page)
     {
@@ -204,9 +215,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public bool IsShown(ObservableObject page) => CurrentPage == page;
 
-    public void ShowHelp() => Help.Open(CurrentTitle);
+    /// <summary>The ? button: opens Help at this page's section, or brings an open Help window to the front.</summary>
+    public void ShowHelp() => ToggleHelp(HelpTrigger.Button);
 
-    private string CurrentTitle => Pages.FirstOrDefault(p => p.Page == CurrentPage)?.Title ?? "";
+    /// <summary>The one function behind the ? button and F1 (see <see cref="HelpPanel.Toggle"/>).</summary>
+    public void ToggleHelp(HelpTrigger trigger) => Help.Toggle(CurrentTitle, trigger);
+
+    /// <summary>Sidebar title of the page on screen; Help opens at this page's section.</summary>
+    public string CurrentTitle => Pages.FirstOrDefault(p => p.Page == CurrentPage)?.Title ?? "";
 
     public void Dispose()
     {

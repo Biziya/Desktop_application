@@ -9,6 +9,7 @@ public static class StatusAndPresentationTests
     private const ulong AddressA = 0x0011223344A1;
     private const ulong AddressB = 0x0011223344A2;
     private const ulong AddressX = 0x0011223344A3;
+    private const ulong AddressT = 0x0011223344A4;
 
     private static void CreateSqlite(string path)
     {
@@ -108,19 +109,26 @@ public static class StatusAndPresentationTests
         Assert.False(quietToasts.Items.Any(t => t.Message.StartsWith("Backend", StringComparison.Ordinal)), "Online at start-up is not announced");
     }
 
-    [Test("FE-043", "CT007-M identification, status mapping, no auto-select, stale results discarded")]
+    [Test("FE-043", "CT007 identification (any variant), status mapping, no auto-select, stale results discarded")]
     public static async Task BluetoothSelection()
     {
+        Assert.Equal("CT007", DeviceName.Normalize("CT007-M"), "CT007-M normalised");
+        Assert.Equal("CT007", DeviceName.Normalize(" ct007-T-0003 "), "CT007-T normalised");
+        Assert.Equal("CT008-M", DeviceName.Normalize(" CT008-M"), "other names only trimmed");
+        Assert.True(DeviceName.Matches("CT007-T", "CT007-M-"), "an old CT007-M- prefix setting still accepts every variant");
+        Assert.False(DeviceName.Matches("CT008-M", "CT007"), "another device family");
+
         var reader = new FakeBluetoothReader();
         reader.Set(
             new KnownBluetoothDevice("CT007-M-0001", AddressA, Connected: true, Paired: true),
             new KnownBluetoothDevice("ct007-m-0002", AddressB, Connected: false, Paired: true),
-            new KnownBluetoothDevice("CT007-X", AddressX, Connected: true, Paired: true),
+            new KnownBluetoothDevice("CT008-M", AddressX, Connected: true, Paired: true),
+            new KnownBluetoothDevice("CT007-T", AddressT, Connected: false, Paired: true),
             new KnownBluetoothDevice("CT007-M-0001", AddressA, Connected: false, Paired: true, LowEnergy: true));
         var check = new Ct007BluetoothCheck(DeviceSettings.Default, reader);
 
         var list = check.ListDevices();
-        Assert.Sequence(new[] { "CT007-M-0001", "ct007-m-0002" }, list.Select(d => d.Name), "prefix match, de-duplicated by address");
+        Assert.Sequence(new[] { "CT007-M-0001", "ct007-m-0002", "CT007-T" }, list.Select(d => d.Name), "every CT007 variant, de-duplicated by address");
         Assert.Equal(LocalState.Connected, check.CheckSelected(list[0]).State, "connected device");
         var paired = check.CheckSelected(list[1]);
         Assert.Equal(LocalState.Disconnected, paired.State, "paired only");
@@ -137,13 +145,13 @@ public static class StatusAndPresentationTests
 
         // With a configured address, the address alone identifies the detector (the name prefix is not used).
         var byAddress = new Ct007BluetoothCheck(DeviceSettings.Default with { Ct007Address = "00:11:22:33:44:A3" }, reader);
-        Assert.Sequence(new[] { "CT007-X" }, byAddress.ListDevices().Select(d => d.Name), "configured address");
+        Assert.Sequence(new[] { "CT008-M" }, byAddress.ListDevices().Select(d => d.Name), "configured address");
 
         using var folder = new TestFolder();
         using var devices = new DeviceStatusMonitor(check, new MeasurementDatabaseCheck(folder.Path("m.db")),
             new GammaGuardDatabaseCheck(Make.Devices(folder.Path("gg.sqlite")), []), TimeSpan.FromMinutes(5));
         await devices.RefreshBluetoothDevicesAsync();
-        Assert.Equal(2, devices.BluetoothDevices.Count, "listed");
+        Assert.Equal(3, devices.BluetoothDevices.Count, "listed");
         Assert.True(devices.SelectedBluetoothDevice is null, "never auto-selected");
         Assert.Equal(LocalState.NotSelected, devices.Bluetooth.State, "not selected");
 
@@ -438,7 +446,7 @@ public static class StatusAndPresentationTests
             Assert.True(column.Alignment == System.Windows.TextAlignment.Right, $"{column.Header}: body cells right-aligned");
         }
 
-        Assert.Sequence(new[] { "Capture No", "Start Time", "End Time", "count0_raw", "hdm", "hdm_raw", "dose_rate", "Session" },
+        Assert.Sequence(new[] { "Capture No", "Start Time", "End Time", "Sample", "count0_raw", "hdm", "hdm_raw", "dose_rate", "Session" },
             columns.Where(c => !c.Visible).Select(c => c.Header), "hidden columns");
 
         // The No. column is compact: a fixed 40–50 px (configured in the YAML), not a share of the table width.
@@ -540,7 +548,7 @@ public static class StatusAndPresentationTests
     {
         var shipped = ApplicationSettings.Load(AppContext.BaseDirectory).Application;
         Assert.Equal("CT007.MeasurementStudio", shipped.Id, "id");
-        Assert.Equal("SPP CT007", shipped.Name, "name");
+        Assert.Equal("Gamma Core Log", shipped.Name, "name");
 
         // Frontend.csproj compiles the same file's version into the assembly ("1.0.0+<commit>").
         var compiled = typeof(ApplicationSettings).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion;

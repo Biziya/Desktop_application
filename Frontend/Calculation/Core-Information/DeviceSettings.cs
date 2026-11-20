@@ -16,7 +16,7 @@ public sealed record DeviceSettings(
     TimeSpan BluetoothCheckInterval)
 {
     public static DeviceSettings Default { get; } =
-        new("CT007-M-", "", "", "*.sqlite", TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(3));
+        new(DeviceName.Family, "", "", "*.sqlite", TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(3));
 
     public static string DefaultPath => Path.Combine(AppContext.BaseDirectory, "Calculation", "Core-Information", "device-settings.json");
 

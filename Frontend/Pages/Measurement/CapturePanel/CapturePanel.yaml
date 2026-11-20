@@ -8,6 +8,7 @@ labels:
   stop: Stop                                    # red glyph + Stop while measuring
   startGlyph: ▶
   stopGlyph: ■
+  liveCps: Live CPS                             # boxed value under the countdown (newest reading, CPS only)
 
 # Final size = size (below) × multiplier. Edit the multipliers: 1.0 = original look, 1.5 = +50 %, 0.8 = −20 %.
 # The countdown ring, its line and its number are enlarged together by 25 % (175 px ring, 10 px line, 40 px number);
@@ -32,6 +33,7 @@ sizes:
   startStopButtonIconFontSize: 13               # the play / stop glyph
   startStopButtonPadding: 16,0                  # no multiplier: used as is
   durationEditorWidth: 230                      # no multiplier
+  liveCpsFontSize: 24                           # the Live CPS value; no multiplier
 
 spacing:
   startStopButton: 0,12,0,0                     # between Threshold and Start / Stop
@@ -60,6 +62,7 @@ chart:
   minHeight: 240                                # the chart also runs down beside the Core Information warning
   axisLabelFontSize: 12
   tickFontSize: 11
+  thresholdLabel: Threshold                     # text beside the dashed threshold line ("Threshold 150")
 
 # CPS threshold alarm. Checked once per completed row against the CPS shown in the table; it sounds only when that
 # value is above the threshold (equal does not sound). The threshold box starts with defaultThreshold and can be edited

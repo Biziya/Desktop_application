@@ -229,7 +229,7 @@ public sealed class DeviceStatusMonitor : ObservableObject, IDisposable
             BluetoothDevices = list;
         }
 
-        BluetoothDevicesMessage = result.Devices.Count == 0 ? "No CT007-M device is paired with this laptop." : "";
+        BluetoothDevicesMessage = result.Devices.Count == 0 ? "No CT007 device (CT007-M, CT007-T, …) is paired with this laptop." : "";
     }
 
     private async Task RunAsync(Func<Task> check, TimeSpan every)

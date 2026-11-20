@@ -9,13 +9,65 @@ namespace Frontend.Api.CoreInformation.Drillholes;
 /// </summary>
 public sealed class DrillholeCache(string databasePath)
 {
+    // LocalDrillholes: drillholes created on this laptop (New drillhole). They are never replaced by a backend refresh
+    // and reach the central database with their uploaded measurements (Drillhole, Project and Campaign columns).
     private const string CreateTable = """
         CREATE TABLE IF NOT EXISTS DrillholeCache (
             hole_id      TEXT NOT NULL PRIMARY KEY,
             project_code TEXT,
             campaign     TEXT
-        )
+        );
+        CREATE TABLE IF NOT EXISTS LocalDrillholes (
+            hole_id      TEXT NOT NULL PRIMARY KEY COLLATE NOCASE,
+            project_code TEXT NOT NULL,
+            campaign     TEXT NOT NULL,
+            created_at   TEXT NOT NULL
+        );
         """;
+
+    public Task<IReadOnlyList<DrillholeResponse>> LoadLocalAsync() => Task.Run<IReadOnlyList<DrillholeResponse>>(() =>
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT hole_id, project_code, campaign FROM LocalDrillholes ORDER BY created_at";
+        using var reader = command.ExecuteReader();
+        var drillholes = new List<DrillholeResponse>();
+
+        while (reader.Read())
+        {
+            drillholes.Add(new DrillholeResponse(reader.GetString(0), reader.GetString(1), reader.GetString(2)));
+        }
+
+        return drillholes;
+    });
+
+    /// <summary>Stores a drillhole created on this laptop. All three values are required.</summary>
+    /// <exception cref="InvalidOperationException">A local drillhole with this Hole ID (any case) already exists.</exception>
+    public Task AddLocalAsync(DrillholeResponse drillhole) => Task.Run(() =>
+    {
+        if (string.IsNullOrWhiteSpace(drillhole.HoleId) || string.IsNullOrWhiteSpace(drillhole.ProjectCode) ||
+            string.IsNullOrWhiteSpace(drillhole.Campaign))
+        {
+            throw new ArgumentException("Drillhole, Project and Campaign are required.", nameof(drillhole));
+        }
+
+        using var connection = Open();
+        using var insert = connection.CreateCommand();
+        insert.CommandText = """
+            INSERT INTO LocalDrillholes (hole_id, project_code, campaign, created_at)
+            VALUES ($holeId, $projectCode, $campaign, $createdAt)
+            ON CONFLICT (hole_id) DO NOTHING
+            """;
+        insert.Parameters.AddWithValue("$holeId", drillhole.HoleId.Trim());
+        insert.Parameters.AddWithValue("$projectCode", drillhole.ProjectCode.Trim());
+        insert.Parameters.AddWithValue("$campaign", drillhole.Campaign.Trim());
+        insert.Parameters.AddWithValue("$createdAt", DateTimeOffset.Now.ToString("O"));
+
+        if (insert.ExecuteNonQuery() == 0)
+        {
+            throw new InvalidOperationException($"Drillhole {drillhole.HoleId.Trim()} already exists.");
+        }
+    });
 
     public Task<IReadOnlyList<DrillholeResponse>> LoadAsync() => Task.Run<IReadOnlyList<DrillholeResponse>>(() =>
     {

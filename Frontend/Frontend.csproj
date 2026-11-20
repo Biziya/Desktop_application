@@ -74,6 +74,9 @@
           CopyToOutputDirectory="PreserveNewest" />
     <None Update="Config\help.yaml"
           CopyToOutputDirectory="PreserveNewest" />
+    <!-- Screenshots shown in the Help window (help.yaml "image"); the same pictures as docs/guide-images. -->
+    <None Include="Help\Images\*.png"
+          CopyToOutputDirectory="PreserveNewest" />
 
     <!-- CT-007 device configuration -->
     <None Update="Calculation\Core-Information\device-settings.json"

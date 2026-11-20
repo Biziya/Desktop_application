@@ -14,8 +14,20 @@ public enum MeasurementState
     Processing
 }
 
-public sealed class MeasurementViewModel : ObservableObject, IDisposable
+public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavigationAware
 {
+    /// <summary>Shown in the Live CPS box while no recent reading is available.</summary>
+    public const string NoLiveCps = "—";
+
+    private readonly ILiveCpsReader? liveCpsReader;
+    private readonly TimeSpan liveCpsInterval;
+    private CancellationTokenSource? livePolling;
+    private string liveCps = NoLiveCps;
+
+    // Captures and device data are only accepted while the Measurement page is on screen. A standalone view model
+    // (tests) counts as shown; MainViewModel hides it at start-up because the app opens on Core Information.
+    private bool isShown = true;
+    private bool isThresholdLineVisible = true;
     private readonly IMeasurementService measurement;
     private readonly ICsvExportService export;
     private readonly IDialogService dialogs;
@@ -59,9 +71,13 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         ToastService? toasts = null,
         CaptureDurationSettings? durationSettings = null,
         CpsAlarm? alarm = null,
-        double? defaultThreshold = null)
+        double? defaultThreshold = null,
+        ILiveCpsReader? liveCps = null,
+        TimeSpan? liveCpsInterval = null)
     {
         ShowDemoTsMs = showDemoTsMs;
+        liveCpsReader = liveCps;
+        this.liveCpsInterval = liveCpsInterval ?? TimeSpan.FromSeconds(1);
         this.alarm = alarm ?? new CpsAlarm(() => { }, TimeSpan.Zero);
         thresholdCps = defaultThreshold;
         threshold = defaultThreshold is { } initial ? CpsAlarm.FormatThreshold(initial) : "";
@@ -104,6 +120,10 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
 
         ToggleAlarmMuteCommand = new RelayCommand(_ => IsAlarmMuted = !IsAlarmMuted);
 
+        ToggleThresholdLineCommand = new RelayCommand(_ => IsThresholdLineVisible = !IsThresholdLineVisible);
+
+        StartLivePolling();
+
         Results.CollectionChanged += (_, change) =>
         {
             AssignDemoTsMs(change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset ? Results : change.NewItems);
@@ -130,6 +150,117 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     /// <summary>The bell beside Threshold: mutes or unmutes the alarm sound.</summary>
     public RelayCommand ToggleAlarmMuteCommand { get; }
 
+    /// <summary>The Show/Hide threshold button above the graph.</summary>
+    public RelayCommand ToggleThresholdLineCommand { get; }
+
+    /// <summary>The Measurement page is on screen: right-click captures and live device readings are accepted.</summary>
+    public bool IsShown => isShown;
+
+    /// <summary>Newest CPS reading ("12.34"), or <see cref="NoLiveCps"/>. Updated about once a second while shown.</summary>
+    public string LiveCps
+    {
+        get => liveCps;
+        private set => Set(ref liveCps, value);
+    }
+
+    /// <summary>The alarm threshold as a number for the graph; NaN when none is set (no line).</summary>
+    public double ThresholdCps => thresholdCps ?? double.NaN;
+
+    /// <summary>The threshold line on the graph is shown (default) or hidden. Not persisted.</summary>
+    public bool IsThresholdLineVisible
+    {
+        get => isThresholdLineVisible;
+        set
+        {
+            if (Set(ref isThresholdLineVisible, value))
+            {
+                Changed(nameof(ThresholdLineButtonText));
+            }
+        }
+    }
+
+    public string ThresholdLineButtonText => IsThresholdLineVisible ? "Hide threshold" : "Show threshold";
+
+    public void OnShown()
+    {
+        if (isShown)
+        {
+            return;
+        }
+
+        isShown = true;
+        Changed(nameof(IsShown));
+        RefreshCommands();
+        StartLivePolling();
+    }
+
+    // Leaving the page: a running capture is cancelled without saving a row, and device readings are no longer read.
+    // Measurement mode stays on, so the next right-click on the Measurement page captures again.
+    public void OnHidden()
+    {
+        if (!isShown)
+        {
+            return;
+        }
+
+        isShown = false;
+        Changed(nameof(IsShown));
+        StopLivePolling();
+
+        if (activeCapture is not null)
+        {
+            activeCapture.Cancel();
+            Notify(ToastKind.Warning, "Capture cancelled because you left the Measurement page. Nothing was saved.");
+        }
+
+        RefreshCommands();
+    }
+
+    private void StartLivePolling()
+    {
+        if (liveCpsReader is null || !isShown || disposed || livePolling is not null)
+        {
+            return;
+        }
+
+        livePolling = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        _ = PollLiveCpsAsync(liveCpsReader, livePolling.Token);
+    }
+
+    private void StopLivePolling()
+    {
+        livePolling?.Cancel();
+        livePolling?.Dispose();
+        livePolling = null;
+        LiveCps = NoLiveCps;
+    }
+
+    // Reads off the UI thread, publishes on it; a read that finishes after the page was left is dropped.
+    private async Task PollLiveCpsAsync(ILiveCpsReader reader, CancellationToken token)
+    {
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                var cps = await Task.Run(reader.ReadLatestCps, token);
+
+                if (token.IsCancellationRequested || !isShown)
+                {
+                    return;
+                }
+
+                LiveCps = FormatLiveCps(cps);
+                await Task.Delay(liveCpsInterval, token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    public static string FormatLiveCps(double? cps) =>
+        cps is { } value && double.IsFinite(value) ? value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) : NoLiveCps;
+
     /// <summary>Demo mode: rows without a device ts_ms get a random one for display only (never saved or exported).</summary>
     public bool ShowDemoTsMs { get; }
 
@@ -154,10 +285,10 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
     /// <summary>Measurement mode is on and waiting for a right-click: the capture panel shows how to take a capture.</summary>
     public bool ShowCaptureHint => State == MeasurementState.Ready;
 
-    public const string CaptureHint = "Measurement in progress — right-click anywhere in the window to capture the next interval.";
+    public const string CaptureHint = "Measurement in progress — right-click anywhere on the Measurement page to capture the next interval.";
 
     public bool CanTrigger =>
-        State == MeasurementState.Ready && SessionMatchesCore && HasValidDepths && activeCapture is null && !isEditingDuration;
+        isShown && State == MeasurementState.Ready && SessionMatchesCore && HasValidDepths && activeCapture is null && !isEditingDuration;
 
     public string Countdown
     {
@@ -242,6 +373,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             {
                 thresholdCps = CpsAlarm.TryParseThreshold(value, out var parsed) ? parsed : null;
                 Changed(nameof(IsThresholdInvalid));
+                Changed(nameof(ThresholdCps));
                 IsAlarmTriggered = false;
                 AlarmChanged();
             }
@@ -535,6 +667,9 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
         }
 
         disposed = true;
+        livePolling?.Cancel();
+        livePolling?.Dispose();
+        livePolling = null;
         StopMeasurementMode();
 
         if (hasUnsavedRows)
@@ -720,6 +855,13 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable
             // row is committed. It does not extend the capture interval, and Stop can still cancel during it.
             await Task.Delay(100, token);
             token.ThrowIfCancellationRequested();
+
+            // Device data that arrives after the user left the Measurement page is never recorded.
+            if (!isShown)
+            {
+                return;
+            }
+
             var row = BuildResult(data, current, core, fromMm, toMm, stepValue, duration);
 
             AddSorted(row);

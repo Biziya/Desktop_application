@@ -11,6 +11,6 @@ application:
   # Velopack package id and install folder. Never change it after a release: installed copies only update from a
   # feed with the same id. It is internal and not shown to users (the name below is).
   id: "CT007.MeasurementStudio"
-  name: "SPP CT007"
+  name: "Gamma Core Log"
   version: "1.2.1.0"
-  description: "SPP CT007 measurement desktop application"
+  description: "Gamma Core Log - CT007 gamma measurement logging along drillholes"

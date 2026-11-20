@@ -294,6 +294,31 @@
                                VerticalAlignment="Center"/>
                 </Grid>
             </Button>
+            <!-- Live CPS, directly under the countdown: the newest reading of the recording detector, refreshed about once a
+                 second while the Measurement page is shown ("—" when no recent reading). CPS only. -->
+            <Border x:Name="LiveCpsBox"
+                    Margin="0,12,0,0" Padding="12,8"
+                    Width="{StaticResource CountdownRingSize}"
+                    HorizontalAlignment="Center"
+                    Background="{StaticResource Surface}"
+                    BorderBrush="{StaticResource Line}" BorderThickness="1.5"
+                    CornerRadius="{StaticResource ControlRadius}"
+                    ToolTip="Newest CPS reading from the detector, updated about once a second"
+                    AutomationProperties.Name="Live CPS"
+                    AutomationProperties.AutomationId="LiveCpsBox">
+                <StackPanel>
+                    <TextBlock Text="{StaticResource LiveCpsLabel}"
+                               FontSize="{StaticResource CountdownLabelFontSize}"
+                               Foreground="{StaticResource Muted}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding LiveCps}"
+                               FontSize="{StaticResource LiveCpsFontSize}"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimary}"
+                               HorizontalAlignment="Center"
+                               AutomationProperties.AutomationId="LiveCpsValue"/>
+                </StackPanel>
+            </Border>
             <!-- Compact duration editor below the countdown (a popup, so the layout never moves).
                  Enter saves, Escape cancels; invalid input shows a 5 s error toast and keeps the editor open. -->
             <Popup IsOpen="{Binding IsEditingDuration, Mode=OneWay}"
@@ -328,9 +353,27 @@
             </Popup>
         </StackPanel>
 
-        <local:DepthBarChart Grid.Column="2" Grid.RowSpan="3"
+        <!-- The alarm threshold as a dashed horizontal line on the graph; this button shows or hides it. -->
+        <Grid Grid.Column="2" Grid.RowSpan="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Button HorizontalAlignment="Right" Margin="0,0,0,4" Padding="12,4" MinHeight="0"
+                    FontSize="12"
+                    Style="{StaticResource SecondaryButton}"
+                    Command="{Binding ToggleThresholdLineCommand}"
+                    Content="{Binding ThresholdLineButtonText}"
+                    ToolTip="Show or hide the threshold line on the graph"
+                    AutomationProperties.AutomationId="ThresholdLineToggle"
+                    AutomationProperties.Name="{Binding ThresholdLineButtonText}"/>
+        <local:DepthBarChart Grid.Row="1"
                              MinHeight="{StaticResource ChartMinHeight}"
                              ItemsSource="{Binding Results}"
+                             Threshold="{Binding ThresholdCps}"
+                             ShowThreshold="{Binding IsThresholdLineVisible}"
+                             ThresholdBrush="{StaticResource Danger}"
+                             ThresholdLabel="{StaticResource ChartThresholdLabel}"
                              XAxisLabel="{StaticResource ChartXAxisLabel}"
                              YAxisLabel="{StaticResource ChartYAxisLabel}"
                              EmptyText="{StaticResource ChartEmptyText}"
@@ -342,5 +385,6 @@
                              AxisBrush="{StaticResource Muted}"
                              Foreground="{StaticResource LabelText}"
                              AutomationProperties.Name="Bar chart of CPS by depth"/>
+        </Grid>
     </Grid>
 </UserControl>

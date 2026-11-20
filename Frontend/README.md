@@ -1,6 +1,8 @@
 # Frontend
 
-The WPF desktop app, shown to users as SPP CT007. It targets `net10.0-windows10.0.19041.0` and uses
+The WPF desktop app, shown to users as **Gamma Core Log** (formerly SPP CT007). Internal identifiers keep the old
+name on purpose: the exe (`Frontend.exe`), the Velopack package id and the data folder, so installed copies keep
+updating and keep their data. It targets `net10.0-windows10.0.19041.0` and uses
 Microsoft.Data.Sqlite, YamlDotNet and Velopack.
 
 ## Run
@@ -18,18 +20,25 @@ of the app works without it.
 
 ## Pages
 
-- Core Information: pick a drillhole (searchable list from the backend, cached locally), check operator and notes,
-  and see the Device Status of this laptop: the CT007-M Bluetooth device, the measurement database and the Gamma Guard
+- Core Information: pick a drillhole (searchable list from the backend, cached locally) or create a new one with
+  **New drillhole** (Drillhole ID, Campaign and Project are all required; it is stored locally and reaches the central
+  database with its uploaded measurements). Check operator and notes, and see the Device Status of this laptop: the
+  CT007 Bluetooth device (any variant, e.g. CT007-M or CT007-T), the measurement database and the Gamma Guard
   database. Save & Continue opens the drillhole's measurement session.
 - Measurement: set Starting Depth, Step and an optional CPS alarm threshold, press Start, then right-click anywhere
-  in the window to capture. Each capture (2 to 10 s, default 5 s; click the countdown to change it) averages the
-  Gamma Guard samples written during that time into one row. Rows can be deleted and exported to CSV.
+  on the Measurement page to capture. Right-clicks and device data are ignored on every other page, and leaving the
+  page cancels a running capture without saving it. Each capture (2 to 10 s, default 5 s; click the countdown to
+  change it) averages the Gamma Guard samples written during that time into one row. The Live CPS box under the
+  countdown shows the newest reading while a capture runs, and the graph draws the alarm threshold as a dashed line
+  (Show/Hide threshold). Rows can be deleted and exported to CSV.
 - Monitoring: live status of every detector writing to the Gamma Guard (CT008) database, with a 5-second sample
   button. Ported from EIC's CT008 Monitor in `SHIBA/`.
 - Upload Data: import an exported CSV, review it, and upload it to the central database.
 - Data Viewer: read-only view of what has been uploaded for a drillhole.
 
-Help (top right, or F1) shows what each control on the current page does. The text lives in `Config/help.yaml`.
+Help (the ? button top right, or F1) opens one Help window with a section per page, scrolled to the page you are on.
+F1 toggles it, Esc closes it, and both work wherever the keyboard focus is. Pressing ? while Help is open brings it
+to the front. The text lives in `Config/help.yaml`, its pictures in `Help/Images/`.
 
 ## Configuration files
 
@@ -112,7 +121,8 @@ The script validates `application.yaml` and `.env.production` (any key other tha
 publishes a self-contained win-x64 build to `release\publish`, checks the exe version and the packaged config, and
 runs `vpk pack` into `release\installer`. That folder then holds:
 
-- `CT007.MeasurementStudio-win-Setup.exe`: give this to users. It installs per user, no admin rights needed.
+- `GammaCoreLog-Setup.exe`: give this to users. It installs per user, no admin rights needed. It is a copy of
+  `CT007.MeasurementStudio-win-Setup.exe` (Velopack names that one after the package id).
 - `CT007.MeasurementStudio-win-Portable.zip`: runs without installing.
 - `CT007.MeasurementStudio-<version>-full.nupkg` (and `-delta.nupkg` from the second release on), plus
   `releases.win.json` and `RELEASES` for the update feed.

@@ -29,6 +29,11 @@ public sealed class DrillholeInformationSettings
         resources.Add("AutofilledToolTip", Labels.AutofilledToolTip);
         resources.Add("ClearDrillholeToolTip", Labels.ClearDrillholeToolTip);
         resources.Add("DrillholeLockedToolTip", Labels.DrillholeLockedToolTip);
+        resources.Add("NewDrillholeLabel", Labels.NewDrillhole);
+        resources.Add("NewDrillholeToolTip", Labels.NewDrillholeToolTip);
+        resources.Add("NewDrillholeTitle", Labels.NewDrillholeTitle);
+        resources.Add("NewDrillholeIdLabel", Labels.NewDrillholeId);
+        resources.Add("SaveNewDrillholeLabel", Labels.SaveNewDrillhole);
 
         resources.Add("DrillholeColumnWidth", Fields.DrillholeWidth);
         resources.Add("DrillholeColumnMinWidth", Fields.DrillholeMinWidth);
@@ -64,6 +69,11 @@ public sealed class DrillholeInformationSettings
         public required string AutofilledToolTip { get; init; }
         public required string ClearDrillholeToolTip { get; init; }
         public required string DrillholeLockedToolTip { get; init; }
+        public required string NewDrillhole { get; init; }
+        public required string NewDrillholeToolTip { get; init; }
+        public required string NewDrillholeTitle { get; init; }
+        public required string NewDrillholeId { get; init; }
+        public required string SaveNewDrillhole { get; init; }
     }
 
     public sealed class FieldSettings

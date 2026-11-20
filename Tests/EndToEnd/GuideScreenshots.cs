@@ -7,7 +7,7 @@ using System.Windows.Media.Imaging;
 
 namespace Ct007.Tests.EndToEnd;
 
-// GUIDE-001: the screenshots in docs/SPP-CT007-User-Guide.docx, taken from the built app with fake data (DesktopBench).
+// GUIDE-001: the screenshots in docs/Gamma-Core-Log-User-Guide.docx, taken from the built app with fake data (DesktopBench).
 // Opt-in twice: --include=Guide and the E2E account variable; CT007_GUIDE_IMAGES names the output folder.
 public static class GuideScreenshots
 {

@@ -11,7 +11,8 @@ namespace Backend.Repositories.CoreInformation.BluetoothDevice;
 // Checks Classic and LE devices and re-verifies each live ConnectionStatus, so paired-but-disconnected probes are ignored.
 public sealed class BluetoothDeviceRepository(ILogger<BluetoothDeviceRepository> logger)
 {
-    private const string DeviceNamePrefix = "CT007-M";
+    // Probes report "CT007-M", "CT007-T", "CT007-M-0001", …: everything after "CT007" is a variant suffix.
+    private const string DeviceFamily = "CT007";
 
     public async Task<BluetoothDeviceResponse> GetConnectedDeviceAsync(CancellationToken cancellationToken)
     {
@@ -87,5 +88,12 @@ public sealed class BluetoothDeviceRepository(ILogger<BluetoothDeviceRepository>
     }
 
     private static bool HasProbeName(string? name) =>
-        name is not null && name.StartsWith(DeviceNamePrefix, StringComparison.OrdinalIgnoreCase);
+        string.Equals(NormalizeDeviceName(name), DeviceFamily, StringComparison.Ordinal);
+
+    // "CT007-M" → "CT007"; other names are only trimmed.
+    internal static string NormalizeDeviceName(string? name)
+    {
+        var trimmed = (name ?? "").Trim();
+        return trimmed.StartsWith(DeviceFamily, StringComparison.OrdinalIgnoreCase) ? DeviceFamily : trimmed;
+    }
 }

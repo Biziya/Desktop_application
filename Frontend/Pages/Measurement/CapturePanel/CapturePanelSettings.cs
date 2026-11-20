@@ -36,6 +36,8 @@ public sealed class CapturePanelSettings
         resources.Add("StopLabel", Labels.Stop);
         resources.Add("StartGlyph", Labels.StartGlyph);
         resources.Add("StopGlyph", Labels.StopGlyph);
+        resources.Add("LiveCpsLabel", Labels.LiveCps);
+        resources.Add("LiveCpsFontSize", Sizes.LiveCpsFontSize);
 
         resources.Add("CountdownFontSize", Sizes.CountdownFontSize * Multipliers.CountdownFontSize);
         resources.Add("CountdownRingSize", Sizes.CountdownRingSize * Multipliers.CountdownRingSize);
@@ -68,6 +70,7 @@ public sealed class CapturePanelSettings
         resources.Add("ChartMinHeight", Chart.MinHeight);
         resources.Add("ChartAxisLabelFontSize", Chart.AxisLabelFontSize);
         resources.Add("ChartTickFontSize", Chart.TickFontSize);
+        resources.Add("ChartThresholdLabel", Chart.ThresholdLabel);
 
         resources.Add(AlarmResource, Alarm);
     }
@@ -83,6 +86,7 @@ public sealed class CapturePanelSettings
         public required string Stop { get; init; }
         public required string StartGlyph { get; init; }
         public required string StopGlyph { get; init; }
+        public required string LiveCps { get; init; }
     }
 
     public sealed class MultiplierSettings
@@ -107,6 +111,7 @@ public sealed class CapturePanelSettings
         public required double StartStopButtonIconFontSize { get; init; }
         public required Thickness StartStopButtonPadding { get; init; }
         public required double DurationEditorWidth { get; init; }
+        public required double LiveCpsFontSize { get; init; }
     }
 
     public sealed class SpacingSettings
@@ -124,6 +129,7 @@ public sealed class CapturePanelSettings
         public required double MinHeight { get; init; }
         public required double AxisLabelFontSize { get; init; }
         public required double TickFontSize { get; init; }
+        public required string ThresholdLabel { get; init; }
     }
 
     /// <summary>Starting Depth, Step and Threshold input boxes.</summary>

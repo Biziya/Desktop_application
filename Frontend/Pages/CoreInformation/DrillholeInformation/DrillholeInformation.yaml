@@ -10,6 +10,11 @@ labels:
   autofilledToolTip: Filled from the selected drillhole.
   clearDrillholeToolTip: Clear drillhole
   drillholeLockedToolTip: Stop the measurement to change the drillhole.
+  newDrillhole: "+ New drillhole"               # opens the New drillhole form under the fields
+  newDrillholeToolTip: Create a drillhole that is not in the list. Campaign and Project are required.
+  newDrillholeTitle: New drillhole
+  newDrillholeId: Drillhole ID
+  saveNewDrillhole: Save drillhole
 
 # Row 1: Drillhole (widest, for long Hole IDs), Project, Campaign (compact: a year), Operator (fits DOMAIN\username).
 # Row 2: Notes, full width. The minimum widths add up to the space available at the smallest window with the

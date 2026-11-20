@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using Frontend.Shared.Infrastructure;
 
@@ -11,6 +12,11 @@ public sealed class HelpSettings
     public const string Resource = "HelpSettings";
 
     public required List<HelpPage> Pages { get; init; }
+
+    /// <summary>Keyboard and mouse shortcuts, shown as the last Help section. Optional.</summary>
+    public List<HelpShortcut> Shortcuts { get; init; } = [];
+
+    public bool HasShortcuts => Shortcuts.Count > 0;
 
     public static HelpSettings Load(string baseDirectory)
     {
@@ -34,6 +40,13 @@ public sealed class HelpSettings
             {
                 throw YamlSettings.Invalid(File, $"pages[{i}].items", "list at least one button or control.");
             }
+
+            if (page.Image is { } image && (Path.IsPathRooted(image) || image.Contains("..", StringComparison.Ordinal)))
+            {
+                throw YamlSettings.Invalid(File, $"pages[{i}].image", "use a path relative to the app folder, e.g. Help/Images/measurement.png.");
+            }
+
+            page.BaseDirectory = baseDirectory;
         }
 
         return settings;
@@ -55,6 +68,24 @@ public sealed class HelpSettings
         public bool HasImportant => Important.Count > 0;
 
         public required List<HelpItem> Items { get; init; }
+
+        /// <summary>Screenshot of the page, relative to the app folder (e.g. Help/Images/measurement.png). Optional.</summary>
+        public string? Image { get; init; }
+
+        internal string BaseDirectory { get; set; } = AppContext.BaseDirectory;
+
+        /// <summary>Full path of <see cref="Image"/> when the file exists, otherwise null (no picture is shown).</summary>
+        public string? ImagePath =>
+            Image is { Length: > 0 } image && Path.Combine(BaseDirectory, image) is var path && System.IO.File.Exists(path) ? path : null;
+
+        public bool HasImage => ImagePath is not null;
+    }
+
+    public sealed class HelpShortcut
+    {
+        public required string Keys { get; init; }
+
+        public required string Does { get; init; }
     }
 
     public sealed class HelpItem

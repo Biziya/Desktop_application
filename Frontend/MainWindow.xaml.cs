@@ -28,13 +28,45 @@ public partial class MainWindow : Window
         // One window-level tunnel registration, including events already handled by controls.
         // The handler lives as long as the window, so it needs no explicit removal.
         AddHandler(Mouse.PreviewMouseDownEvent, new MouseButtonEventHandler(OnMeasurementMouseDown), handledEventsToo: true);
+
+        // F1 / Esc at window level, before any control sees them: they work whatever has keyboard focus.
+        AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler(OnHelpShortcut), handledEventsToo: true);
         viewModel.Help.PropertyChanged += OnHelpChanged;
+        viewModel.Help.FocusRequested += BringHelpToFront;
     }
 
-    // The Help window counts as part of the app: right-click captures while either window is active.
+    /// <summary>The Help window, once created (one instance for the app's lifetime).</summary>
+    public HelpWindow? HelpWindowInstance => helpWindow;
+
+    /// <summary>F1 toggles Help; Esc closes it (only when open, so Esc keeps its other uses otherwise).</summary>
+    public static bool HandleHelpShortcut(Key key, HelpPanel help, Action<HelpTrigger> toggle)
+    {
+        switch (key)
+        {
+            case Key.F1:
+                toggle(HelpTrigger.Key);
+                return true;
+            case Key.Escape when help.IsOpen:
+                help.Close();
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void OnHelpShortcut(object sender, KeyEventArgs e)
+    {
+        if (!e.Handled && HandleHelpShortcut(e.Key == Key.System ? e.SystemKey : e.Key, viewModel.Help, viewModel.ToggleHelp))
+        {
+            e.Handled = true;
+        }
+    }
+
+    // The Help window counts as part of the app: right-click captures while either window is active, but only while
+    // the Measurement page is on screen. On every other page right-click is an ordinary right-click.
     private bool AcceptMeasurementMouseInput =>
         (IsActive || helpWindow?.IsActive == true) && IsEnabled && WindowState != WindowState.Minimized
-        && viewModel.Measurement.IsMeasurementModeActive;
+        && viewModel.IsMeasurementPageActive && viewModel.Measurement.IsMeasurementModeActive;
 
     private void OnMeasurementMouseDown(object sender, MouseButtonEventArgs e)
     {
@@ -54,48 +86,73 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ShowHelp(object sender, ExecutedRoutedEventArgs e) => viewModel.ShowHelp();
+    // The ? button (ApplicationCommands.Help): the same function as F1, but never closes an open Help window.
+    private void HelpButtonPressed(object sender, ExecutedRoutedEventArgs e) => viewModel.ToggleHelp(HelpTrigger.Button);
 
     private void OnHelpChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(HelpPanel.IsOpen))
-        {
-            return;
-        }
-
-        if (!viewModel.Help.IsOpen)
+        if (e.PropertyName == nameof(HelpPanel.IsOpen) && !viewModel.Help.IsOpen)
         {
             helpWindow?.Hide();
-            return;
-        }
 
+            // Back to the app, so the next key press (F1 again, a shortcut) reaches the main window.
+            if (IsVisible)
+            {
+                Activate();
+            }
+        }
+    }
+
+    // Single instance: created once, then only shown, restored and activated. Opening never does nothing silently.
+    private void BringHelpToFront()
+    {
         if (helpWindow is null)
         {
-            helpWindow = new HelpWindow(viewModel.Help, OnMeasurementMouseDown, () => AcceptMeasurementMouseInput)
+            helpWindow = new HelpWindow(viewModel.Help, OnMeasurementMouseDown, () => AcceptMeasurementMouseInput,
+                OnHelpShortcut)
             {
                 Owner = this,
-                ShowActivated = false,
                 WindowStartupLocation = WindowStartupLocation.Manual,
             };
-            PlaceHelpWindow(helpWindow);
+            PlaceHelpWindow(helpWindow, firstTime: true);
+        }
+        else
+        {
+            PlaceHelpWindow(helpWindow, firstTime: false);
+        }
+
+        if (helpWindow.WindowState == WindowState.Minimized)
+        {
+            helpWindow.WindowState = WindowState.Normal;
         }
 
         helpWindow.Show();
+        helpWindow.Activate();
+        helpWindow.ScrollToCurrentSection();
     }
 
-    // First time only: near the top-right corner, inside the main window. Later it opens where the user left it.
-    private void PlaceHelpWindow(Window window)
+    // First time: near the top-right corner, inside the main window. Later it opens where the user left it, pulled back
+    // onto the screen if that place is no longer visible (another monitor, a resolution change).
+    private void PlaceHelpWindow(Window window, bool firstTime)
     {
-        var source = PresentationSource.FromVisual(this);
+        var area = SystemParameters.WorkArea;
 
-        if (source?.CompositionTarget is null)
+        if (firstTime && PresentationSource.FromVisual(this)?.CompositionTarget is { } target)
         {
-            return;
+            var topRight = target.TransformFromDevice.Transform(PointToScreen(new Point(ActualWidth, 0)));
+            window.Left = topRight.X - window.Width - 32;
+            window.Top = topRight.Y + 72;
+        }
+        else if (firstTime || double.IsNaN(window.Left) || double.IsNaN(window.Top))
+        {
+            window.Left = area.Right - window.Width - 32;
+            window.Top = area.Top + 72;
         }
 
-        var topRight = source.CompositionTarget.TransformFromDevice.Transform(PointToScreen(new Point(ActualWidth, 0)));
-        window.Left = topRight.X - window.Width - 32;
-        window.Top = topRight.Y + 72;
+        var screenLeft = SystemParameters.VirtualScreenLeft;
+        var screenTop = SystemParameters.VirtualScreenTop;
+        window.Left = Math.Clamp(window.Left, screenLeft, Math.Max(screenLeft, screenLeft + SystemParameters.VirtualScreenWidth - window.Width));
+        window.Top = Math.Clamp(window.Top, screenTop, Math.Max(screenTop, screenTop + SystemParameters.VirtualScreenHeight - 80));
     }
 
     protected override void OnContextMenuOpening(ContextMenuEventArgs e)
@@ -122,6 +179,7 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         viewModel.Help.PropertyChanged -= OnHelpChanged;
+        viewModel.Help.FocusRequested -= BringHelpToFront;
         viewModel.Dispose();
         base.OnClosed(e);
     }

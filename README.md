@@ -1,6 +1,6 @@
-# SPP CT007
+# Gamma Core Log
 
-SPP CT007 (CT007 Measurement Studio) is a Windows desktop app for logging CT007 gamma measurements along a drillhole.
+Gamma Core Log (formerly SPP CT007 / CT007 Measurement Studio) is a Windows desktop app for logging CT007 gamma measurements along a drillhole.
 The operator picks a drillhole, right-clicks to capture a few seconds of readings from the local Gamma Guard (CT008)
 SQLite database, and each capture becomes one depth interval in the table. Measurements are kept in a local SQLite file,
 exported to CSV, and uploaded to a central SQL Server database through a small ASP.NET Core API.
@@ -12,7 +12,8 @@ exported to CSV, and uploaded to a central SQL Server database through a small A
 | `Frontend/` | WPF desktop app and its installer script |
 | `Backend/` | ASP.NET Core API (drillhole list, measurement upload, uploaded data) |
 | `Tests/` | Console test harness for both projects |
-| `tools/` | `check-db.ps1`, a read-only inspector for the app's `measurements.db` |
+| `docs/` | User guide (`Gamma-Core-Log-User-Guide.docx`, [docs/README.md](docs/README.md)) and its screenshots |
+| `tools/` | `check-db.ps1`, a read-only inspector for the app's `measurements.db`; `docs/build-user-guide.js`, which builds the Word user guide |
 | `Images/` | Screenshots |
 | `SHIBA/` | CT008 Monitor source handed over by EIC, kept for reference |
 

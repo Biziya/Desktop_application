@@ -34,7 +34,8 @@ public sealed record BluetoothDeviceOption(ulong Address, string Name, string? D
 
 /// <summary>
 /// CT007-M detection on this laptop: a device matches <see cref="DeviceSettings.Ct007Address"/> when set, otherwise
-/// its name starts with <see cref="DeviceSettings.Ct007NamePrefix"/>. Read-only; never pairs or connects.
+/// its name matches <see cref="DeviceSettings.Ct007NamePrefix"/> after <see cref="DeviceName.Normalize"/> ("CT007-M", "CT007-T" → "CT007").
+/// Read-only; never pairs or connects.
 /// </summary>
 public sealed class Ct007BluetoothCheck(DeviceSettings settings, IBluetoothReader reader)
 {
@@ -47,7 +48,7 @@ public sealed class Ct007BluetoothCheck(DeviceSettings settings, IBluetoothReade
     {
     }
 
-    public static LocalStatus NotSelected { get; } = new(LocalState.NotSelected, "No device selected", "Select the CT007-M device to monitor.");
+    public static LocalStatus NotSelected { get; } = new(LocalState.NotSelected, "No device selected", "Select the CT007 device to monitor.");
 
     public IReadOnlyList<BluetoothDeviceOption> ListDevices() =>
         reader.ListDevices(NameMayMatch).Where(IsCt007)
@@ -100,14 +101,12 @@ public sealed class Ct007BluetoothCheck(DeviceSettings settings, IBluetoothReade
             return device.Address == address;
         }
 
-        return settings.Ct007NamePrefix.Length > 0 &&
-               device.Name.Trim().StartsWith(settings.Ct007NamePrefix, StringComparison.OrdinalIgnoreCase);
+        return DeviceName.Matches(device.Name, settings.Ct007NamePrefix);
     }
 
-    // Only devices that can be CT007-M are opened (with a configured address, the name does not matter).
+    // Only devices that can be a CT007 (any variant) are opened (with a configured address, the name does not matter).
     private bool NameMayMatch(string name) =>
-        ParseAddress(settings.Ct007Address) is not null ||
-        (settings.Ct007NamePrefix.Length > 0 && name.Trim().StartsWith(settings.Ct007NamePrefix, StringComparison.OrdinalIgnoreCase));
+        ParseAddress(settings.Ct007Address) is not null || DeviceName.Matches(name, settings.Ct007NamePrefix);
 
     private static ulong? ParseAddress(string text)
     {

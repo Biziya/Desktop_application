@@ -20,13 +20,11 @@
         <DataTemplate DataType="{x:Type viewer:DataViewerViewModel}"><viewer:DataViewerPage/></DataTemplate>
     </Window.Resources>
 
-    <!-- The Help button of every page header sends ApplicationCommands.Help (F1 does too); Esc closes the Help window. -->
+    <!-- The ? button of every page header sends ApplicationCommands.Help. F1 and Esc are handled in PreviewKeyDown
+         (MainWindow.xaml.cs), so they work wherever the keyboard focus is. All three go through ToggleHelp. -->
     <Window.CommandBindings>
-        <CommandBinding Command="ApplicationCommands.Help" Executed="ShowHelp"/>
+        <CommandBinding Command="ApplicationCommands.Help" Executed="HelpButtonPressed"/>
     </Window.CommandBindings>
-    <Window.InputBindings>
-        <KeyBinding Key="Escape" Command="{Binding Help.CloseCommand}"/>
-    </Window.InputBindings>
 
     <Grid>
         <Grid.ColumnDefinitions>

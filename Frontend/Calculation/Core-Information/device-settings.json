@@ -1,5 +1,5 @@
 {
-  "ct007NamePrefix": "CT007-M-",
+  "ct007NamePrefix": "CT007",
   "ct007Address": "",
   "gammaGuardDatabasePath": "",
   "gammaGuardFileName": "*.sqlite",
