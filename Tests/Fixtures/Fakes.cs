@@ -229,6 +229,17 @@ public sealed class FakeDialogs : IDialogService
         return Confirm;
     }
 
+    /// <summary>Answer to "Discard new drillhole?" (true = Discard).</summary>
+    public bool DiscardNewDrillhole { get; set; } = true;
+
+    public int DiscardAsked { get; private set; }
+
+    public bool ConfirmDiscardNewDrillhole()
+    {
+        DiscardAsked++;
+        return DiscardNewDrillhole;
+    }
+
     /// <summary>The file "chosen" in the import dialog; null = cancelled.</summary>
     public string? CsvFile { get; set; }
 

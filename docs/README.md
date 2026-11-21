@@ -36,13 +36,13 @@ Pick the drillhole and check that the laptop is ready.
 
 | Field / button | What it does |
 |---|---|
-| Drillhole | Type part of the Hole ID, then pick it (Enter, or click). Drillholes you already measured are listed first. |
-| + New drillhole | Creates a drillhole that is not in the list (see below). |
-| Project / Campaign | Filled in from the drillhole. |
+| Existing / New | Existing picks a drillhole from the list. New creates one that is not in the list yet (see below). |
+| Drillhole | Type part of the Hole ID, then pick it (Enter, or click). Drillholes you already measured are listed first; **Local** marks one created on this computer. |
+| Project / Campaign | Filled in from the drillhole (chosen by you in New). |
 | Operator / Notes | Your name (filled with your Windows account) and remarks. Saved with every reading. |
 | Device Status | Green means ready. Red or amber says what needs fixing; **Retry** checks again. |
 | Select / Change Database | Pick the GammaGuard database yourself if the app cannot find it. |
-| Save & Continue | Saves the choice and opens the Measurement page. |
+| Save & Continue | The only save button. Saves the choice (in New: creates the drillhole first) and opens the Measurement page. |
 
 ![Device Status with a problem](guide-images/device-status-problem.png)
 
@@ -50,18 +50,27 @@ Pick the drillhole and check that the laptop is ready.
 
 Use this when the drillhole is not in the list yet (for example, a hole that has not reached the central collar list).
 
-1. Click **+ New drillhole** under the Drillhole box.
-2. Enter the **Drillhole ID**, **Campaign** and **Project**. All three are required.
-3. Click **Save drillhole**.
+1. Click **New** in the Existing / New switch above the Drillhole box. Any drillhole you had picked is cleared.
+2. Type the **Drillhole ID**.
+3. Pick the **Project** and the **Campaign** from their lists. If yours is not there, choose **+ Add new project** (or
+   **+ Add new campaign**) and type it; the **×** goes back to the list.
+4. Click **Save & Continue**. The drillhole is created, selected and the Measurement page opens, all in one step.
 
-If Campaign or Project is empty, the drillhole is **not** saved: the empty box turns red, a message under it says what
-is missing, and an error message appears at the bottom of the window. An ID that already exists is refused too;
-pick it from the list instead.
+Drillhole ID, Project and Campaign are all required. **Save & Continue** stays disabled until they are filled in, and
+an empty box shows what is missing. Spaces at the start and end are removed.
 
-![New drillhole form with Campaign and Project missing](guide-images/new-drillhole.png)
+If the Drillhole ID already exists (in any letter case), the app says so: click **switch to Existing to select it** to
+pick that drillhole instead. A new Project or Campaign that already exists in another letter case (for example
+`zoovch` next to `Zoovch`) is refused too; pick it from the list.
 
-The new drillhole is stored on this laptop, added to the list and selected. It reaches the central database together
-with its uploaded measurements. Existing drillholes can still be picked from the list as before.
+![New mode with the Campaign still missing](guide-images/new-drillhole.png)
+
+The new drillhole is stored on this computer only, also when the app is offline, and is never sent to the central
+drillhole list. It is listed with a **Local** tag and is still there after a restart. Its new Project or Campaign is
+offered in the lists straight away.
+
+Switching back to Existing with something typed asks **Discard new drillhole?** first: **Discard** drops it, **Keep
+editing** stays in New.
 
 ## Measurement
 
@@ -143,7 +152,7 @@ brings it to the front.
 | Device Status is red for Bluetooth | Check the probe is on and paired. Any CT007 name (CT007-M, CT007-T …) is accepted. |
 | "No samples were received" after a capture | GammaGuard is not recording the probe. Check it in GammaGuard and try again. |
 | Right-click does nothing | You are not on the Measurement page, or Start has not been pressed. |
-| New drillhole is not saved | Fill in Drillhole ID, Campaign and Project; the red box shows what is missing. |
+| Save & Continue is greyed out in New | Fill in Drillhole ID, Project and Campaign; the red box shows what is missing or already exists. |
 | Sidebar shows Offline | The backend cannot be reached. Measuring still works; upload later. |
 
 Your measurements are stored per Windows user in `%LocalAppData%\CT007_Measurement_Studio\measurements.db`.

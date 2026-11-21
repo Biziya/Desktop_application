@@ -8,16 +8,20 @@ namespace Frontend.Pages.CoreInformation.DrillholeInformation;
 /// </summary>
 public sealed record DrillholeOption
 {
-    private DrillholeOption(string header, DrillholeResponse? drillhole, bool showSeparator)
+    private DrillholeOption(string header, DrillholeResponse? drillhole, bool showSeparator, bool isLocal = false)
     {
         Header = header;
         Drillhole = drillhole;
         ShowSeparator = showSeparator;
+        IsLocal = isLocal;
     }
 
     public string Header { get; }
 
     public DrillholeResponse? Drillhole { get; }
+
+    /// <summary>Created on this computer and not in the central drillhole list: shown with a "Local" tag.</summary>
+    public bool IsLocal { get; }
 
     /// <summary>True for a group heading (not selectable).</summary>
     public bool IsHeader => Drillhole is null;
@@ -40,5 +44,5 @@ public sealed record DrillholeOption
 
     private static DrillholeOption Group(string header, bool showSeparator) => new(header, null, showSeparator);
 
-    public static DrillholeOption Item(DrillholeResponse drillhole) => new("", drillhole, false);
+    public static DrillholeOption Item(DrillholeResponse drillhole, bool isLocal = false) => new("", drillhole, false, isLocal);
 }

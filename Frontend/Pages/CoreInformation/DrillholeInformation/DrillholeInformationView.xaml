@@ -56,6 +56,13 @@
                     <StackPanel x:Name="ItemPart" Orientation="Horizontal">
                         <TextBlock Text="{Binding HoleId}" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Details}" Foreground="{StaticResource Muted}" Margin="10,0,0,0"/>
+                        <!-- Created on this computer: only in this laptop's list, never sent to the central one. -->
+                        <Border Margin="8,0,0,0" Padding="5,0" CornerRadius="3" BorderThickness="1"
+                                BorderBrush="{StaticResource Muted}" VerticalAlignment="Center"
+                                ToolTip="{StaticResource LocalTagToolTip}"
+                                Visibility="{Binding IsLocal, Converter={StaticResource BoolVisibility}}">
+                            <TextBlock Text="{StaticResource LocalTagLabel}" FontSize="11" Foreground="{StaticResource Muted}"/>
+                        </Border>
                     </StackPanel>
                 </Grid>
                 <DataTemplate.Triggers>
@@ -82,17 +89,98 @@
                 <Setter Property="IsTabStop" Value="False"/>
                 <Setter Property="ToolTip" Value="{StaticResource AutofilledToolTip}"/>
             </Style>
+            <!-- " *" after the Project and Campaign labels in New mode only (they are filled in for you in Existing). -->
+            <Style x:Key="NewModeStar" TargetType="Run" BasedOn="{StaticResource RequiredStar}">
+                <Setter Property="Text" Value=""/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsNewMode}" Value="True">
+                        <Setter Property="Text" Value=" *"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <!-- Shown in New mode / in Existing mode only. -->
+            <Style x:Key="NewOnly" TargetType="FrameworkElement">
+                <Setter Property="Visibility" Value="{Binding IsNewMode, Converter={StaticResource BoolVisibility}}"/>
+            </Style>
+            <Style x:Key="ExistingOnly" TargetType="FrameworkElement">
+                <Setter Property="Visibility" Value="{Binding IsNewMode, Converter={StaticResource InverseBoolVisibility}}"/>
+            </Style>
+            <!-- Drillhole ID box in New mode: red border while it shows an error. -->
+            <Style x:Key="NewDrillholeIdBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsNewDrillholeIdInvalid}" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <!-- Project / Campaign in New mode (DataContext: a NewNameField): the list, or the text box after "+ Add new …". -->
+            <Style x:Key="NameChoiceBox" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                <Setter Property="Visibility" Value="{Binding IsChoosing, Converter={StaticResource BoolVisibility}}"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasError}" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <Style x:Key="NameTextBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="Visibility" Value="{Binding IsAdding, Converter={StaticResource BoolVisibility}}"/>
+                <Setter Property="Padding" Value="11,0,30,0"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasError}" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <DataTemplate x:Key="ProjectChoice">
+                <TextBlock x:Name="Name" Text="{Binding Name}"/>
+                <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding IsAddNew}" Value="True">
+                        <Setter TargetName="Name" Property="Text" Value="{StaticResource AddProjectLabel}"/>
+                        <Setter TargetName="Name" Property="Foreground" Value="{StaticResource Blue}"/>
+                    </DataTrigger>
+                </DataTemplate.Triggers>
+            </DataTemplate>
+            <DataTemplate x:Key="CampaignChoice">
+                <TextBlock x:Name="Name" Text="{Binding Name}"/>
+                <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding IsAddNew}" Value="True">
+                        <Setter TargetName="Name" Property="Text" Value="{StaticResource AddCampaignLabel}"/>
+                        <Setter TargetName="Name" Property="Foreground" Value="{StaticResource Blue}"/>
+                    </DataTrigger>
+                </DataTemplate.Triggers>
+            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <!-- One row of four fields (Drillhole, Project, Campaign, Operator), then Notes across; Save &amp; Continue at the end. -->
+    <!-- Existing | New switch, then one row of four fields (Drillhole, Project, Campaign, Operator) that changes in place
+         with the mode, then Notes across; Save &amp; Continue at the end is the only save button. -->
     <Border Style="{StaticResource Card}">
         <DockPanel>
             <TextBlock DockPanel.Dock="Top" Text="{StaticResource DrillholeSectionTitle}" Style="{StaticResource SectionTitle}"/>
-            <!-- Saving belongs to this form, so the action sits at its end. A missing drillhole is reported (red border and
-                 toast) only after Save & Continue. -->
+            <!-- Existing: pick a drillhole from the list. New: create one (Drillhole ID, Project and Campaign required).
+                 Disabled while measuring. Leaving New with something entered asks "Discard new drillhole?" first. -->
+            <Border DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="0,0,0,14" Padding="2" CornerRadius="6"
+                    Background="{StaticResource HoverSurface}"
+                    IsEnabled="{Binding CanSwitchMode}"
+                    ToolTip="{StaticResource DrillholeModeToolTip}"
+                    AutomationProperties.AutomationId="DrillholeModeSwitch">
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton GroupName="DrillholeMode" Style="{StaticResource SegmentPill}" Padding="16,4" FontSize="13"
+                                 Content="{StaticResource DrillholeModeExistingLabel}"
+                                 IsChecked="{Binding IsExistingModeSelected}"
+                                 AutomationProperties.AutomationId="DrillholeModeExisting"/>
+                    <RadioButton GroupName="DrillholeMode" Style="{StaticResource SegmentPill}" Padding="16,4" FontSize="13"
+                                 Content="{StaticResource DrillholeModeNewLabel}"
+                                 IsChecked="{Binding IsNewModeSelected}"
+                                 AutomationProperties.AutomationId="DrillholeModeNew"/>
+                </StackPanel>
+            </Border>
+            <!-- Saving belongs to this form, so the action sits at its end. Existing: a missing drillhole is reported (red
+                 border and toast) after the click. New: disabled until Drillhole ID, Project and Campaign are valid; one
+                 click creates the drillhole, selects it and continues. -->
             <Button DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="{StaticResource SaveAndContinueMargin}"
-                    Content="{StaticResource SaveAndContinueLabel}" Command="{Binding SaveCommand}"/>
+                    Content="{StaticResource SaveAndContinueLabel}" Command="{Binding SaveCommand}"
+                    AutomationProperties.AutomationId="SaveAndContinueButton"/>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="{StaticResource DrillholeColumnWidth}" MinWidth="{StaticResource DrillholeColumnMinWidth}"/>
@@ -103,157 +191,147 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <!-- Searchable dropdown (cached backend list): type part of a Hole ID to filter; the closest match is
-                     highlighted and Enter picks it; arrows + Enter or the mouse pick any entry; Escape closes the list.
-                     Two groups: Measured drillholes (newest first), then All drillholes (A–Z); while searching, exact
-                     matches first, then prefix, then partial. Picking fills Project and Campaign; typing never picks
-                     or rewrites the text. The × clears the drillhole (not Operator, Notes or stored data). -->
                 <StackPanel Style="{StaticResource FieldPanel}">
-                    <TextBlock Style="{StaticResource FieldLabel}"><Run Text="{StaticResource DrillholeLabel}"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
-                    <!-- Text and SelectedItem are bound BEFORE ItemsSource on purpose: when the page is replaced
-                         (navigation), WPF detaches bindings in this order. With ItemsSource first, the emptied list
-                         cleared the selection and the dropdown wrote "" back into the still-attached Text binding,
-                         erasing the picked drillhole (and its Project/Campaign) in the ViewModel. -->
-                    <Grid>
-                        <ComboBox x:Name="DrillholeBox"
-                                  Style="{StaticResource DrillholeBox}"
-                                  IsEditable="True"
-                                  IsTextSearchEnabled="False"
-                                  StaysOpenOnEdit="True"
-                                  Text="{Binding DrillholeSearch, UpdateSourceTrigger=PropertyChanged}"
-                                  SelectedItem="{Binding PickedDrillhole, Mode=TwoWay}"
-                                  ItemsSource="{Binding DrillholeOptions}"
-                                  TextSearch.TextPath="HoleId"
-                                  TextBoxBase.TextChanged="DrillholeTyped"
-                                  PreviewKeyDown="DrillholeKeyDown"
-                                  Padding="{StaticResource DrillholeBoxPadding}"
-                                  ItemContainerStyle="{StaticResource DrillholeItem}"
-                                  ItemTemplate="{StaticResource DrillholeEntry}"
-                                  AutomationProperties.Name="{StaticResource DrillholeLabel}"/>
-                        <!-- Inside the box, left of the chevron; only shown when there is something to clear. -->
-                        <Button Style="{StaticResource ClearButton}"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
-                                Margin="{StaticResource ClearDrillholeMargin}"
-                                Command="{Binding ClearDrillholeCommand}"
-                                Visibility="{Binding CanClearDrillhole, Converter={StaticResource BoolVisibility}}"
-                                ToolTip="{StaticResource ClearDrillholeToolTip}"
-                                AutomationProperties.Name="{StaticResource ClearDrillholeToolTip}"/>
-                    </Grid>
-                    <DockPanel>
-                        <Button DockPanel.Dock="Right"
-                                Content="{StaticResource RetryDrillholesLabel}"
-                                Style="{StaticResource SmallButton}"
-                                Margin="{StaticResource RetryDrillholesMargin}"
-                                Command="{Binding RefreshDrillholesCommand}"
-                                Visibility="{Binding CanRetryDrillholes, Converter={StaticResource BoolVisibility}}"/>
-                        <TextBlock Style="{StaticResource StatusMessage}" Text="{Binding DrillholesMessage}"/>
-                    </DockPanel>
-                    <!-- Opens the New drillhole form below (not while measuring). -->
-                    <Button HorizontalAlignment="Left" Margin="0,6,0,0"
-                            Style="{StaticResource SmallButton}"
-                            Content="{StaticResource NewDrillholeLabel}"
-                            Command="{Binding NewDrillholeCommand}"
-                            ToolTip="{StaticResource NewDrillholeToolTip}"
-                            AutomationProperties.AutomationId="NewDrillholeButton"
-                            AutomationProperties.Name="{StaticResource NewDrillholeLabel}"/>
+                    <!-- Existing: searchable dropdown (cached backend list plus drillholes created here, tagged Local):
+                         type part of a Hole ID to filter; the closest match is highlighted and Enter picks it; arrows +
+                         Enter or the mouse pick any entry; Escape closes the list. Two groups: Measured drillholes
+                         (newest first), then All drillholes (A–Z); while searching, exact matches first, then prefix,
+                         then partial. Picking fills Project and Campaign; typing never picks or rewrites the text. The ×
+                         clears the drillhole (not Operator, Notes or stored data). -->
+                    <StackPanel Style="{StaticResource ExistingOnly}">
+                        <TextBlock Style="{StaticResource FieldLabel}"><Run Text="{StaticResource DrillholeLabel}"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
+                        <!-- Text and SelectedItem are bound BEFORE ItemsSource on purpose: when the page is replaced
+                             (navigation), WPF detaches bindings in this order. With ItemsSource first, the emptied list
+                             cleared the selection and the dropdown wrote "" back into the still-attached Text binding,
+                             erasing the picked drillhole (and its Project/Campaign) in the ViewModel. -->
+                        <Grid>
+                            <ComboBox x:Name="DrillholeBox"
+                                      Style="{StaticResource DrillholeBox}"
+                                      IsEditable="True"
+                                      IsTextSearchEnabled="False"
+                                      StaysOpenOnEdit="True"
+                                      Text="{Binding DrillholeSearch, UpdateSourceTrigger=PropertyChanged}"
+                                      SelectedItem="{Binding PickedDrillhole, Mode=TwoWay}"
+                                      ItemsSource="{Binding DrillholeOptions}"
+                                      TextSearch.TextPath="HoleId"
+                                      TextBoxBase.TextChanged="DrillholeTyped"
+                                      PreviewKeyDown="DrillholeKeyDown"
+                                      Padding="{StaticResource DrillholeBoxPadding}"
+                                      ItemContainerStyle="{StaticResource DrillholeItem}"
+                                      ItemTemplate="{StaticResource DrillholeEntry}"
+                                      AutomationProperties.Name="{StaticResource DrillholeLabel}"/>
+                            <!-- Inside the box, left of the chevron; only shown when there is something to clear. -->
+                            <Button Style="{StaticResource ClearButton}"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Margin="{StaticResource ClearDrillholeMargin}"
+                                    Command="{Binding ClearDrillholeCommand}"
+                                    Visibility="{Binding CanClearDrillhole, Converter={StaticResource BoolVisibility}}"
+                                    ToolTip="{StaticResource ClearDrillholeToolTip}"
+                                    AutomationProperties.Name="{StaticResource ClearDrillholeToolTip}"/>
+                        </Grid>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right"
+                                    Content="{StaticResource RetryDrillholesLabel}"
+                                    Style="{StaticResource SmallButton}"
+                                    Margin="{StaticResource RetryDrillholesMargin}"
+                                    Command="{Binding RefreshDrillholesCommand}"
+                                    Visibility="{Binding CanRetryDrillholes, Converter={StaticResource BoolVisibility}}"/>
+                            <TextBlock Style="{StaticResource StatusMessage}" Text="{Binding DrillholesMessage}"/>
+                        </DockPanel>
+                    </StackPanel>
+                    <!-- New: the Hole ID of the drillhole to create. An ID that is already listed (any letter case) is
+                         refused, with a link that switches to Existing and selects it. -->
+                    <StackPanel Style="{StaticResource NewOnly}" Tag="id" LostKeyboardFocus="NewFieldLostFocus">
+                        <TextBlock Style="{StaticResource FieldLabel}"><Run Text="{StaticResource NewDrillholeIdLabel}"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
+                        <TextBox x:Name="NewDrillholeIdBox" Style="{StaticResource NewDrillholeIdBox}"
+                                 Text="{Binding NewDrillholeId, UpdateSourceTrigger=PropertyChanged}"
+                                 IsVisibleChanged="FocusWhenShown"
+                                 AutomationProperties.AutomationId="NewDrillholeIdBox"
+                                 AutomationProperties.Name="{StaticResource NewDrillholeIdLabel}"/>
+                        <TextBlock Style="{StaticResource FieldError}" Text="{Binding NewDrillholeIdError}"
+                                   Visibility="{Binding IsNewDrillholeIdRequired, Converter={StaticResource BoolVisibility}}"
+                                   AutomationProperties.AutomationId="NewDrillholeIdError"/>
+                        <TextBlock Style="{StaticResource FieldError}"
+                                   Visibility="{Binding IsNewDrillholeIdDuplicate, Converter={StaticResource BoolVisibility}}"
+                                   AutomationProperties.AutomationId="NewDrillholeIdDuplicate"><Run Text="Drillhole already exists — "/><Hyperlink
+                                Command="{Binding SelectExistingDuplicateCommand}"
+                                AutomationProperties.AutomationId="SwitchToExistingLink"><Run Text="{StaticResource SwitchToExistingLabel}"/></Hyperlink></TextBlock>
+                    </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Style="{StaticResource FieldPanel}">
-                    <TextBlock Text="{StaticResource ProjectLabel}" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}"><Run Text="{StaticResource ProjectLabel}"/><Run Style="{StaticResource NewModeStar}"/></TextBlock>
                     <TextBox Style="{StaticResource AutofilledField}" Text="{Binding DrillholeName, Mode=OneWay}"
+                             Visibility="{Binding IsNewMode, Converter={StaticResource InverseBoolVisibility}}"
+                             AutomationProperties.AutomationId="ProjectValue"
                              AutomationProperties.Name="{StaticResource ProjectLabel}"/>
+                    <!-- New: an existing project, or "+ Add new project" to type one (× goes back to the list). -->
+                    <StackPanel Style="{StaticResource NewOnly}" Tag="project" LostKeyboardFocus="NewFieldLostFocus">
+                        <Grid DataContext="{Binding NewProject}">
+                            <ComboBox x:Name="NewProjectBox" Style="{StaticResource NameChoiceBox}"
+                                      SelectedItem="{Binding Picked, Mode=TwoWay}"
+                                      ItemsSource="{Binding Choices}"
+                                      ItemTemplate="{StaticResource ProjectChoice}"
+                                      AutomationProperties.AutomationId="NewProjectBox"
+                                      AutomationProperties.Name="{StaticResource ProjectLabel}"/>
+                            <TextBox x:Name="NewProjectText" Style="{StaticResource NameTextBox}"
+                                     Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                                     IsVisibleChanged="FocusWhenShown"
+                                     AutomationProperties.AutomationId="NewProjectText"
+                                     AutomationProperties.Name="New project"/>
+                            <Button Style="{StaticResource ClearButton}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Margin="0,0,4,0"
+                                    Command="{Binding CancelAddCommand}"
+                                    Visibility="{Binding IsAdding, Converter={StaticResource BoolVisibility}}"
+                                    ToolTip="{StaticResource CancelAddToolTip}"
+                                    AutomationProperties.AutomationId="CancelAddProject"
+                                    AutomationProperties.Name="{StaticResource CancelAddToolTip}"/>
+                        </Grid>
+                        <TextBlock Style="{StaticResource FieldError}" Text="{Binding NewProject.Error}"
+                                   Visibility="{Binding NewProject.HasError, Converter={StaticResource BoolVisibility}}"
+                                   AutomationProperties.AutomationId="NewProjectError"/>
+                    </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Style="{StaticResource FieldPanel}">
-                    <TextBlock Text="{StaticResource CampaignLabel}" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}"><Run Text="{StaticResource CampaignLabel}"/><Run Style="{StaticResource NewModeStar}"/></TextBlock>
                     <TextBox Style="{StaticResource AutofilledField}" Text="{Binding ProjectArea, Mode=OneWay}" TextAlignment="Right"
+                             Visibility="{Binding IsNewMode, Converter={StaticResource InverseBoolVisibility}}"
+                             AutomationProperties.AutomationId="CampaignValue"
                              AutomationProperties.Name="{StaticResource CampaignLabel}"/>
+                    <!-- New: an existing campaign, or "+ Add new campaign" to type one (× goes back to the list). -->
+                    <StackPanel Style="{StaticResource NewOnly}" Tag="campaign" LostKeyboardFocus="NewFieldLostFocus">
+                        <Grid DataContext="{Binding NewCampaign}">
+                            <ComboBox x:Name="NewCampaignBox" Style="{StaticResource NameChoiceBox}"
+                                      SelectedItem="{Binding Picked, Mode=TwoWay}"
+                                      ItemsSource="{Binding Choices}"
+                                      ItemTemplate="{StaticResource CampaignChoice}"
+                                      AutomationProperties.AutomationId="NewCampaignBox"
+                                      AutomationProperties.Name="{StaticResource CampaignLabel}"/>
+                            <TextBox x:Name="NewCampaignText" Style="{StaticResource NameTextBox}"
+                                     Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                                     IsVisibleChanged="FocusWhenShown"
+                                     AutomationProperties.AutomationId="NewCampaignText"
+                                     AutomationProperties.Name="New campaign"/>
+                            <Button Style="{StaticResource ClearButton}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Margin="0,0,4,0"
+                                    Command="{Binding CancelAddCommand}"
+                                    Visibility="{Binding IsAdding, Converter={StaticResource BoolVisibility}}"
+                                    ToolTip="{StaticResource CancelAddToolTip}"
+                                    AutomationProperties.AutomationId="CancelAddCampaign"
+                                    AutomationProperties.Name="{StaticResource CancelAddToolTip}"/>
+                        </Grid>
+                        <TextBlock Style="{StaticResource FieldError}" Text="{Binding NewCampaign.Error}"
+                                   Visibility="{Binding NewCampaign.HasError, Converter={StaticResource BoolVisibility}}"
+                                   AutomationProperties.AutomationId="NewCampaignError"/>
+                    </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="3" Style="{StaticResource FieldPanel}">
                     <TextBlock Text="{StaticResource OperatorLabel}" Style="{StaticResource FieldLabel}"/>
                     <TextBox Text="{Binding Operator, UpdateSourceTrigger=PropertyChanged}"
                              AutomationProperties.Name="{StaticResource OperatorLabel}"/>
                 </StackPanel>
-                <!-- New drillhole: all three fields are required. Save is refused while one is empty: the box turns red
-                     with a message under it (and one error toast). The new drillhole is stored on this laptop, added to
-                     the list and selected; it reaches the central database with its uploaded measurements. -->
-                <Border Grid.Row="1" Grid.ColumnSpan="4" Margin="{StaticResource DrillholeFieldMargin}" Padding="14,12"
-                        Background="{StaticResource HoverSurface}" BorderBrush="{StaticResource Line}" BorderThickness="1"
-                        CornerRadius="{StaticResource ControlRadius}"
-                        AutomationProperties.AutomationId="NewDrillholeForm"
-                        Visibility="{Binding IsCreatingDrillhole, Converter={StaticResource BoolVisibility}}">
-                    <StackPanel>
-                        <TextBlock Text="{StaticResource NewDrillholeTitle}" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="2*"/>
-                                <ColumnDefinition Width="1.3*"/>
-                                <ColumnDefinition Width="1.3*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Margin="0,0,14,0">
-                                <TextBlock Style="{StaticResource FieldLabel}"><Run Text="{StaticResource NewDrillholeIdLabel}"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
-                                <TextBox x:Name="NewDrillholeIdBox" Text="{Binding NewDrillholeId, UpdateSourceTrigger=PropertyChanged}"
-                                         AutomationProperties.Name="{StaticResource NewDrillholeIdLabel}">
-                                    <TextBox.Style>
-                                        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsNewDrillholeIdInvalid}" Value="True">
-                                                    <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBox.Style>
-                                </TextBox>
-                                <TextBlock Style="{StaticResource FieldError}" Text="{Binding NewDrillholeIdError}"
-                                           Visibility="{Binding IsNewDrillholeIdInvalid, Converter={StaticResource BoolVisibility}}"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Margin="0,0,14,0">
-                                <TextBlock Style="{StaticResource FieldLabel}"><Run Text="{StaticResource CampaignLabel}"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
-                                <TextBox Text="{Binding NewCampaign, UpdateSourceTrigger=PropertyChanged}"
-                                         AutomationProperties.Name="New drillhole campaign">
-                                    <TextBox.Style>
-                                        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsNewCampaignInvalid}" Value="True">
-                                                    <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBox.Style>
-                                </TextBox>
-                                <TextBlock Style="{StaticResource FieldError}" Text="{Binding NewCampaignError}"
-                                           Visibility="{Binding IsNewCampaignInvalid, Converter={StaticResource BoolVisibility}}"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2" Margin="0,0,14,0">
-                                <TextBlock Style="{StaticResource FieldLabel}"><Run Text="{StaticResource ProjectLabel}"/><Run Text=" *" Style="{StaticResource RequiredStar}"/></TextBlock>
-                                <TextBox Text="{Binding NewProject, UpdateSourceTrigger=PropertyChanged}"
-                                         AutomationProperties.Name="New drillhole project">
-                                    <TextBox.Style>
-                                        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsNewProjectInvalid}" Value="True">
-                                                    <Setter Property="BorderBrush" Value="{StaticResource Danger}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBox.Style>
-                                </TextBox>
-                                <TextBlock Style="{StaticResource FieldError}" Text="{Binding NewProjectError}"
-                                           Visibility="{Binding IsNewProjectInvalid, Converter={StaticResource BoolVisibility}}"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,22,0,0">
-                                <Button Content="Cancel" Style="{StaticResource SecondaryButton}" Padding="14,7" Margin="0,0,8,0"
-                                        Command="{Binding CancelNewDrillholeCommand}"/>
-                                <Button Content="{StaticResource SaveNewDrillholeLabel}" Padding="14,7"
-                                        Command="{Binding SaveNewDrillholeCommand}"
-                                        AutomationProperties.AutomationId="SaveNewDrillholeButton"/>
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-                <DockPanel Grid.Row="2" Grid.ColumnSpan="4" Margin="{StaticResource DrillholeFieldMargin}">
+                <DockPanel Grid.Row="1" Grid.ColumnSpan="4" Margin="{StaticResource DrillholeFieldMargin}">
                     <TextBlock DockPanel.Dock="Top" Text="{StaticResource NotesLabel}" Style="{StaticResource FieldLabel}"/>
                     <TextBox
                              Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"

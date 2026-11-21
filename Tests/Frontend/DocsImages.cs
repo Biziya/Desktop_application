@@ -73,15 +73,18 @@ public static class DocsImages
             main.Toasts.Items.Clear();
             await Snap(window, output, "core-information");
 
-            // New drillhole: Save with Campaign and Project still empty shows what is missing.
-            main.Core.NewDrillholeCommand.Execute(null);
+            // New mode: Drillhole ID typed, Project picked, "+ Add new campaign" chosen but left empty, so the Campaign
+            // box shows what is missing and Save & Continue stays disabled.
+            main.Core.IsNewModeSelected = true;
             main.Core.NewDrillholeId = "DH-NEW-01";
-            await main.Core.SaveNewDrillholeAsync();
-            main.Toasts.Items.Clear();
+            main.Core.NewProject.Picked = main.Core.NewProject.Choices.First(c => c.Name == "North Ridge");
+            main.Core.NewCampaign.Picked = main.Core.NewCampaign.Choices[^1];
+            main.Core.MarkTouched("campaign");
             await Task.Delay(300);
             main.Toasts.Items.Clear();
             await Snap(window, output, "new-drillhole");
-            main.Core.CancelNewDrillholeCommand.Execute(null);
+            main.Core.IsExistingModeSelected = true;   // FakeDialogs: Discard
+            await Make.Pick(main.Core, "DH-001");
 
             // Measurement: armed, a few intervals captured, threshold line at 150 CPS, Live value and eye icon above the graph.
             main.Core.SaveCommand.Execute(null);

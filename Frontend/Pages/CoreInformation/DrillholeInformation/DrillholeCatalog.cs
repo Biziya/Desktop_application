@@ -16,9 +16,10 @@ public sealed class DrillholeCatalog
     private readonly Dictionary<string, DrillholeOption> options;
     private readonly List<DrillholeResponse> sorted;
 
-    private DrillholeCatalog(List<DrillholeResponse> all, Dictionary<string, DrillholeResponse> byId,
-        Dictionary<string, DrillholeOption> options, List<DrillholeResponse> sorted)
+    private DrillholeCatalog(List<DrillholeResponse> remote, List<DrillholeResponse> all,
+        Dictionary<string, DrillholeResponse> byId, Dictionary<string, DrillholeOption> options, List<DrillholeResponse> sorted)
     {
+        Remote = remote;
         All = all;
         this.byId = byId;
         this.options = options;
@@ -27,30 +28,46 @@ public sealed class DrillholeCatalog
 
     public static DrillholeCatalog Empty { get; } = Build([], null);
 
+    /// <summary>Every drillhole: the backend (or cached) list, then the ones created on this computer.</summary>
     public IReadOnlyList<DrillholeResponse> All { get; }
+
+    /// <summary>The backend (or cached) list only, without the drillholes created on this computer.</summary>
+    public IReadOnlyList<DrillholeResponse> Remote { get; }
 
     public int Count => All.Count;
 
-    public static DrillholeCatalog Build(IEnumerable<DrillholeResponse> list, DrillholeCatalog? previous)
+    /// <summary>
+    /// Builds the catalog from the backend (or cached) <paramref name="list"/> and the drillholes created on this
+    /// computer (<paramref name="local"/>). A local drillhole whose Hole ID is also in the backend list is listed once,
+    /// as the backend entry; the others are marked <see cref="DrillholeOption.IsLocal"/>.
+    /// </summary>
+    public static DrillholeCatalog Build(IEnumerable<DrillholeResponse> list, DrillholeCatalog? previous,
+        IEnumerable<DrillholeResponse>? local = null)
     {
         // Entries without a Hole ID cannot be selected or saved, so they are left out; duplicates are listed once.
-        var all = list
+        static List<DrillholeResponse> Clean(IEnumerable<DrillholeResponse> source) => source
             .Where(d => !string.IsNullOrWhiteSpace(d.HoleId))
             .Select(d => d with { HoleId = d.HoleId!.Trim() })
             .DistinctBy(d => d.HoleId!, StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+        var remote = Clean(list);
+        var remoteIds = new HashSet<string>(remote.Select(d => d.HoleId!), StringComparer.OrdinalIgnoreCase);
+        var all = remote.Concat(Clean(local ?? []).Where(d => !remoteIds.Contains(d.HoleId!))).ToList();
         var byId = all.ToDictionary(d => d.HoleId!, StringComparer.OrdinalIgnoreCase);
         var options = new Dictionary<string, DrillholeOption>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var drillhole in all)
         {
-            options[drillhole.HoleId!] = previous?.options.GetValueOrDefault(drillhole.HoleId!) is { } same && same.Drillhole == drillhole
+            var isLocal = !remoteIds.Contains(drillhole.HoleId!);
+            options[drillhole.HoleId!] = previous?.options.GetValueOrDefault(drillhole.HoleId!) is { } same &&
+                                         same.Drillhole == drillhole && same.IsLocal == isLocal
                 ? same
-                : DrillholeOption.Item(drillhole);
+                : DrillholeOption.Item(drillhole, isLocal);
         }
 
         var sorted = all.OrderBy(d => d.HoleId, StringComparer.OrdinalIgnoreCase).ToList();
-        return new DrillholeCatalog(all, byId, options, sorted);
+        return new DrillholeCatalog(remote, all, byId, options, sorted);
     }
 
     public DrillholeResponse? Find(string holeId) =>

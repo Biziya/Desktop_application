@@ -45,13 +45,11 @@ public sealed class CoreInformationViewModel : ObservableObject
     private ApiStatus? drillholesStatus;
     private string drillholesError = "";
     private IReadOnlyList<DrillholeResponse> localDrillholes = [];
-    private bool isCreatingDrillhole;
-    private bool showNewDrillholeErrors;
-    private bool savingNewDrillhole;
+    private readonly Action<CoreSnapshot> saved;
+    private bool isNewMode;
+    private bool newDrillholeIdTouched;
+    private bool saving;
     private string newDrillholeId = "";
-    private string newProject = "";
-    private string newCampaign = "";
-    private string newDrillholeIdTaken = "";
 
     /// <param name="searchDelay">Pause after the last keystroke before the list is filtered (default 150 ms).</param>
     public CoreInformationViewModel(
@@ -73,16 +71,17 @@ public sealed class CoreInformationViewModel : ObservableObject
         this.searchDelay = searchDelay ?? TimeSpan.FromMilliseconds(150);
         Devices = devices;
         operatorName = WindowsAccount.Current();
-        SaveCommand = new RelayCommand(_ => Save(saved));
+        this.saved = saved;
+        SaveCommand = new RelayCommand(_ => _ = SaveAsync(), _ => !saving && (!isNewMode || CanSaveNew));
         RefreshDrillholesCommand = new RelayCommand(_ => _ = LoadDrillholesAsync());
         ClearDrillholeCommand = new RelayCommand(_ => ClearDrillhole(), _ => CanClearDrillhole);
         RefreshMeasurementDatabaseCommand = new RelayCommand(_ => _ = devices.CheckMeasurementDatabaseAsync());
         RefreshGammaGuardDatabaseCommand = new RelayCommand(_ => _ = devices.CheckGammaGuardDatabaseAsync(rediscover: true));
         SelectGammaGuardDatabaseCommand = new AsyncCommand(SelectGammaGuardDatabaseAsync,
             error => Toasts.Error($"The Gamma Guard database could not be changed: {error.Message}"));
-        NewDrillholeCommand = new RelayCommand(_ => BeginNewDrillhole(), _ => !isSelectionLocked && !isCreatingDrillhole);
-        SaveNewDrillholeCommand = new RelayCommand(_ => _ = SaveNewDrillholeAsync(), _ => isCreatingDrillhole && !savingNewDrillhole);
-        CancelNewDrillholeCommand = new RelayCommand(_ => IsCreatingDrillhole = false, _ => isCreatingDrillhole);
+        SelectExistingDuplicateCommand = new RelayCommand(_ => SelectExistingDuplicate(), _ => DuplicateDrillhole is not null);
+        NewProject.InputChanged += NewDrillholeInputChanged;
+        NewCampaign.InputChanged += NewDrillholeInputChanged;
 
         // A drillhole list that failed because the backend was offline loads again as soon as it is back.
         backend.CameOnline += () =>
@@ -120,38 +119,106 @@ public sealed class CoreInformationViewModel : ObservableObject
                 Changed(nameof(CanClearDrillhole));
                 ClearDrillholeCommand.Refresh();
 
-                if (value)
+                // Measuring needs a saved drillhole: a New drillhole that was not saved is dropped.
+                if (value && isNewMode)
                 {
-                    IsCreatingDrillhole = false;
+                    ResetNewDrillhole();
+                    SetNewMode(false);
                 }
 
-                NewDrillholeCommand.Refresh();
+                Changed(nameof(CanSwitchMode));
+                SaveCommand.Refresh();
             }
         }
     }
 
-    /// <summary>Opens the New drillhole form (Drillhole ID, Campaign and Project, all required).</summary>
-    public RelayCommand NewDrillholeCommand { get; }
+    // ── Existing / New ────────────────────────────────────────────────────────────────────────────────────────────
+    // Existing: pick a drillhole from the list (Project and Campaign are filled from it). New: type a Drillhole ID and
+    // choose or add its Project and Campaign in the same row; Save & Continue creates it on this computer (never sent
+    // to the central drillhole list), selects it and continues, all in one step.
 
-    public RelayCommand SaveNewDrillholeCommand { get; }
+    /// <summary>True in New mode (create a drillhole), false in Existing mode (pick one).</summary>
+    public bool IsNewMode => isNewMode;
 
-    public RelayCommand CancelNewDrillholeCommand { get; }
-
-    /// <summary>The New drillhole form is open. Closing it discards what was typed.</summary>
-    public bool IsCreatingDrillhole
+    /// <summary>"New" radio button: only a check acts (the group unchecking it is ignored).</summary>
+    public bool IsNewModeSelected
     {
-        get => isCreatingDrillhole;
-        private set
+        get => isNewMode;
+        set
         {
-            if (Set(ref isCreatingDrillhole, value))
+            if (value)
             {
-                NewDrillholeCommand.Refresh();
-                SaveNewDrillholeCommand.Refresh();
-                CancelNewDrillholeCommand.Refresh();
+                SwitchMode(toNew: true);
             }
         }
     }
 
+    /// <summary>"Existing" radio button: only a check acts (the group unchecking it is ignored).</summary>
+    public bool IsExistingModeSelected
+    {
+        get => !isNewMode;
+        set
+        {
+            if (value)
+            {
+                SwitchMode(toNew: false);
+            }
+        }
+    }
+
+    /// <summary>The switch is disabled while measuring: the drillhole cannot change until Stop.</summary>
+    public bool CanSwitchMode => !isSelectionLocked;
+
+    /// <summary>
+    /// Switches between Existing and New. To New: the selected drillhole is cleared, so only one is ever active.
+    /// New → Existing with something typed or picked asks "Discard new drillhole?" first. False when refused.
+    /// </summary>
+    public bool SwitchMode(bool toNew)
+    {
+        if (toNew == isNewMode)
+        {
+            return true;
+        }
+
+        if (isSelectionLocked)
+        {
+            RejectWhileLocked();
+            NotifyMode();
+            return false;
+        }
+
+        if (toNew)
+        {
+            ClearDrillhole();
+            showErrors = false;
+            Changed(nameof(HasDrillholeError));
+        }
+        else if (HasNewInput && !dialogs.ConfirmDiscardNewDrillhole())
+        {
+            NotifyMode();
+            return false;
+        }
+
+        ResetNewDrillhole();
+        SetNewMode(toNew);
+        return true;
+    }
+
+    private void SetNewMode(bool value)
+    {
+        isNewMode = value;
+        NotifyMode();
+        SaveCommand.Refresh();
+    }
+
+    private void NotifyMode()
+    {
+        Changed(nameof(IsNewMode));
+        Changed(nameof(IsNewModeSelected));
+        Changed(nameof(IsExistingModeSelected));
+    }
+
+    /// <summary>Drillhole ID typed in New mode.</summary>
     public string NewDrillholeId
     {
         get => newDrillholeId;
@@ -159,118 +226,136 @@ public sealed class CoreInformationViewModel : ObservableObject
         {
             if (Set(ref newDrillholeId, value ?? ""))
             {
+                newDrillholeIdTouched = true;
                 NewDrillholeInputChanged();
             }
         }
     }
 
-    /// <summary>Project of the new drillhole (stored like the API projectCode).</summary>
-    public string NewProject
-    {
-        get => newProject;
-        set
-        {
-            if (Set(ref newProject, value ?? ""))
-            {
-                NewDrillholeInputChanged();
-            }
-        }
-    }
+    /// <summary>Project of the new drillhole: picked from the list or added (stored like the API projectCode).</summary>
+    public NewNameField NewProject { get; } = new("Project");
 
-    /// <summary>Campaign of the new drillhole (stored like the API campaign).</summary>
-    public string NewCampaign
-    {
-        get => newCampaign;
-        set
-        {
-            if (Set(ref newCampaign, value ?? ""))
-            {
-                NewDrillholeInputChanged();
-            }
-        }
-    }
+    /// <summary>Campaign of the new drillhole: picked from the list or added (stored like the API campaign).</summary>
+    public NewNameField NewCampaign { get; } = new("Campaign");
 
-    /// <summary>Shown under the Drillhole ID box after a save attempt; empty when valid.</summary>
+    /// <summary>The drillhole that already has the typed ID (any letter case), or null.</summary>
+    public DrillholeResponse? DuplicateDrillhole =>
+        newDrillholeId.Trim() is { Length: > 0 } id ? catalog.Find(id) : null;
+
+    public bool IsNewDrillholeIdDuplicate => DuplicateDrillhole is not null;
+
+    /// <summary>Shown under the Drillhole ID box: required once touched, or the ID already exists.</summary>
     public string NewDrillholeIdError =>
-        !showNewDrillholeErrors ? "" :
-        newDrillholeId.Trim().Length == 0 ? "Drillhole ID is required." :
-        newDrillholeIdTaken.Length > 0 && string.Equals(newDrillholeId.Trim(), newDrillholeIdTaken, StringComparison.OrdinalIgnoreCase)
-            ? $"{newDrillholeIdTaken} already exists. Pick it from the Drillhole list." : "";
-
-    public string NewCampaignError => showNewDrillholeErrors && newCampaign.Trim().Length == 0 ? "Campaign is required." : "";
-
-    public string NewProjectError => showNewDrillholeErrors && newProject.Trim().Length == 0 ? "Project is required." : "";
-
-    public bool HasNewDrillholeErrors => IsNewDrillholeIdInvalid || IsNewCampaignInvalid || IsNewProjectInvalid;
+        newDrillholeId.Trim().Length == 0 ? (newDrillholeIdTouched ? "Drillhole ID is required." : "") :
+        IsNewDrillholeIdDuplicate ? "Drillhole already exists — switch to Existing to select it." : "";
 
     public bool IsNewDrillholeIdInvalid => NewDrillholeIdError.Length > 0;
 
-    public bool IsNewCampaignInvalid => NewCampaignError.Length > 0;
+    /// <summary>The ID box shows "required" (the duplicate message has its own line with a link).</summary>
+    public bool IsNewDrillholeIdRequired => IsNewDrillholeIdInvalid && !IsNewDrillholeIdDuplicate;
 
-    public bool IsNewProjectInvalid => NewProjectError.Length > 0;
+    /// <summary>Drillhole ID, Project and Campaign are all filled in and valid: Save &amp; Continue is enabled.</summary>
+    public bool CanSaveNew =>
+        newDrillholeId.Trim().Length > 0 && !IsNewDrillholeIdDuplicate && NewProject.IsValid && NewCampaign.IsValid;
 
-    private void BeginNewDrillhole()
+    /// <summary>Something was typed or picked in New mode (switching to Existing then asks first).</summary>
+    public bool HasNewInput => newDrillholeId.Trim().Length > 0 || NewProject.HasInput || NewCampaign.HasInput;
+
+    /// <summary>The link in the "already exists" message: switch to Existing and select that drillhole.</summary>
+    public RelayCommand SelectExistingDuplicateCommand { get; }
+
+    /// <summary>Focus left a New field: an empty one now shows "required". <paramref name="field"/>: id, project, campaign.</summary>
+    public void MarkTouched(string field)
     {
-        if (isSelectionLocked)
+        switch (field)
         {
-            RejectWhileLocked();
+            case "id":
+                if (!newDrillholeIdTouched)
+                {
+                    newDrillholeIdTouched = true;
+                    NewDrillholeInputChanged();
+                }
+
+                break;
+            case "project":
+                NewProject.MarkTouched();
+                break;
+            case "campaign":
+                NewCampaign.MarkTouched();
+                break;
+        }
+    }
+
+    private void SelectExistingDuplicate()
+    {
+        if (DuplicateDrillhole is not { } existing || isSelectionLocked)
+        {
             return;
         }
 
-        showNewDrillholeErrors = false;
-        newDrillholeIdTaken = "";
-        newDrillholeId = drillholeSearch.Trim().Length > 0 && catalog.Find(drillholeSearch) is null ? drillholeSearch.Trim() : "";
-        newProject = "";
-        newCampaign = "";
-        NewDrillholeInputChanged();
+        ResetNewDrillhole();
+        SetNewMode(false);
+        Choose(existing);
+    }
+
+    private void ResetNewDrillhole()
+    {
+        newDrillholeId = "";
+        newDrillholeIdTouched = false;
         Changed(nameof(NewDrillholeId));
-        Changed(nameof(NewProject));
-        Changed(nameof(NewCampaign));
-        IsCreatingDrillhole = true;
+        NewProject.Reset();
+        NewCampaign.Reset();
+        NewDrillholeInputChanged();
     }
 
     private void NewDrillholeInputChanged()
     {
+        Changed(nameof(DuplicateDrillhole));
+        Changed(nameof(IsNewDrillholeIdDuplicate));
         Changed(nameof(NewDrillholeIdError));
-        Changed(nameof(NewCampaignError));
-        Changed(nameof(NewProjectError));
         Changed(nameof(IsNewDrillholeIdInvalid));
-        Changed(nameof(IsNewCampaignInvalid));
-        Changed(nameof(IsNewProjectInvalid));
-        Changed(nameof(HasNewDrillholeErrors));
+        Changed(nameof(IsNewDrillholeIdRequired));
+        Changed(nameof(CanSaveNew));
+        Changed(nameof(HasNewInput));
+        SaveCommand.Refresh();
+        SelectExistingDuplicateCommand.Refresh();
+    }
+
+    // Project and Campaign dropdowns in New mode: every name in the list, including drillholes created here.
+    private void RefreshNameChoices()
+    {
+        NewProject.SetExisting(catalog.All.Select(d => d.ProjectCode));
+        NewCampaign.SetExisting(catalog.All.Select(d => d.Campaign));
+        NewDrillholeInputChanged();
     }
 
     /// <summary>
-    /// Validates and stores the new drillhole, then selects it. Saving is refused (false, with a message under each
-    /// empty box and one error toast) while Drillhole ID, Campaign or Project is empty, or when the ID already exists.
+    /// Save &amp; Continue. Existing mode: saves the picked drillhole and continues. New mode: stores the new drillhole on
+    /// this computer, switches back to Existing with it selected, and continues. False when nothing was saved.
     /// </summary>
-    public async Task<bool> SaveNewDrillholeAsync()
+    public async Task<bool> SaveAsync()
     {
-        if (!isCreatingDrillhole || savingNewDrillhole)
+        if (saving)
         {
             return false;
         }
 
-        var id = newDrillholeId.Trim();
-        var project = newProject.Trim();
-        var campaign = newCampaign.Trim();
-        newDrillholeIdTaken = id.Length > 0 && catalog.Find(id) is { } existing ? existing.HoleId! : "";
-        showNewDrillholeErrors = true;
-        NewDrillholeInputChanged();
-
-        if (HasNewDrillholeErrors)
+        if (!isNewMode)
         {
-            var missing = new[] { id.Length == 0 ? "Drillhole ID" : null, campaign.Length == 0 ? "Campaign" : null, project.Length == 0 ? "Project" : null }
-                .OfType<string>().ToList();
-            Toasts.Error(missing.Count > 0
-                ? $"The drillhole was not saved: {string.Join(" and ", missing)} {(missing.Count == 1 ? "is" : "are")} required."
-                : NewDrillholeIdError);
+            return Save();
+        }
+
+        if (!CanSaveNew)
+        {
+            MarkTouched("id");
+            MarkTouched("project");
+            MarkTouched("campaign");
             return false;
         }
 
-        var entry = new DrillholeResponse(id, project, campaign);
-        savingNewDrillhole = true;
-        SaveNewDrillholeCommand.Refresh();
+        var entry = new DrillholeResponse(newDrillholeId.Trim(), NewProject.Value, NewCampaign.Value);
+        saving = true;
+        SaveCommand.Refresh();
 
         try
         {
@@ -278,9 +363,11 @@ public sealed class CoreInformationViewModel : ObservableObject
         }
         catch (InvalidOperationException)
         {
-            newDrillholeIdTaken = id;
-            NewDrillholeInputChanged();
-            Toasts.Error(NewDrillholeIdError);
+            // Created meanwhile (another window of the app): list it so the duplicate message and link appear.
+            localDrillholes = [.. await cache.LoadLocalAsync()];
+            catalog = DrillholeCatalog.Build(catalog.Remote, catalog, localDrillholes);
+            ShowDrillholes();
+            Toasts.Error(NewDrillholeIdError.Length > 0 ? NewDrillholeIdError : $"Drillhole {entry.HoleId} already exists.");
             return false;
         }
         catch (Exception error)
@@ -290,19 +377,19 @@ public sealed class CoreInformationViewModel : ObservableObject
         }
         finally
         {
-            savingNewDrillhole = false;
-            SaveNewDrillholeCommand.Refresh();
+            saving = false;
+            SaveCommand.Refresh();
         }
 
         localDrillholes = [.. localDrillholes, entry];
-        var previous = catalog;
-        catalog = DrillholeCatalog.Build(previous.All.Append(entry), previous);
-        IsCreatingDrillhole = false;
+        catalog = DrillholeCatalog.Build(catalog.Remote, catalog, localDrillholes);
+        ResetNewDrillhole();
+        SetNewMode(false);
         ShowDrillholes();
-        Choose(catalog.Find(id)!);
+        Choose(catalog.Find(entry.HoleId!)!);
         await WhenOptionsUpdated();
-        Toasts.Success($"Drillhole {id} created and selected.");
-        return true;
+        Toasts.Success($"Drillhole {entry.HoleId} created.");
+        return Save();
     }
 
     /// <summary>Highlighted best match for the typed text; picked only on Enter (<see cref="CommitClosest"/>) or a click.</summary>
@@ -529,7 +616,7 @@ public sealed class CoreInformationViewModel : ObservableObject
                 {
                     var previous = catalog;
                     var local = localDrillholes;
-                    catalog = await Task.Run(() => DrillholeCatalog.Build(cached.Concat(local), previous));
+                    catalog = await Task.Run(() => DrillholeCatalog.Build(cached, previous, local));
                     ShowDrillholes();
                 }
             }
@@ -553,7 +640,7 @@ public sealed class CoreInformationViewModel : ObservableObject
             if (fresh.Count > 0 || catalog.Count <= localDrillholes.Count)
             {
                 var local = localDrillholes;
-                catalog = await Task.Run(() => DrillholeCatalog.Build(fresh.All.Concat(local), current));
+                catalog = await Task.Run(() => DrillholeCatalog.Build(fresh.All, current, local));
             }
 
             if (fresh.Count > 0)
@@ -581,6 +668,7 @@ public sealed class CoreInformationViewModel : ObservableObject
         Changed(nameof(PickedDrillhole));
         Changed(nameof(DrillholesMessage));
         Changed(nameof(CanRetryDrillholes));
+        RefreshNameChoices();
     }
 
     private void Choose(DrillholeResponse entry)
@@ -766,7 +854,7 @@ public sealed class CoreInformationViewModel : ObservableObject
 
     private bool HasDrillhole => !string.IsNullOrWhiteSpace(DrillholeId);
 
-    private void Save(Action<CoreSnapshot> saved)
+    private bool Save()
     {
         showErrors = true;
         Changed(nameof(HasDrillholeError));
@@ -774,7 +862,7 @@ public sealed class CoreInformationViewModel : ObservableObject
         if (!HasDrillhole)
         {
             Toasts.Error("Select a drillhole from the list.");
-            return;
+            return false;
         }
 
         // An emptied Operator is filled with the signed-in account again; an edited one is kept as entered.
@@ -789,6 +877,8 @@ public sealed class CoreInformationViewModel : ObservableObject
             ProjectArea.Trim(),
             Operator.Trim(),
             Notes.Trim()));
+
+        return true;
     }
 
     // A text field that cannot start with whitespace. When only leading whitespace was typed the stored value does not

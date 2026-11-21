@@ -782,6 +782,39 @@
             </Trigger>
         </Style.Triggers>
     </Style>
+    <!-- Segmented switch drawn as small pills (CPS | CPM on Measurement, Existing | New on Core Information): radio
+         buttons in one group inside a HoverSurface border; the chosen one is white with blue text. -->
+    <Style x:Key="SegmentPill" TargetType="RadioButton">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Padding" Value="7,2"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Pill" CornerRadius="4" Padding="{TemplateBinding Padding}" Background="Transparent"
+                            BorderBrush="Transparent" BorderThickness="1">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Pill" Property="Background" Value="{StaticResource Surface}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Blue}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Pill" Property="BorderBrush" Value="{StaticResource Blue}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.55"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
     <!-- Small borderless × (toast close, Drillhole clear): grey, darker on hover, blue focus ring. -->
     <Style x:Key="ClearButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
         <Setter Property="Width" Value="24"/>

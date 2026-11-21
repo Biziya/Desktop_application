@@ -10,11 +10,18 @@ labels:
   autofilledToolTip: Filled from the selected drillhole.
   clearDrillholeToolTip: Clear drillhole
   drillholeLockedToolTip: Stop the measurement to change the drillhole.
-  newDrillhole: "+ New drillhole"               # opens the New drillhole form under the fields
-  newDrillholeToolTip: Create a drillhole that is not in the list. Campaign and Project are required.
-  newDrillholeTitle: New drillhole
+# Existing / New switch above the fields. New turns the same row into Drillhole ID, Project and Campaign inputs;
+# Save & Continue then creates the drillhole on this computer, selects it and continues.
+  modeExisting: Existing
+  modeNew: New
+  modeToolTip: Existing picks a drillhole from the list. New creates one that is not in the list yet.
   newDrillholeId: Drillhole ID
-  saveNewDrillhole: Save drillhole
+  addProject: "+ Add new project"               # last entry of the Project list in New mode
+  addCampaign: "+ Add new campaign"
+  cancelAddToolTip: Back to the list
+  switchToExisting: switch to Existing to select it   # link in "Drillhole already exists — …"
+  localTag: Local                               # tag on drillholes created on this computer
+  localTagToolTip: Created on this computer. It is not in the central drillhole list.
 
 # Row 1: Drillhole (widest, for long Hole IDs), Project, Campaign (compact: a year), Operator (fits DOMAIN\username).
 # Row 2: Notes, full width. The minimum widths add up to the space available at the smallest window with the

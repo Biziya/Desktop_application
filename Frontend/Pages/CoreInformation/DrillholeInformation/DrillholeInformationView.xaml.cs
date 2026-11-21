@@ -62,6 +62,26 @@ public partial class DrillholeInformationView : UserControl
         }
     }
 
+    // New mode: a field the keyboard focus left (and whose list is not open) shows "required" when it is empty.
+    private void NewFieldLostFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string field } panel && !panel.IsKeyboardFocusWithin &&
+            !(field == "project" && NewProjectBox.IsDropDownOpen) && !(field == "campaign" && NewCampaignBox.IsDropDownOpen) &&
+            DataContext is CoreInformationViewModel vm)
+        {
+            vm.MarkTouched(field);
+        }
+    }
+
+    // The Drillhole ID box (New mode turned on) and the "+ Add new …" text boxes take the focus when they appear.
+    private void FocusWhenShown(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (sender is TextBox box && e.NewValue is true && IsLoaded)
+        {
+            Dispatcher.BeginInvoke(() => box.Focus(), System.Windows.Threading.DispatcherPriority.Input);
+        }
+    }
+
     // The view is created per navigation while the ViewModel lives on, so the subscription must not outlive the view.
     private void Observe(CoreInformationViewModel? vm)
     {

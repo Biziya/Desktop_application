@@ -29,6 +29,14 @@ public sealed class DialogService : IDialogService
         "They are stored in the central database.",
         "Upload"));
 
+    public bool ConfirmDiscardNewDrillhole() => Show(new ConfirmationWindow(
+        "New drillhole",
+        "Discard new drillhole?",
+        "What you entered for the new drillhole is not saved.",
+        "Discard",
+        (Brush)Application.Current.FindResource("Danger"),
+        "Keep editing"));
+
     public string? PickCsvFile()
     {
         var dialog = new OpenFileDialog

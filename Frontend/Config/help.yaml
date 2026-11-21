@@ -15,12 +15,14 @@ pages:
       - Open GammaGuard and connect the SPP first.
       - Press Save & Continue before you can measure.
     items:
+      - control: Existing / New
+        does: Existing picks a drillhole from the list. New creates one that is not in it.
       - control: Drillhole
-        does: Type part of the ID, then pick it. Drillholes you already measured come first.
-      - control: + New drillhole
-        does: Creates a drillhole that is not in the list. Campaign and Project are required.
+        does: Type part of the ID, then pick it. Measured ones come first; Local = made here.
+      - control: New drillhole
+        does: Drillhole ID, Project and Campaign are required. Use + Add new for a new name.
       - control: Save & Continue
-        does: Saves your choice and opens the Measurement page.
+        does: Saves your choice (in New, creates the drillhole) and opens Measurement.
       - control: Device Status
         does: Green means ready. Red or amber means something needs fixing.
       - control: Retry

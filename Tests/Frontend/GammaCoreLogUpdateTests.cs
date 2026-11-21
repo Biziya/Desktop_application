@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Automation;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Frontend.Pages.Measurement.CapturePanel;
@@ -10,7 +11,7 @@ using Frontend.Shared.Help;
 namespace Ct007.Tests.FrontendTests;
 
 /// <summary>
-/// FE-DH-NEW, FE-PAGE, FE-LIVE, FE-THRESH, FE-HELP-05…07: the Gamma Core Log updates (new drillhole, Measurement-page
+/// FE-DH-NEW (Existing / New drillhole), FE-PAGE, FE-LIVE, FE-THRESH, FE-HELP-05…07: the Gamma Core Log updates (new drillhole, Measurement-page
 /// only capture, live CPS, threshold line, single Help window with F1 / Esc).
 /// </summary>
 public static class GammaCoreLogUpdateTests
@@ -39,90 +40,291 @@ public static class GammaCoreLogUpdateTests
         Assert.Equal(MeasurementState.Ready, main.Measurement.State, "armed");
     }
 
-    [Test("FE-DH-NEW-01", "New drillhole: saving is refused while Campaign or Project is empty, with a message for each")]
-    public static async Task NewDrillholeRequiresCampaignAndProject()
+    [Test("FE-DH-NEW-01", "New mode clears the picked drillhole; Save & Continue stays disabled until ID, Project and Campaign are filled")]
+    public static async Task NewModeRequiresAllThree()
     {
         using var folder = new TestFolder();
         var db = folder.Path("m.db");
-        var form = Make.CoreForm(new StubBackend(), db, new MemoryRepository(db), out _);
+        var form = Make.CoreForm(new StubBackend(), db, new MemoryRepository(db), out _, dialogs: new FakeDialogs());
         await form.LoadDrillholesAsync();
+        await Make.Pick(form, "DH-001");
+        Assert.True(form.SaveCommand.CanExecute(null), "Existing: Save & Continue enabled");
 
-        Assert.True(form.NewDrillholeCommand.CanExecute(null), "New drillhole available");
-        form.NewDrillholeCommand.Execute(null);
-        Assert.True(form.IsCreatingDrillhole, "form open");
-        Assert.False(form.HasNewDrillholeErrors, "no errors before the first save attempt");
+        form.IsNewModeSelected = true;
+        Assert.True(form.IsNewMode && !form.IsExistingModeSelected, "New mode");
+        Assert.Equal("", form.DrillholeId, "the picked drillhole is cleared");
+        Assert.Equal("", form.DrillholeName, "its Project is cleared");
+        Assert.Equal("", form.ProjectArea, "its Campaign is cleared");
+        Assert.False(form.SaveCommand.CanExecute(null), "disabled while everything is empty");
+        Assert.Equal("", form.NewDrillholeIdError, "no message before a field is touched");
+        Assert.Equal("", form.NewProject.Error, "no Project message yet");
+        Assert.Sequence(new[] { "North Ridge", "South Pit" }, form.NewProject.Choices.Where(c => !c.IsAddNew).Select(c => c.Name), "projects, once each, A–Z");
+        Assert.Sequence(new[] { "2024", "2025" }, form.NewCampaign.Choices.Where(c => !c.IsAddNew).Select(c => c.Name), "campaigns");
+        Assert.True(form.NewProject.Choices[^1].IsAddNew && form.NewCampaign.Choices[^1].IsAddNew, "+ Add new … is the last entry");
+
+        form.MarkTouched("id");
+        form.MarkTouched("project");
+        form.MarkTouched("campaign");
+        Assert.Equal("Drillhole ID is required.", form.NewDrillholeIdError, "ID message");
+        Assert.Equal("Project is required.", form.NewProject.Error, "Project message");
+        Assert.Equal("Campaign is required.", form.NewCampaign.Error, "Campaign message");
+
+        form.NewDrillholeId = "   ";
+        form.NewProject.Picked = form.NewProject.Choices[0];
+        form.NewCampaign.Picked = form.NewCampaign.Choices[1];
+        Assert.Equal("", form.NewProject.Error + form.NewCampaign.Error, "picked: no message");
+        Assert.False(form.SaveCommand.CanExecute(null), "spaces-only ID: disabled");
+        Assert.Equal("Drillhole ID is required.", form.NewDrillholeIdError, "spaces-only ID is empty");
 
         form.NewDrillholeId = "DH-NEW-1";
-        Assert.False(await form.SaveNewDrillholeAsync(), "both empty: refused");
-        Assert.Equal("Campaign is required.", form.NewCampaignError, "Campaign message");
-        Assert.Equal("Project is required.", form.NewProjectError, "Project message");
-        Assert.True(Make.Toasted(form.Toasts, ToastKind.Error, "The drillhole was not saved: Campaign and Project are required."), "toast");
+        Assert.True(form.SaveCommand.CanExecute(null), "all three filled: enabled");
 
-        form.NewCampaign = "2026";
-        Assert.False(await form.SaveNewDrillholeAsync(), "Project empty: refused");
-        Assert.Equal("", form.NewCampaignError, "Campaign accepted");
-        Assert.Equal("Project is required.", form.NewProjectError, "Project still missing");
-
-        form.NewCampaign = "   ";
-        form.NewProject = "North Ridge";
-        Assert.False(await form.SaveNewDrillholeAsync(), "whitespace Campaign: refused");
-        Assert.True(form.IsNewCampaignInvalid && !form.IsNewProjectInvalid, "only Campaign flagged");
-
-        form.NewCampaign = "2026";
-        form.NewDrillholeId = "dh-001";
-        Assert.False(await form.SaveNewDrillholeAsync(), "existing ID: refused");
-        Assert.Contains("already exists", form.NewDrillholeIdError, "duplicate message");
-
+        form.NewCampaign.Picked = form.NewCampaign.Choices[^1];
+        Assert.True(form.NewCampaign.IsAdding, "+ Add new campaign: a text box");
+        Assert.False(form.SaveCommand.CanExecute(null), "empty new campaign: disabled");
+        Assert.False(await form.SaveAsync(), "refused");
+        Assert.Equal("Campaign is required.", form.NewCampaign.Error, "Campaign message");
         Assert.Sequence(Array.Empty<string>(), (await new DrillholeCache(db).LoadLocalAsync()).Select(d => d.HoleId!), "nothing stored");
-        Assert.Equal("", form.DrillholeId, "nothing selected");
-        Assert.True(form.IsCreatingDrillhole, "form stays open");
-        form.CancelNewDrillholeCommand.Execute(null);
-        Assert.False(form.IsCreatingDrillhole, "Cancel closes the form");
+        Assert.True(form.IsNewMode, "still in New mode");
     }
 
-    [Test("FE-DH-NEW-02", "New drillhole: saved locally, listed, selected with its Project and Campaign, kept after a refresh")]
-    public static async Task NewDrillholeIsStoredAndSelected()
+    [Test("FE-DH-NEW-02", "New drillhole: one Save & Continue stores it locally, selects it, continues; listed as Local after a restart")]
+    public static async Task NewDrillholeIsStoredSelectedAndContinued()
     {
         using var folder = new TestFolder();
         var db = folder.Path("m.db");
         var backend = new StubBackend();
-        var form = Make.CoreForm(backend, db, new MemoryRepository(db), out _);
+        var saves = new List<CoreSnapshot>();
+        var form = Make.CoreForm(backend, db, new MemoryRepository(db), out _, dialogs: new FakeDialogs(), saved: saves.Add);
         await form.LoadDrillholesAsync();
 
-        form.NewDrillholeCommand.Execute(null);
+        form.IsNewModeSelected = true;
         form.NewDrillholeId = " DH-NEW-7 ";
-        form.NewCampaign = "2026";
-        form.NewProject = "Lake Side";
-        Assert.True(await form.SaveNewDrillholeAsync(), "saved");
+        form.NewProject.Picked = form.NewProject.Choices.First(c => c.Name == "South Pit");
+        form.NewCampaign.Picked = form.NewCampaign.Choices[^1];
+        form.NewCampaign.Text = " 2026 ";
+        Assert.True(form.SaveCommand.CanExecute(null), "enabled");
+        Assert.True(await form.SaveAsync(), "created and continued in one step");
 
-        Assert.False(form.IsCreatingDrillhole, "form closed");
+        Assert.False(form.IsNewMode, "back to Existing");
         Assert.Equal("DH-NEW-7", form.DrillholeId, "selected (trimmed)");
-        Assert.Equal("Lake Side", form.DrillholeName, "Project field");
-        Assert.Equal("2026", form.ProjectArea, "Campaign field");
-        Assert.True(Make.Ids(form).Contains("DH-NEW-7"), "listed");
-        Assert.True(Make.Ids(form).Contains("DH-001"), "existing drillholes still listed");
-
-        await form.LoadDrillholesAsync();
-        Assert.True(Make.Ids(form).Contains("DH-NEW-7"), "kept after a backend refresh");
+        Assert.Equal("South Pit", form.DrillholeName, "Project");
+        Assert.Equal("2026", form.ProjectArea, "Campaign (trimmed)");
+        Assert.Equal(1, saves.Count, "continued once");
+        Assert.Equal(new CoreSnapshot("DH-NEW-7", "South Pit", "2026", form.Operator, ""), saves[0], "Save & Continue snapshot");
+        Assert.True(Make.Toasted(form.Toasts, ToastKind.Success, "Drillhole DH-NEW-7 created."), "toast");
+        Assert.Sequence(new[] { "DH-NEW-7|South Pit|2026" },
+            (await new DrillholeCache(db).LoadLocalAsync()).Select(d => $"{d.HoleId}|{d.ProjectCode}|{d.Campaign}"), "stored on this computer");
         Assert.False((await new DrillholeCache(db).LoadAsync()).Any(d => d.HoleId == "DH-NEW-7"), "not mixed into the backend cache");
+        Assert.True(form.DrillholeOptions.Single(o => o.HoleId == "DH-NEW-7").IsLocal, "tagged Local");
+        Assert.False(form.DrillholeOptions.Single(o => o.HoleId == "DH-001").IsLocal, "backend drillholes are not");
+        Assert.True(form.NewCampaign.Choices.Any(c => c.Name == "2026"), "the new campaign is offered right away");
 
-        // A new form (next start-up) lists it from the local table.
-        var again = Make.CoreForm(backend, db, new MemoryRepository(db), out _);
+        backend.Offline = true;
+        await form.LoadDrillholesAsync();
+        Assert.True(Make.Ids(form).Contains("DH-NEW-7"), "kept when the refresh fails");
+
+        // Next start-up, still offline: listed from the local table, tagged, with its Project and Campaign.
+        var again = Make.CoreForm(backend, db, new MemoryRepository(db), out _, dialogs: new FakeDialogs());
         await again.LoadDrillholesAsync();
         await Make.Pick(again, "DH-NEW-7");
-        Assert.Equal("Lake Side", again.DrillholeName, "Project after restart");
+        Assert.Equal("South Pit", again.DrillholeName, "Project after restart");
         Assert.Equal("2026", again.ProjectArea, "Campaign after restart");
+        Assert.True(again.DrillholeOptions.Single(o => o.HoleId == "DH-NEW-7").IsLocal, "still tagged Local");
+        Assert.True(again.NewCampaign.Choices.Any(c => c.Name == "2026"), "new campaign listed after restart");
+    }
 
-        // Saved with the drillhole for measuring.
-        CoreSnapshot? saved = null;
-        var third = new CoreInformationViewModel(core => saved = core, new DrillholesClient(new ApiClient(
-                new ApiSettings("http://stub.test", TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(5)), backend)),
-            new BackendConnection(new ApiClient(new ApiSettings("http://stub.test", TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(5)), backend), TimeSpan.FromMinutes(5)),
-            new DrillholeCache(db), new MemoryRepository(db), Make.Monitor(db, db + ".gg"), TimeSpan.Zero);
-        await third.LoadDrillholesAsync();
-        await Make.Pick(third, "DH-NEW-7");
-        third.SaveCommand.Execute(null);
-        Assert.Equal(new CoreSnapshot("DH-NEW-7", "Lake Side", "2026", third.Operator, ""), saved, "Save & Continue snapshot");
+    [Test("FE-DH-NEW-03", "New drillhole: an existing ID (any case) is blocked; the link switches to Existing and selects it")]
+    public static async Task DuplicateIdLinksToExisting()
+    {
+        using var folder = new TestFolder();
+        var db = folder.Path("m.db");
+        var dialogs = new FakeDialogs();
+        var form = Make.CoreForm(new StubBackend(), db, new MemoryRepository(db), out _, dialogs: dialogs);
+        await form.LoadDrillholesAsync();
+
+        form.IsNewModeSelected = true;
+        form.NewDrillholeId = " dh-001 ";
+        form.NewProject.Picked = form.NewProject.Choices[0];
+        form.NewCampaign.Picked = form.NewCampaign.Choices[0];
+        Assert.True(form.IsNewDrillholeIdDuplicate, "duplicate found");
+        Assert.Equal("Drillhole already exists — switch to Existing to select it.", form.NewDrillholeIdError, "message");
+        Assert.False(form.IsNewDrillholeIdRequired, "not shown as 'required'");
+        Assert.False(form.SaveCommand.CanExecute(null), "Save & Continue disabled");
+        Assert.False(await form.SaveAsync(), "refused");
+
+        Assert.True(form.SelectExistingDuplicateCommand.CanExecute(null), "link available");
+        form.SelectExistingDuplicateCommand.Execute(null);
+        await form.WhenOptionsUpdated();
+        Assert.False(form.IsNewMode, "Existing mode");
+        Assert.Equal(0, dialogs.DiscardAsked, "the link does not ask to discard");
+        Assert.Equal("DH-001", form.DrillholeId, "DH-001 selected");
+        Assert.Equal("North Ridge", form.DrillholeName, "its Project");
+        Assert.Equal("", form.NewDrillholeId, "New inputs cleared");
+        Assert.Sequence(Array.Empty<string>(), (await new DrillholeCache(db).LoadLocalAsync()).Select(d => d.HoleId!), "nothing stored");
+    }
+
+    [Test("FE-DH-NEW-04", "New drillhole: an added Project or Campaign that already exists (any case, extra spaces) is blocked")]
+    public static async Task DuplicateProjectAndCampaignNames()
+    {
+        using var folder = new TestFolder();
+        var db = folder.Path("m.db");
+        var form = Make.CoreForm(new StubBackend(), db, new MemoryRepository(db), out _, dialogs: new FakeDialogs());
+        await form.LoadDrillholesAsync();
+
+        form.IsNewModeSelected = true;
+        form.NewDrillholeId = "DH-NEW-9";
+        form.NewProject.Picked = form.NewProject.Choices[^1];
+        form.NewProject.Text = "north ridge";
+        form.NewCampaign.Picked = form.NewCampaign.Choices[^1];
+        form.NewCampaign.Text = "2024 ";
+        Assert.Equal("Project «North Ridge» already exists — pick it from the list.", form.NewProject.Error, "Project duplicate");
+        Assert.Equal("Campaign «2024» already exists — pick it from the list.", form.NewCampaign.Error, "Campaign duplicate");
+        Assert.False(form.SaveCommand.CanExecute(null), "disabled");
+
+        form.NewProject.Text = "Zoovch";
+        Assert.Equal("", form.NewProject.Error, "a new name is accepted");
+        Assert.True(form.NewCampaign.CancelAddCommand.CanExecute(null), "× available while adding");
+        form.NewCampaign.CancelAddCommand.Execute(null);
+        Assert.False(form.NewCampaign.IsAdding, "× returns to the list");
+        Assert.True(form.NewCampaign.Picked is null && form.NewCampaign.Value == "", "typed text dropped");
+        form.NewCampaign.Picked = form.NewCampaign.Choices.First(c => c.Name == "2025");
+        Assert.True(form.SaveCommand.CanExecute(null), "enabled");
+        Assert.True(await form.SaveAsync(), "saved with the new project");
+
+        form.IsNewModeSelected = true;
+        Assert.True(form.NewProject.Choices.Any(c => c.Name == "Zoovch"), "new project listed");
+        form.NewProject.Picked = form.NewProject.Choices[^1];
+        form.NewProject.Text = "ZOOVCH";
+        Assert.Equal("Project «Zoovch» already exists — pick it from the list.", form.NewProject.Error, "now a duplicate too");
+    }
+
+    [Test("FE-DH-NEW-05", "Leaving New mode with input asks to discard; Keep editing keeps it; no switching while measuring")]
+    public static async Task LeavingNewModeAsksToDiscard()
+    {
+        using var folder = new TestFolder();
+        var db = folder.Path("m.db");
+        var dialogs = new FakeDialogs { DiscardNewDrillhole = false };
+        var form = Make.CoreForm(new StubBackend(), db, new MemoryRepository(db), out _, dialogs: dialogs);
+        await form.LoadDrillholesAsync();
+
+        form.IsNewModeSelected = true;
+        form.IsExistingModeSelected = true;
+        Assert.False(form.IsNewMode, "nothing entered: back without asking");
+        Assert.Equal(0, dialogs.DiscardAsked, "no prompt");
+
+        form.IsNewModeSelected = true;
+        form.NewDrillholeId = "DH-X";
+        form.IsExistingModeSelected = true;
+        Assert.Equal(1, dialogs.DiscardAsked, "asked");
+        Assert.True(form.IsNewMode && form.IsNewModeSelected, "Keep editing stays in New");
+        Assert.Equal("DH-X", form.NewDrillholeId, "input kept");
+
+        dialogs.DiscardNewDrillhole = true;
+        form.IsExistingModeSelected = true;
+        Assert.Equal(2, dialogs.DiscardAsked, "asked again");
+        Assert.False(form.IsNewMode, "Discard: Existing");
+        form.IsNewModeSelected = true;
+        Assert.Equal("", form.NewDrillholeId, "input discarded");
+        form.IsExistingModeSelected = true;
+
+        await Make.Pick(form, "DH-002");
+        form.IsSelectionLocked = true;
+        Assert.False(form.CanSwitchMode, "switch disabled while measuring");
+        form.IsNewModeSelected = true;
+        Assert.False(form.IsNewMode, "refused while measuring");
+        Assert.Equal("DH-002", form.DrillholeId, "drillhole kept");
+        Assert.True(Make.Toasted(form.Toasts, ToastKind.Error, "Stop the measurement before changing the drillhole."), "toast");
+        form.IsSelectionLocked = false;
+        Assert.True(form.CanSwitchMode, "available after Stop");
+    }
+
+    [Test("FE-DH-NEW-06", "Core Information view: one Project/Campaign set per mode, one save button, no New drillhole panel")]
+    public static async Task NewModeView()
+    {
+        Wpf.EnsureResources();
+        using var folder = new TestFolder();
+        var (main, _) = await Shell(folder);
+        var window = new Frontend.MainWindow(main) { ShowActivated = false, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20_000 };
+
+        try
+        {
+            window.Show();
+            main.ShowPage(main.Core);
+            window.UpdateLayout();
+
+            var all = Ids(window, visibleOnly: false);
+            Assert.False(all.Contains("NewDrillholeButton") || all.Contains("NewDrillholeForm") || all.Contains("SaveNewDrillholeButton"),
+                "the old New drillhole link, panel and button are gone");
+            Assert.False(Descendants(window).OfType<Button>().Any(b => b.Content is string text && text.Contains("Save drillhole")), "no Save drillhole");
+            Assert.Equal(1, all.Count(id => id == "SaveAndContinueButton"), "one Save & Continue");
+
+            var radios = Descendants(window).OfType<RadioButton>().Where(r => r.GroupName == "DrillholeMode").ToList();
+            Assert.Sequence(new[] { "Existing", "New" }, radios.Select(r => r.Content as string), "Existing | New switch");
+            Assert.True(radios[0].IsChecked == true, "Existing by default");
+
+            var visible = Ids(window);
+            Assert.True(visible.Contains("ProjectValue") && visible.Contains("CampaignValue"), "Existing: read-only Project and Campaign");
+            Assert.False(visible.Contains("NewProjectBox") || visible.Contains("NewCampaignBox") || visible.Contains("NewDrillholeIdBox"),
+                "Existing: no New inputs");
+            Assert.True(Named<ComboBox>(window, "DrillholeBox").IsVisible, "Drillhole dropdown");
+
+            radios[1].IsChecked = true;
+            window.UpdateLayout();
+            Assert.True(main.Core.IsNewMode, "New chosen in the view");
+            visible = Ids(window);
+            Assert.True(visible.Contains("NewDrillholeIdBox") && visible.Contains("NewProjectBox") && visible.Contains("NewCampaignBox"), "New inputs");
+            Assert.False(visible.Contains("ProjectValue") || visible.Contains("CampaignValue"), "New: no read-only Project/Campaign");
+            Assert.False(Named<ComboBox>(window, "DrillholeBox").IsVisible, "no Drillhole dropdown");
+            Assert.False(Descendants(window).OfType<Button>().Single(b => AutomationProperties.GetAutomationId(b) == "SaveAndContinueButton").IsEnabled,
+                "Save & Continue disabled while empty");
+
+            double Left(string id) => Descendants(window).OfType<FrameworkElement>().First(e => AutomationProperties.GetAutomationId(e) == id)
+                .TransformToAncestor(window).Transform(new Point()).X;
+            Assert.True(Left("NewDrillholeIdBox") < Left("NewProjectBox") && Left("NewProjectBox") < Left("NewCampaignBox"),
+                "Drillhole → Project → Campaign");
+
+            main.Core.NewProject.Picked = main.Core.NewProject.Choices[^1];
+            window.UpdateLayout();
+            visible = Ids(window);
+            Assert.True(visible.Contains("NewProjectText") && visible.Contains("CancelAddProject") && !visible.Contains("NewProjectBox"),
+                "+ Add new project: text box with ×");
+
+            radios[0].IsChecked = true;
+            window.UpdateLayout();
+            Assert.False(main.Core.IsNewMode, "back to Existing (nothing entered)");
+            Assert.True(Ids(window).Contains("ProjectValue"), "read-only Project again");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [Test("FE-DH-NEW-07", "New drillhole while the backend is offline: saved locally, and nothing is ever sent for it")]
+    public static async Task NewDrillholeOfflineIsNeverSynced()
+    {
+        using var folder = new TestFolder();
+        var db = folder.Path("m.db");
+        var backend = new StubBackend();
+        var form = Make.CoreForm(backend, db, new MemoryRepository(db), out _, dialogs: new FakeDialogs());
+        await form.LoadDrillholesAsync();
+
+        backend.Offline = true;
+        await form.LoadDrillholesAsync();
+        form.IsNewModeSelected = true;
+        form.NewDrillholeId = "DH-OFF-1";
+        form.NewProject.Picked = form.NewProject.Choices[0];
+        form.NewCampaign.Picked = form.NewCampaign.Choices[0];
+        Assert.True(await form.SaveAsync(), "created offline");
+        Assert.Equal("DH-OFF-1", form.DrillholeId, "selected");
+
+        backend.Offline = false;
+        await form.LoadDrillholesAsync();
+        Assert.True(form.DrillholeOptions.Single(o => o.HoleId == "DH-OFF-1").IsLocal, "still Local once online");
+        Assert.True(backend.Requests.All(r => r.StartsWith("GET ", StringComparison.Ordinal) || r.StartsWith("HEAD ", StringComparison.Ordinal)),
+            $"only reads were sent: {string.Join(", ", backend.Requests.Distinct())}");
+        Assert.Sequence(new[] { "DH-OFF-1" }, (await new DrillholeCache(db).LoadLocalAsync()).Select(d => d.HoleId!), "stored locally");
     }
 
     [Test("FE-PAGE-01", "Right-click capture is only accepted on the Measurement page; other pages add no row")]
@@ -622,6 +824,10 @@ public static class GammaCoreLogUpdateTests
 
     private static T Named<T>(DependencyObject root, string name) where T : FrameworkElement =>
         Descendants(root).OfType<T>().FirstOrDefault(e => e.Name == name) ?? throw new InvalidOperationException($"{name} not found");
+
+    // AutomationIds of the (visible) elements under root.
+    private static string[] Ids(DependencyObject root, bool visibleOnly = true) => Descendants(root).OfType<FrameworkElement>()
+        .Where(e => !visibleOnly || e.IsVisible).Select(AutomationProperties.GetAutomationId).Where(id => id.Length > 0).ToArray();
 
     private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
     {

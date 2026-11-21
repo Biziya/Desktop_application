@@ -9,8 +9,9 @@ namespace Frontend.Api.CoreInformation.Drillholes;
 /// </summary>
 public sealed class DrillholeCache(string databasePath)
 {
-    // LocalDrillholes: drillholes created on this laptop (New drillhole). They are never replaced by a backend refresh
-    // and reach the central database with their uploaded measurements (Drillhole, Project and Campaign columns).
+    // LocalDrillholes: drillholes created on this laptop (Core Information, New mode). They are never replaced by a
+    // backend refresh and never sent to the central drillhole list; only the Drillhole, Project and Campaign columns of
+    // uploaded measurements carry their values.
     private const string CreateTable = """
         CREATE TABLE IF NOT EXISTS DrillholeCache (
             hole_id      TEXT NOT NULL PRIMARY KEY,

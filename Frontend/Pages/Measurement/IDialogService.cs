@@ -8,6 +8,9 @@ public interface IDialogService
 
     bool ConfirmUpload(int recordCount, string drillhole);
 
+    /// <summary>"Discard new drillhole?" (Discard / Keep editing). True = discard what was typed.</summary>
+    bool ConfirmDiscardNewDrillhole();
+
     /// <summary>Full path of the CSV file the user chose to import, or null when cancelled.</summary>
     string? PickCsvFile();
 

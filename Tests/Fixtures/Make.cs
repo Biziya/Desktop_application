@@ -52,12 +52,13 @@ public static class Make
 
     /// <param name="handler">A <see cref="StubBackend"/>, or null for real HTTP to <paramref name="baseUrl"/> (in-process TestBackend).</param>
     public static CoreInformationViewModel CoreForm(HttpMessageHandler? handler, string databasePath, IMeasurementRepository history,
-        out BackendConnection connection, TimeSpan? searchDelay = null, string baseUrl = "http://stub.test", double timeoutSeconds = 5)
+        out BackendConnection connection, TimeSpan? searchDelay = null, string baseUrl = "http://stub.test", double timeoutSeconds = 5,
+        IDialogService? dialogs = null, Action<CoreSnapshot>? saved = null)
     {
         var api = new ApiClient(new ApiSettings(baseUrl, TimeSpan.FromSeconds(timeoutSeconds), TimeSpan.FromMinutes(5)), handler);
         connection = new BackendConnection(api, TimeSpan.FromMinutes(5));
-        return new CoreInformationViewModel(_ => { }, new DrillholesClient(api), connection, new DrillholeCache(databasePath),
-            history, Monitor(databasePath, databasePath + ".gg"), searchDelay ?? TimeSpan.Zero);
+        return new CoreInformationViewModel(saved ?? (_ => { }), new DrillholesClient(api), connection, new DrillholeCache(databasePath),
+            history, Monitor(databasePath, databasePath + ".gg"), searchDelay ?? TimeSpan.Zero, dialogs: dialogs);
     }
 
     /// <summary>Types into the Drillhole box, waits for the filter and presses Enter.</summary>

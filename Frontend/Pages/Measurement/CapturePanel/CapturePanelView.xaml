@@ -113,34 +113,6 @@
                 </Style.Triggers>
             </Style>
 
-            <!-- CPS | CPM switch of the live value: two radio buttons drawn as small pills; the chosen unit is white. -->
-            <Style x:Key="UnitPill" TargetType="RadioButton">
-                <Setter Property="FontSize" Value="12"/>
-                <Setter Property="FontWeight" Value="SemiBold"/>
-                <Setter Property="Foreground" Value="{StaticResource Muted}"/>
-                <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="RadioButton">
-                            <Border x:Name="Pill" CornerRadius="4" Padding="7,2" Background="Transparent"
-                                    BorderBrush="Transparent" BorderThickness="1">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="Pill" Property="Background" Value="{StaticResource Surface}"/>
-                                    <Setter Property="Foreground" Value="{StaticResource Blue}"/>
-                                </Trigger>
-                                <Trigger Property="IsKeyboardFocused" Value="True">
-                                    <Setter TargetName="Pill" Property="BorderBrush" Value="{StaticResource Blue}"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-
             <!-- Glyph and label of the Start / Stop toggle; they switch with IsMeasurementModeActive. -->
             <Style x:Key="StartStopGlyph" TargetType="Run">
                 <Setter Property="FontSize" Value="{StaticResource StartStopButtonIconFontSize}"/>
@@ -392,12 +364,12 @@
                         <Border Margin="8,0,0,0" Padding="2" CornerRadius="6" Background="{StaticResource HoverSurface}"
                                 VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
-                                <RadioButton GroupName="LiveUnit" Style="{StaticResource UnitPill}"
+                                <RadioButton GroupName="LiveUnit" Style="{StaticResource SegmentPill}"
                                              Content="{StaticResource LiveCpsUnitLabel}"
                                              IsChecked="{Binding IsLiveUnitCps}"
                                              ToolTip="Counts per second"
                                              AutomationProperties.AutomationId="LiveUnitCps"/>
-                                <RadioButton GroupName="LiveUnit" Style="{StaticResource UnitPill}"
+                                <RadioButton GroupName="LiveUnit" Style="{StaticResource SegmentPill}"
                                              Content="{StaticResource LiveCpmUnitLabel}"
                                              IsChecked="{Binding IsLiveUnitCpm}"
                                              ToolTip="Counts per minute (CPS × 60)"

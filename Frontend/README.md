@@ -20,9 +20,12 @@ of the app works without it.
 
 ## Pages
 
-- Core Information: pick a drillhole (searchable list from the backend, cached locally) or create a new one with
-  **New drillhole** (Drillhole ID, Campaign and Project are all required; it is stored locally and reaches the central
-  database with its uploaded measurements). Check operator and notes, and see the Device Status of this laptop: the
+- Core Information: an **Existing | New** switch. Existing picks a drillhole (searchable list from the backend, cached
+  locally). New turns the same row into Drillhole ID, Project and Campaign inputs, all required: Project and Campaign
+  are picked from the names in use or added with "+ Add new …", and duplicates are refused in any letter case. Save &
+  Continue (the only save button) then creates the drillhole, selects it and continues. New drillholes are stored on
+  this laptop only (`LocalDrillholes` in `measurements.db`), offline too, are never sent to the central drillhole
+  list, and are tagged Local in the dropdown. Check operator and notes, and see the Device Status of this laptop: the
   CT007 Bluetooth device (any variant, e.g. CT007-M or CT007-T), the measurement database and the Gamma Guard
   database. Save & Continue opens the drillhole's measurement session.
 - Measurement: set Starting Depth, Step and an optional CPS alarm threshold, press Start, then right-click anywhere
