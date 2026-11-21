@@ -86,7 +86,7 @@ const h2 = (t) => new Paragraph({ heading: HeadingLevel.HEADING_2, children: [ne
 const children = [
   new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun("Gamma Core Log")] }),
   new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: "User Guide", size: 32, color: "2563EB" })] }),
-  new Paragraph({ spacing: { after: 320 }, children: [new TextRun({ text: "Application version 1.2.1 · November 2026", color: "555555" })] }),
+  new Paragraph({ spacing: { after: 320 }, children: [new TextRun({ text: "Application version 1.3.0 · November 2026", color: "555555" })] }),
   p("Gamma Core Log logs CT007 gamma readings along a drillhole. You pick (or create) a drillhole, press **Start**, and right-click once for every depth interval. Each capture averages the detector's readings over a few seconds and becomes one row in the table. Readings stay on the laptop until you export them and upload them to the central database."),
   p("Inside the app, press **F1** (or the **?** button at the top right of any page) to open Help at the page you are on."),
   new TableOfContents("Contents", { hyperlink: true, headingStyleRange: "1-2" }),
