@@ -548,7 +548,7 @@
         <Setter Property="Background" Value="{StaticResource Surface}"/>
         <Setter Property="BorderBrush" Value="{StaticResource InputBorder}"/>
         <Setter Property="Content" Value="?"/>
-        <Setter Property="ToolTip" Value="Help (F1)"/>
+        <Setter Property="infra:Tip.Text" Value="{DynamicResource TipHelp}"/>
         <Setter Property="AutomationProperties.Name" Value="Help"/>
         <Setter Property="Template">
             <Setter.Value>

@@ -14,7 +14,7 @@ labels:
 # Save & Continue then creates the drillhole on this computer, selects it and continues.
   modeExisting: Existing
   modeNew: New
-  modeToolTip: Existing picks a drillhole from the list. New creates one that is not in the list yet.
+  modeToolTip: Select a saved drillhole or create a new one
   newDrillholeId: Drillhole ID
   addProject: "+ Add new project"               # last entry of the Project list in New mode
   addCampaign: "+ Add new campaign"

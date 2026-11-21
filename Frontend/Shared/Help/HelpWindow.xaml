@@ -53,7 +53,7 @@
                         Content="Close" FontSize="16" FontWeight="SemiBold"
                         MinWidth="140" Height="44" Padding="24,0"
                         Command="{Binding CloseCommand}"
-                        ToolTip="Close Help (Esc or F1)"
+                        infra:Tip.Text="Close Help (Esc or F1)"
                         AutomationProperties.AutomationId="HelpCloseButton"
                         AutomationProperties.Name="Close Help"/>
                 <TextBlock VerticalAlignment="Center" Style="{StaticResource MutedText}" FontSize="13" TextWrapping="Wrap">

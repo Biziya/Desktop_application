@@ -1,6 +1,7 @@
 <UserControl x:Class="Frontend.Pages.Measurement.Table.MeasurementGrid"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infra="clr-namespace:Frontend.Shared.Infrastructure"
              x:Name="Root">
     <!-- The measurement table shared by the Measurement and Upload Data pages: the visible columns of MeasurementTable.yaml
          (application resources) and a Delete column. ItemsSource is the DataContext's Results; the Delete button runs the
@@ -119,11 +120,21 @@
                                     FontSize="{StaticResource TableDeleteIconFontSize}"
                                     Width="{StaticResource TableDeleteButtonSize}"
                                     Height="{StaticResource TableDeleteButtonSize}"
-                                    ToolTip="Delete measurement"
                                     AutomationProperties.Name="Delete measurement"
-                                    Style="{StaticResource DeleteButton}"
                                     Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                    CommandParameter="{Binding}"/>
+                                    CommandParameter="{Binding}">
+                                <!-- Disabled only on Upload Data, while uploading or once uploaded. -->
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource DeleteButton}">
+                                        <Setter Property="infra:Tip.Text" Value="{StaticResource TipDeleteRow}"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter Property="infra:Tip.Text" Value="{StaticResource TipDeleteRowDisabled}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

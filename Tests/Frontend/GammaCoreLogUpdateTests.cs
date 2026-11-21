@@ -14,7 +14,7 @@ namespace Ct007.Tests.FrontendTests;
 /// FE-DH-NEW (Existing / New drillhole), FE-PAGE, FE-LIVE, FE-THRESH, FE-HELP-05…07: the Gamma Core Log updates (new drillhole, Measurement-page
 /// only capture, live CPS, threshold line, single Help window with F1 / Esc).
 /// </summary>
-public static class GammaCoreLogUpdateTests
+public static partial class GammaCoreLogUpdateTests
 {
     private static async Task<(MainViewModel Main, ControlledMeasurements Device)> Shell(TestFolder folder, HelpSettings? help = null)
     {
@@ -687,7 +687,7 @@ public static class GammaCoreLogUpdateTests
             window.UpdateLayout();
 
             var eye = Named<Button>(window, "ThresholdLineToggle");
-            Assert.Equal("Show/Hide threshold", eye.ToolTip as string, "tooltip");
+            Assert.Equal("Show or hide the threshold line", eye.ToolTip as string, "tooltip");
             var icon = (System.Windows.Shapes.Path)eye.Content;
             Assert.True(ReferenceEquals(icon.Data, Application.Current.FindResource("EyeIcon")), "open eye while shown");
 

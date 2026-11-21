@@ -1,7 +1,7 @@
 labels:
   sectionTitle: Device Status
   bluetooth: CT007 Device — Bluetooth
-  bluetoothDeviceToolTip: CT007 device to monitor (any variant, e.g. CT007-M or CT007-T)
+  bluetoothDeviceToolTip: Choose the CT007 device to connect via Bluetooth
   measurementDatabase: Measurement SQLite Database
   gammaGuardDatabase: Gamma Guard SQLite Database
   retry: Retry                                  # shown on a database row that is not available

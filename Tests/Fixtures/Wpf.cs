@@ -19,7 +19,9 @@ public static class Wpf
         }
 
         var app = Application.Current ?? new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        Frontend.Shared.Infrastructure.ToolTipDefaults.Apply();
         app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Frontend;component/Shared/Styles/Theme.xaml") });
+        app.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/Frontend;component/Shared/Styles/ToolTips.xaml") });
         Frontend.Pages.PageSettings.AddTo(app.Resources, AppContext.BaseDirectory);
         Frontend.Config.ApplicationSettings.Load(AppContext.BaseDirectory).AddTo(app.Resources);
         resourcesLoaded = true;

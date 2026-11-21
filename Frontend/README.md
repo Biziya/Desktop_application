@@ -44,6 +44,11 @@ Help (the ? button top right, or F1) opens one Help window with a section per pa
 F1 toggles it, Esc closes it, and both work wherever the keyboard focus is. Pressing ? while Help is open brings it
 to the front. The text lives in `Config/help.yaml`, its pictures in `Help/Images/`.
 
+Tooltips answer the short "what is this?" questions on the page itself: they appear after 400 ms, stay 10 s, also
+show on keyboard focus and on disabled controls (where they say why). A small ⓘ beside a label explains that field.
+All tooltip texts and their one shared style are in `Shared/Styles/ToolTips.xaml` (a few sit with their page labels in
+the page YAML files); keep each to one short sentence.
+
 ## Configuration files
 
 All of these are copied next to `Frontend.exe` and read once at start-up. Edit the copy beside the exe and restart

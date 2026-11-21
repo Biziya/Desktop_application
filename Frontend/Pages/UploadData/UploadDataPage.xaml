@@ -1,6 +1,7 @@
 <UserControl x:Class="Frontend.Pages.UploadData.UploadDataPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infra="clr-namespace:Frontend.Shared.Infrastructure"
              xmlns:table="clr-namespace:Frontend.Pages.Measurement.Table">
     <!-- Upload Data: Import CSV → review (rows can only be removed) → Upload Data. DataContext: UploadDataViewModel.
          Results and errors are toasts (MainWindow). The table is the Measurement page's (MeasurementGrid, MeasurementTable.yaml). -->
@@ -30,6 +31,29 @@
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
             <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
         </Style>
+        <!-- Header actions. Disabled, their tooltip says why. -->
+        <Style x:Key="ImportButton" TargetType="Button" BasedOn="{StaticResource SuccessButton}">
+            <Setter Property="infra:Tip.Text" Value="{StaticResource TipImport}"/>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="infra:Tip.Text" Value="{StaticResource TipImportDisabled}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="UploadButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="infra:Tip.Text" Value="{StaticResource TipUpload}"/>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="infra:Tip.Text" Value="{StaticResource TipUploadDisabled}"/>
+                </Trigger>
+                <DataTrigger Binding="{Binding IsUploading}" Value="True">
+                    <Setter Property="infra:Tip.Text" Value="{StaticResource TipImportDisabled}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsUploaded}" Value="True">
+                    <Setter Property="infra:Tip.Text" Value="{StaticResource TipUploaded}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -48,13 +72,12 @@
             </Grid.ColumnDefinitions>
             <TextBlock Text="Upload Data" Style="{StaticResource PageTitle}"/>
             <Button Grid.Column="1"
-                    Style="{StaticResource SuccessButton}"
                     FontSize="{StaticResource TableActionButtonFontSize}"
                     MinWidth="{StaticResource TableActionButtonMinWidth}"
                     MinHeight="{StaticResource TableActionButtonMinHeight}"
                     Margin="0,0,10,0"
                     VerticalAlignment="Center"
-                    ToolTip="Choose a CSV file exported from the Measurement page. The file is only read."
+                    Style="{StaticResource ImportButton}"
                     AutomationProperties.Name="Import CSV"
                     Command="{Binding ImportCommand}">
                 <StackPanel Orientation="Horizontal">
@@ -67,7 +90,7 @@
                     MinWidth="{StaticResource TableActionButtonMinWidth}"
                     MinHeight="{StaticResource TableActionButtonMinHeight}"
                     VerticalAlignment="Center"
-                    ToolTip="Store the measurements below in the central database."
+                    Style="{StaticResource UploadButton}"
                     AutomationProperties.Name="Upload Data"
                     Command="{Binding UploadCommand}">
                 <StackPanel Orientation="Horizontal">
@@ -134,7 +157,11 @@
                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding CreatedAt}" Style="{StaticResource InfoValue}"/>
                     <TextBlock Grid.Row="3" Text="Operator" Style="{StaticResource InfoLabel}"/>
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Operator}" Style="{StaticResource InfoValue}"/>
-                    <TextBlock Grid.Row="4" Text="Uploading User" Style="{StaticResource InfoLabel}"/>
+                    <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,16,0" VerticalAlignment="Top">
+                        <TextBlock Text="Uploading User" Style="{StaticResource InfoLabel}" Margin="0,0,0,6"/>
+                        <Button Style="{StaticResource InfoIcon}" VerticalAlignment="Top" Margin="3,-1,0,0"
+                                infra:Tip.Text="{StaticResource TipUploadingUser}" AutomationProperties.Name="About Uploading User"/>
+                    </StackPanel>
                     <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding UploadingUsername}" Style="{StaticResource InfoValue}"/>
 
                     <TextBlock Grid.Row="1" Grid.Column="2" Text="Drillhole" Style="{StaticResource InfoLabel}"/>

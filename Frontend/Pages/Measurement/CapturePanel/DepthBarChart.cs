@@ -62,7 +62,11 @@ public sealed class DepthBarChart : FrameworkElement
     public DepthBarChart()
     {
         tip.PlacementTarget = this;
-        MouseLeave += (_, _) => tip.IsOpen = false;
+        MouseLeave += (_, _) =>
+        {
+            tip.IsOpen = false;
+            ClearValue(ToolTipService.IsEnabledProperty);
+        };
     }
 
     public IEnumerable? ItemsSource
@@ -332,8 +336,13 @@ public sealed class DepthBarChart : FrameworkElement
         {
             tip.IsOpen = false;
             hovered = null;
+            // Off the bars, the chart's own tooltip (the capture hint) may show again.
+            ClearValue(ToolTipService.IsEnabledProperty);
             return;
         }
+
+        // Over a bar only the bar's values show, never the chart's tooltip on top of them.
+        ToolTipService.SetIsEnabled(this, false);
 
         // The text is rebuilt only when the pointer moves to another bar; within a bar only the position follows.
         if (!ReferenceEquals(hit, hovered) || !tip.IsOpen)

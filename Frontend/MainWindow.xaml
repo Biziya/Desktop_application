@@ -50,21 +50,8 @@
                      expand again. Same rounded grey hover as the page items. -->
                 <Button DockPanel.Dock="Top" Style="{StaticResource NavigationButton}" Height="48" Margin="0"
                         Foreground="{StaticResource SidebarTextStrong}"
-                        Command="{Binding ToggleSidebarCommand}" AutomationProperties.Name="Toggle sidebar">
-                    <Button.ToolTip>
-                        <ToolTip>
-                            <ToolTip.Style>
-                                <Style TargetType="ToolTip">
-                                    <Setter Property="Content" Value="Collapse sidebar"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsSidebarCollapsed}" Value="True">
-                                            <Setter Property="Content" Value="Expand sidebar"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ToolTip.Style>
-                        </ToolTip>
-                    </Button.ToolTip>
+                        Command="{Binding ToggleSidebarCommand}" AutomationProperties.Name="Toggle sidebar"
+                        infra:Tip.Text="{StaticResource TipSidebarToggle}">
                     <Grid>
                         <DockPanel Margin="6,0,8,0" Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBoolVisibility}}">
                             <Path DockPanel.Dock="Right" Data="{StaticResource CollapseLeftIcon}" Width="14" Height="14" Stretch="Uniform"
@@ -85,7 +72,7 @@
                 <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
                 <StackPanel Margin="15,0,0,0">
                     <StackPanel Orientation="Horizontal" Background="Transparent"
-                                ToolTip="{Binding Backend.Tooltip}" AutomationProperties.Name="{Binding Backend.Tooltip}">
+                                infra:Tip.Text="{StaticResource TipConnection}" AutomationProperties.Name="{Binding Backend.Tooltip}">
                         <Ellipse Width="9" Height="9" VerticalAlignment="Center">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse">
@@ -149,7 +136,7 @@
                             </Border>
                             <Button DockPanel.Dock="Right" Style="{StaticResource ClearButton}" Margin="8,0,0,0" VerticalAlignment="Top"
                                     Command="{Binding DataContext.Toasts.DismissCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                    CommandParameter="{Binding}" ToolTip="Dismiss" AutomationProperties.Name="Dismiss notification"/>
+                                    CommandParameter="{Binding}" infra:Tip.Text="{StaticResource TipDismiss}" AutomationProperties.Name="Dismiss notification"/>
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource ToastTitle}"/>
                                 <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="13" Margin="0,2,0,0"

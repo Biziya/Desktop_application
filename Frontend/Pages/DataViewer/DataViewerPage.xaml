@@ -1,6 +1,7 @@
 <UserControl x:Class="Frontend.Pages.DataViewer.DataViewerPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infra="clr-namespace:Frontend.Shared.Infrastructure"
              xmlns:table="clr-namespace:Frontend.Pages.Measurement.Table">
     <!-- DataContext: DataViewerViewModel. Uploaded measurements (central database), by drillhole; read-only.
          The drillhole card mirrors Core Information's Drillhole Information form; the table is the Measurement page's. -->
@@ -61,7 +62,7 @@
                                   TextSearch.TextPath="HoleId"
                                   TextBoxBase.TextChanged="DrillholeTyped"
                                   ItemTemplate="{StaticResource DrillholeEntry}"
-                                  ToolTip="Type to search the uploaded drillholes"
+                                  infra:Tip.Text="{StaticResource TipViewerDrillhole}"
                                   AutomationProperties.Name="Drillhole"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Style="{StaticResource FieldPanel}">
@@ -82,7 +83,7 @@
                     <!-- Refresh: two curved arrows; they turn counter-clockwise (the way the arrows point) while loading. -->
                     <Button Grid.Column="4" Style="{StaticResource OutlinedIconButton}" VerticalAlignment="Bottom"
                             Margin="0,0,0,16" Command="{Binding RefreshCommand}"
-                            ToolTip="Load the uploaded data from the central database again"
+                            infra:Tip.Text="{StaticResource TipViewerRefresh}"
                             AutomationProperties.Name="Refresh">
                         <Path Data="{StaticResource RefreshIcon}" Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.8"
                               StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
@@ -127,6 +128,7 @@
                 <DockPanel>
                     <Button DockPanel.Dock="Right" Content="{StaticResource RetryDrillholesLabel}" Style="{StaticResource SmallButton}"
                             Command="{Binding RefreshCommand}"
+                            infra:Tip.Text="{StaticResource TipRetryDrillholes}"
                             Visibility="{Binding CanRetry, Converter={StaticResource BoolVisibility}}"/>
                     <TextBlock Style="{StaticResource StatusMessage}" Text="{Binding Message}" Margin="0,0,0,0"/>
                 </DockPanel>
