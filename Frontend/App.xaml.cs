@@ -43,7 +43,6 @@ public partial class App : Application
     // A configuration error closes the app instead of opening it half-configured.
     protected override void OnStartup(StartupEventArgs e)
     {
-        ToolTipDefaults.Apply();
         base.OnStartup(e);
         CatchUnhandledExceptions();
         MainWindow window;

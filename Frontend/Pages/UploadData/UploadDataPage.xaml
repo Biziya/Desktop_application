@@ -24,33 +24,32 @@
             <Setter Property="TextWrapping" Value="NoWrap"/>
             <Setter Property="Foreground" Value="{StaticResource Muted}"/>
         </Style>
-        <!-- A value too long for its column ends in "…"; the full value is the tooltip. -->
+        <!-- A value too long for its column ends in "…". -->
         <Style x:Key="InfoValue" TargetType="TextBlock">
             <Setter Property="Margin" Value="0,0,32,6"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
         </Style>
-        <!-- Header actions. Disabled, their tooltip says why. -->
+        <!-- Header actions. Disabled, their screen-reader help text says why. -->
         <Style x:Key="ImportButton" TargetType="Button" BasedOn="{StaticResource SuccessButton}">
-            <Setter Property="infra:Tip.Text" Value="{StaticResource TipImport}"/>
+            <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextImport}"/>
             <Style.Triggers>
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="infra:Tip.Text" Value="{StaticResource TipImportDisabled}"/>
+                    <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextImportDisabled}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="UploadButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="infra:Tip.Text" Value="{StaticResource TipUpload}"/>
+            <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextUpload}"/>
             <Style.Triggers>
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="infra:Tip.Text" Value="{StaticResource TipUploadDisabled}"/>
+                    <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextUploadDisabled}"/>
                 </Trigger>
                 <DataTrigger Binding="{Binding IsUploading}" Value="True">
-                    <Setter Property="infra:Tip.Text" Value="{StaticResource TipImportDisabled}"/>
+                    <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextImportDisabled}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsUploaded}" Value="True">
-                    <Setter Property="infra:Tip.Text" Value="{StaticResource TipUploaded}"/>
+                    <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextUploaded}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -133,7 +132,7 @@
                 </TextBlock>
 
                 <!-- The imported file and session on the left, the drillhole on the right; Notes wraps (up to three lines,
-                     the rest in the tooltip). Missing values (older exports) read "Not available". Read-only. -->
+                     the rest ends in "…"). Missing values (older exports) read "Not available". Read-only. -->
                 <Grid Visibility="{Binding HasImport, Converter={StaticResource BoolVisibility}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -157,11 +156,8 @@
                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding CreatedAt}" Style="{StaticResource InfoValue}"/>
                     <TextBlock Grid.Row="3" Text="Operator" Style="{StaticResource InfoLabel}"/>
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Operator}" Style="{StaticResource InfoValue}"/>
-                    <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,16,0" VerticalAlignment="Top">
-                        <TextBlock Text="Uploading User" Style="{StaticResource InfoLabel}" Margin="0,0,0,6"/>
-                        <Button Style="{StaticResource InfoIcon}" VerticalAlignment="Top" Margin="3,-1,0,0"
-                                infra:Tip.Text="{StaticResource TipUploadingUser}" AutomationProperties.Name="About Uploading User"/>
-                    </StackPanel>
+                    <TextBlock Grid.Row="4" Text="Uploading User" Style="{StaticResource InfoLabel}"
+                               AutomationProperties.HelpText="{StaticResource HelpTextUploadingUser}"/>
                     <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding UploadingUsername}" Style="{StaticResource InfoValue}"/>
 
                     <TextBlock Grid.Row="1" Grid.Column="2" Text="Drillhole" Style="{StaticResource InfoLabel}"/>

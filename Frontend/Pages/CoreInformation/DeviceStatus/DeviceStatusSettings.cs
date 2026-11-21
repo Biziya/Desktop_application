@@ -16,13 +16,13 @@ public sealed class DeviceStatusSettings
     {
         resources.Add("DeviceStatusTitle", Labels.SectionTitle);
         resources.Add("BluetoothLabel", Labels.Bluetooth);
-        resources.Add("BluetoothDeviceToolTip", Labels.BluetoothDeviceToolTip);
+        resources.Add("BluetoothDeviceHelpText", Labels.BluetoothDeviceHelpText);
         resources.Add("MeasurementDatabaseLabel", Labels.MeasurementDatabase);
         resources.Add("GammaGuardDatabaseLabel", Labels.GammaGuardDatabase);
         resources.Add("DeviceRetryLabel", Labels.Retry);
         resources.Add("SelectDatabaseLabel", Labels.SelectDatabase);
         resources.Add("ChangeDatabaseLabel", Labels.ChangeDatabase);
-        resources.Add("SelectDatabaseToolTip", Labels.SelectDatabaseToolTip);
+        resources.Add("SelectDatabaseHelpText", Labels.SelectDatabaseHelpText);
         resources.Add("DeviceStatusDot", Labels.StatusDot);
 
         resources.Add("DeviceStatusTitleMargin", Spacing.Title);
@@ -37,13 +37,13 @@ public sealed class DeviceStatusSettings
     {
         public required string SectionTitle { get; init; }
         public required string Bluetooth { get; init; }
-        public required string BluetoothDeviceToolTip { get; init; }
+        public required string BluetoothDeviceHelpText { get; init; }
         public required string MeasurementDatabase { get; init; }
         public required string GammaGuardDatabase { get; init; }
         public required string Retry { get; init; }
         public required string SelectDatabase { get; init; }
         public required string ChangeDatabase { get; init; }
-        public required string SelectDatabaseToolTip { get; init; }
+        public required string SelectDatabaseHelpText { get; init; }
         public required string StatusDot { get; init; }
     }
 

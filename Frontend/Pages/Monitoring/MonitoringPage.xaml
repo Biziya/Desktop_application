@@ -13,9 +13,9 @@
             <Setter Property="Margin" Value="0,0,32,4"/>
         </Style>
         <!-- Column headers that need a word of explanation; x:Shared="False" gives every table its own copy. -->
-        <TextBlock x:Key="DoseRateHeader" x:Shared="False" Text="Dose rate" infra:Tip.Text="{StaticResource TipDoseRate}"/>
-        <TextBlock x:Key="CoverageHeader" x:Shared="False" Text="Coverage (s)" infra:Tip.Text="{StaticResource TipCoverage}"/>
-        <TextBlock x:Key="HdmHeader" x:Shared="False" Text="HDM" infra:Tip.Text="{StaticResource TipHdm}"/>
+        <TextBlock x:Key="DoseRateHeader" x:Shared="False" Text="Dose rate" AutomationProperties.HelpText="{StaticResource HelpTextDoseRate}"/>
+        <TextBlock x:Key="CoverageHeader" x:Shared="False" Text="Coverage (s)" AutomationProperties.HelpText="{StaticResource HelpTextCoverage}"/>
+        <TextBlock x:Key="HdmHeader" x:Shared="False" Text="HDM" AutomationProperties.HelpText="{StaticResource HelpTextHdm}"/>
     </UserControl.Resources>
 
     <!-- The title stays fixed; the cards scroll, with the scroll bar in the page margin. The body is at least as tall as
@@ -54,7 +54,7 @@
                     <TextBlock Text="Choose the database on Core Information, under Device Status. Monitoring starts as soon as it is available."
                                Style="{StaticResource MutedText}" TextAlignment="Center" MaxWidth="420" Margin="0,6,0,16"/>
                     <Button Content="Open Core Information" HorizontalAlignment="Center" Command="{Binding ShowCoreInformationCommand}"
-                            infra:Tip.Text="{StaticResource TipOpenCoreInformation}"/>
+                            AutomationProperties.HelpText="{StaticResource HelpTextOpenCoreInformation}"/>
                 </StackPanel>
             </Border>
             </StackPanel>
@@ -87,7 +87,7 @@
                                     <DataGridTemplateColumn Header="State" Width="0.9*" SortMemberPath="StateText">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
-                                                <Border Style="{StaticResource StatusChip}" Tag="{Binding Tone}" ToolTip="{Binding HeartbeatAge, StringFormat=Heartbeat {0} ago}">
+                                                <Border Style="{StaticResource StatusChip}" Tag="{Binding Tone}">
                                                     <TextBlock Text="{Binding StateText}"/>
                                                 </Border>
                                             </DataTemplate>
@@ -110,7 +110,7 @@
                                                                 <DataTrigger Binding="{Binding HasResponseTimeWarning}" Value="True">
                                                                     <Setter Property="Foreground" Value="{StaticResource Warning}"/>
                                                                     <Setter Property="FontWeight" Value="SemiBold"/>
-                                                                    <Setter Property="infra:Tip.Text" Value="{StaticResource TipSampleNeedsResponse}"/>
+                                                                    <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextSampleNeedsResponse}"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -127,7 +127,7 @@
                                                             IsEnabled="{Binding CanSample}"
                                                             Command="{Binding DataContext.SampleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                             CommandParameter="{Binding}"
-                                                            infra:Tip.Text="{StaticResource TipTakeSample}"
+                                                            AutomationProperties.HelpText="{StaticResource HelpTextTakeSample}"
                                                             AutomationProperties.Name="{Binding Serial, StringFormat=Take 5-second sample for {0}}"/>
                                                     <TextBlock Text="{Binding SampleStatus}" Style="{StaticResource MutedText}" FontSize="12"
                                                                Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="NoWrap"
@@ -162,7 +162,7 @@
                                             <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding HeartbeatAge, StringFormat={}{0} ago}" Style="{StaticResource DetailValue}"/>
                                             <TextBlock Grid.Column="4" Text="CPS raw" Style="{StaticResource DetailLabel}"/>
                                             <TextBlock Grid.Column="5" Text="{Binding LatestCpsRaw, StringFormat=0.00, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
-                                            <TextBlock Grid.Row="1" Grid.Column="4" Text="HDM" Style="{StaticResource DetailLabel}" infra:Tip.Text="{StaticResource TipHdm}"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="4" Text="HDM" Style="{StaticResource DetailLabel}" AutomationProperties.HelpText="{StaticResource HelpTextHdm}"/>
                                             <TextBlock Grid.Row="1" Grid.Column="5" Text="{Binding Latest.Hdm, StringFormat=0.###, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
                                             <TextBlock Grid.Row="2" Grid.Column="4" Text="HDM raw" Style="{StaticResource DetailLabel}"/>
                                             <TextBlock Grid.Row="2" Grid.Column="5" Text="{Binding Latest.HdmRaw, StringFormat=0.###, TargetNullValue=–}" Style="{StaticResource DetailValue}"/>
@@ -236,7 +236,7 @@
                             <TextBlock Text="Recent readings" Style="{StaticResource CardTitle}"/>
                             <ToggleButton x:Name="ShowRecent" Grid.Column="1" Style="{StaticResource DisclosureToggle}"
                                           AutomationProperties.Name="Show recent readings"
-                                          infra:Tip.Text="{StaticResource TipRecentReadings}"/>
+                                          AutomationProperties.HelpText="{StaticResource HelpTextRecentReadings}"/>
                         </Grid>
                         <DataGrid Style="{StaticResource DataTable}" ItemsSource="{Binding Engine.RecentReadings}" MaxHeight="360"
                                   AutomationProperties.Name="Recent readings"

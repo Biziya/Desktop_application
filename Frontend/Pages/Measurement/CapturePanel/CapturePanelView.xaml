@@ -41,22 +41,12 @@
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
-                <Setter Property="infra:Tip.Text" Value="{StaticResource TipCountdown}"/>
+                <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextCountdown}"/>
                 <Style.Triggers>
                     <Trigger Property="IsEnabled" Value="False">
-                        <Setter Property="infra:Tip.Text" Value="{StaticResource TipCountdownDisabled}"/>
+                        <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextCountdownDisabled}"/>
                     </Trigger>
                 </Style.Triggers>
-            </Style>
-
-            <!-- ⓘ on the top border of a Starting Depth / Step / Threshold box, at its right end (the white behind it
-                 hides the border, as behind the label). Margin: the box's top margin minus 1 (the 18 px icon is centred
-                 on the border, which is 8 px below the box's top). -->
-            <Style x:Key="BoxInfoIcon" TargetType="Button" BasedOn="{StaticResource InfoIcon}">
-                <Setter Property="Background" Value="{StaticResource Surface}"/>
-                <Setter Property="HorizontalAlignment" Value="Right"/>
-                <Setter Property="VerticalAlignment" Value="Top"/>
-                <Setter Property="Margin" Value="0,7,8,0"/>
             </Style>
 
             <!-- Starting Depth, Step and Threshold: compact inputs (after the Uiverse "coolinput"). The label (Tag, the same
@@ -122,16 +112,16 @@
                 <Setter Property="HorizontalAlignment" Value="Stretch"/>
                 <Setter Property="Background" Value="{StaticResource ButtonCreate}"/>
                 <Setter Property="AutomationProperties.Name" Value="Start measurement"/>
-                <Setter Property="infra:Tip.Text" Value="{StaticResource TipStart}"/>
+                <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextStart}"/>
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding IsMeasurementModeActive}" Value="True">
                         <Setter Property="Background" Value="{StaticResource ButtonDanger}"/>
                         <Setter Property="AutomationProperties.Name" Value="Stop measurement"/>
-                        <Setter Property="infra:Tip.Text" Value="{StaticResource TipStop}"/>
+                        <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextStop}"/>
                     </DataTrigger>
                     <!-- Start is only disabled while no drillhole is saved for measuring. -->
                     <Trigger Property="IsEnabled" Value="False">
-                        <Setter Property="infra:Tip.Text" Value="{StaticResource TipStartDisabled}"/>
+                        <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextStartDisabled}"/>
                     </Trigger>
                 </Style.Triggers>
             </Style>
@@ -200,11 +190,10 @@
         <!-- The first box's spacing is dropped so the column starts at its label. Invalid text gets a red border while
              typing; leaving the box (or Start) reports it in a toast. -->
         <StackPanel Width="{StaticResource StartStopButtonWidth}" VerticalAlignment="Center">
-            <Grid>
             <TextBox Text="{Binding NextFrom, UpdateSourceTrigger=PropertyChanged}" Tag="{StaticResource StartingDepthLabel}" Margin="0"
                      LostFocus="DepthCommitted"
                      AutomationProperties.Name="Starting depth in metres"
-                     AutomationProperties.HelpText="{StaticResource TipStartingDepth}">
+                     AutomationProperties.HelpText="{StaticResource HelpTextStartingDepth}">
                 <TextBox.Style>
                     <Style TargetType="TextBox" BasedOn="{StaticResource FloatingLabelInput}">
                         <Style.Triggers>
@@ -215,13 +204,10 @@
                     </Style>
                 </TextBox.Style>
             </TextBox>
-                <Button Style="{StaticResource BoxInfoIcon}" Margin="0,-1,8,0" infra:Tip.Text="{StaticResource TipStartingDepth}" AutomationProperties.Name="About Starting Depth"/>
-            </Grid>
-            <Grid>
             <TextBox Text="{Binding Step, UpdateSourceTrigger=PropertyChanged}" Tag="{StaticResource StepLabel}"
                      LostFocus="DepthCommitted"
                      AutomationProperties.Name="Depth step in centimetres"
-                     AutomationProperties.HelpText="{StaticResource TipStep}">
+                     AutomationProperties.HelpText="{StaticResource HelpTextStep}">
                 <TextBox.Style>
                     <Style TargetType="TextBox" BasedOn="{StaticResource FloatingLabelInput}">
                         <Style.Triggers>
@@ -232,14 +218,12 @@
                     </Style>
                 </TextBox.Style>
             </TextBox>
-                <Button Style="{StaticResource BoxInfoIcon}" infra:Tip.Text="{StaticResource TipStep}" AutomationProperties.Name="About Step"/>
-            </Grid>
             <!-- A completed row whose CPS is above this sounds the alarm (it never stops or changes the measurement).
                  The bell inside the box (left; the value is right-aligned) shows the alarm state and mutes the sound. -->
             <Grid>
                 <TextBox Text="{Binding Threshold, UpdateSourceTrigger=PropertyChanged}" Tag="{StaticResource ThresholdLabel}"
                          LostFocus="ThresholdCommitted"
-                         AutomationProperties.HelpText="{StaticResource TipThreshold}"
+                         AutomationProperties.HelpText="{StaticResource HelpTextThreshold}"
                          AutomationProperties.Name="CPS alarm threshold">
                     <TextBox.Style>
                         <Style TargetType="TextBox" BasedOn="{StaticResource FloatingLabelInput}">
@@ -254,8 +238,8 @@
                 <Button Style="{StaticResource IconButton}" Width="26" Height="26" Margin="6,0,0,5"
                         HorizontalAlignment="Left" VerticalAlignment="Bottom"
                         Command="{Binding ToggleAlarmMuteCommand}"
-                        infra:Tip.Text="{Binding AlarmToolTip}"
-                        AutomationProperties.Name="{Binding AlarmToolTip}">
+                        AutomationProperties.HelpText="{Binding AlarmDescription}"
+                        AutomationProperties.Name="{Binding AlarmDescription}">
                     <Path Width="15" Height="15" Stretch="Uniform" StrokeThickness="1.8"
                           StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
                         <Path.Style>
@@ -289,7 +273,6 @@
                         </Path.Style>
                     </Path>
                 </Button>
-                <Button Style="{StaticResource BoxInfoIcon}" infra:Tip.Text="{StaticResource TipThreshold}" AutomationProperties.Name="About Threshold"/>
             </Grid>
             <Button Style="{StaticResource StartStopButton}" Margin="{StaticResource StartStopButtonMargin}"
                     Command="{Binding ToggleMeasurementCommand}">
@@ -376,7 +359,7 @@
                         Background="{StaticResource Surface}"
                         BorderBrush="{StaticResource Line}" BorderThickness="1.5"
                         CornerRadius="{StaticResource ControlRadius}"
-                        infra:Tip.Text="{StaticResource TipLive}"
+                        AutomationProperties.HelpText="{StaticResource HelpTextLive}"
                         AutomationProperties.Name="Live reading"
                         AutomationProperties.AutomationId="LiveBox">
                     <StackPanel Orientation="Horizontal">
@@ -398,12 +381,12 @@
                                 <RadioButton GroupName="LiveUnit" Style="{StaticResource SegmentPill}"
                                              Content="{StaticResource LiveCpsUnitLabel}"
                                              IsChecked="{Binding IsLiveUnitCps}"
-                                             infra:Tip.Text="{StaticResource TipLiveUnit}"
+                                             AutomationProperties.HelpText="{StaticResource HelpTextLiveUnit}"
                                              AutomationProperties.AutomationId="LiveUnitCps"/>
                                 <RadioButton GroupName="LiveUnit" Style="{StaticResource SegmentPill}"
                                              Content="{StaticResource LiveCpmUnitLabel}"
                                              IsChecked="{Binding IsLiveUnitCpm}"
-                                             infra:Tip.Text="{StaticResource TipLiveUnit}"
+                                             AutomationProperties.HelpText="{StaticResource HelpTextLiveUnit}"
                                              AutomationProperties.AutomationId="LiveUnitCpm"/>
                             </StackPanel>
                         </Border>
@@ -414,7 +397,7 @@
                         Style="{StaticResource IconButton}"
                         VerticalAlignment="Center"
                         Command="{Binding ToggleThresholdLineCommand}"
-                        infra:Tip.Text="{StaticResource TipThresholdLine}"
+                        AutomationProperties.HelpText="{StaticResource HelpTextThresholdLine}"
                         AutomationProperties.AutomationId="ThresholdLineToggle"
                         AutomationProperties.Name="{Binding ThresholdLineButtonText}">
                     <Path Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.8"
@@ -452,7 +435,7 @@
                              AxisBrush="{StaticResource Muted}"
                              Foreground="{StaticResource LabelText}"
                              AutomationProperties.Name="Bar chart of CPS by depth"
-                             infra:Tip.Text="{StaticResource TipGraph}"/>
+                             AutomationProperties.HelpText="{StaticResource HelpTextGraph}"/>
         </Grid>
     </Grid>
 </UserControl>

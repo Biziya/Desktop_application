@@ -36,14 +36,16 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             alarmSettings: Resource<CapturePanelSettings.AlarmSettings>(CapturePanelSettings.AlarmResource),
             monitoringSettings: Resource<MonitoringSettings>(MonitoringSettings.Resource),
             retentionSettings: Resource<DataRetentionSettings>(DataRetentionSettings.Resource),
-            helpSettings: Resource<HelpSettings>(HelpSettings.Resource))
+            helpSettings: Resource<HelpSettings>(HelpSettings.Resource),
+            uiSettings: UiSettings.Load(UiSettings.DefaultPath))
     {
     }
 
     /// <summary>Optional parameters are test seams; null means the real implementation, except:</summary>
     /// <param name="alarmSettings">null: no default threshold and no alarm.</param>
     /// <param name="retentionSettings">null: old data is never deleted.</param>
-    /// <param name="helpSettings">null: the Help panel is empty.</param>
+    /// <param name="helpSettings">null: the Help drawer is empty.</param>
+    /// <param name="uiSettings">null: the Help drawer width is kept for this run only.</param>
     public MainViewModel(
         IMeasurementRepository repository,
         ApiSettings apiSettings,
@@ -56,7 +58,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         MonitoringSettings? monitoringSettings = null,
         DataRetentionSettings? retentionSettings = null,
         HelpSettings? helpSettings = null,
-        ILiveCpsReader? liveCps = null)
+        ILiveCpsReader? liveCps = null,
+        UiSettings? uiSettings = null)
     {
         dialogs ??= new DialogService();
 
@@ -137,7 +140,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         ShowPageCommand = new RelayCommand(p => ShowPage((p as NavigationItem)?.Page ?? p as ObservableObject));
         ToggleSidebarCommand = new RelayCommand(_ => IsSidebarCollapsed = !IsSidebarCollapsed);
-        Help = new HelpPanel(helpSettings);
+        Help = new HelpPanel(helpSettings, uiSettings);
+        Help.Show(CurrentTitle);
         Backend.Start();
         Devices.Start();
 
@@ -193,7 +197,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 item.IsSelected = item.Page == value;
             }
 
-            Help?.Show(CurrentTitle);
+            if (Help is not null)
+            {
+                Help.Show(CurrentTitle);
+                Help.DimsPage = value != Measurement;
+            }
 
             (previous as INavigationAware)?.OnHidden();
             (value as INavigationAware)?.OnShown();
@@ -215,11 +223,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public bool IsShown(ObservableObject page) => CurrentPage == page;
 
-    /// <summary>The ? button: opens Help at this page's section, or brings an open Help window to the front.</summary>
-    public void ShowHelp() => ToggleHelp(HelpTrigger.Button);
+    /// <summary>The ? button: opens Help at this page's section, or closes it (same as F1).</summary>
+    public void ShowHelp() => ToggleHelp();
 
     /// <summary>The one function behind the ? button and F1 (see <see cref="HelpPanel.Toggle"/>).</summary>
-    public void ToggleHelp(HelpTrigger trigger) => Help.Toggle(CurrentTitle, trigger);
+    public void ToggleHelp() => Help.Toggle(CurrentTitle);
 
     /// <summary>Sidebar title of the page on screen; Help opens at this page's section.</summary>
     public string CurrentTitle => Pages.FirstOrDefault(p => p.Page == CurrentPage)?.Title ?? "";

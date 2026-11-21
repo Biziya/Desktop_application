@@ -476,7 +476,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
         : IsAlarmMuted ? AlarmState.Muted
         : AlarmState.Armed;
 
-    public string AlarmToolTip => Alarm switch
+    public string AlarmDescription => Alarm switch
     {
         AlarmState.Off => "No alarm: enter a CPS threshold.",
         AlarmState.Triggered => $"The last measurement was above {CpsAlarm.FormatThreshold(thresholdCps!.Value)} CPS.{(IsAlarmMuted ? " Sound muted; click to unmute." : " Click to mute.")}",
@@ -640,7 +640,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
     private void AlarmChanged()
     {
         Changed(nameof(Alarm));
-        Changed(nameof(AlarmToolTip));
+        Changed(nameof(AlarmDescription));
     }
 
     // Empties the table and the depth inputs; nothing stored is deleted.

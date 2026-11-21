@@ -1,13 +1,13 @@
 labels:
   sectionTitle: Device Status
   bluetooth: CT007 Device — Bluetooth
-  bluetoothDeviceToolTip: Choose the CT007 device to connect via Bluetooth
+  bluetoothDeviceHelpText: Choose the CT007 device to connect via Bluetooth
   measurementDatabase: Measurement SQLite Database
   gammaGuardDatabase: Gamma Guard SQLite Database
   retry: Retry                                  # shown on a database row that is not available
   selectDatabase: Select Database               # Gamma Guard row, no database available
   changeDatabase: Change Database               # Gamma Guard row, a database is available
-  selectDatabaseToolTip: Choose the Gamma Guard SQLite database file
+  selectDatabaseHelpText: Choose the Gamma Guard SQLite database file
   statusDot: "●  "                              # in front of the status text ("●  Connected"); keep the quotes
 
 spacing:

@@ -95,6 +95,7 @@
     <BooleanToVisibilityConverter x:Key="BoolVisibility"/>
     <infra:InverseBoolVisibilityConverter x:Key="InverseBoolVisibility"/>
     <infra:NonEmptyVisibilityConverter x:Key="NonEmptyVisibility"/>
+    <infra:NotNullVisibilityConverter x:Key="NotNullVisibility"/>
     <infra:NonEmptyVisibilityConverter x:Key="ZeroLengthVisibility" Invert="True"/>
     <infra:ZeroVisibilityConverter x:Key="ZeroVisibility"/>
     <infra:ResourceKeyConverter x:Key="ResourceKey"/>
@@ -534,7 +535,11 @@
         <Setter Property="Background" Value="{StaticResource ButtonDanger}"/>
         <Setter Property="Foreground" Value="{StaticResource Surface}"/>
     </Style>
-    <!-- Round "?" at the right of every page header. ApplicationCommands.Help is handled by MainWindow (F1 does the same). -->
+    <!-- Round "?" at the right of every page header: opens or closes the Help drawer. ApplicationCommands.Help is
+         handled by MainWindow (F1 does the same). Highlighted while the drawer is open. -->
+    <!-- Circle with an i: the icon of a Note callout in the Help drawer. -->
+    <Geometry x:Key="CalloutInfoGeometry">M2,12 A10,10 0 1 0 22,12 A10,10 0 1 0 2,12 Z M12,11 L12,17 M12,7.4 L12,7.6</Geometry>
+
     <Style x:Key="HelpButton" TargetType="Button">
         <Setter Property="Command" Value="ApplicationCommands.Help"/>
         <Setter Property="HorizontalAlignment" Value="Right"/>
@@ -548,7 +553,7 @@
         <Setter Property="Background" Value="{StaticResource Surface}"/>
         <Setter Property="BorderBrush" Value="{StaticResource InputBorder}"/>
         <Setter Property="Content" Value="?"/>
-        <Setter Property="infra:Tip.Text" Value="{DynamicResource TipHelp}"/>
+        <Setter Property="AutomationProperties.HelpText" Value="{DynamicResource HelpTextHelp}"/>
         <Setter Property="AutomationProperties.Name" Value="Help"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -559,6 +564,12 @@
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <!-- Help drawer open (inherited from MainWindow): the ? stays highlighted. -->
+                        <Trigger Property="infra:HelpButtonState.IsHelpOpen" Value="True">
+                            <Setter TargetName="Frame" Property="Background" Value="{StaticResource SoftBlue}"/>
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Blue}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Blue}"/>
+                        </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Frame" Property="Background" Value="{StaticResource SoftBlue}"/>
                             <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Blue}"/>
@@ -574,6 +585,11 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <Trigger Property="infra:HelpButtonState.IsHelpOpen" Value="True">
+                <Setter Property="AutomationProperties.ItemStatus" Value="Open"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
     <!-- Square icon button with the secondary frame, as tall as a text box (e.g. Data Viewer Refresh). -->
     <Style x:Key="OutlinedIconButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">

@@ -7,11 +7,13 @@
         xmlns:viewer="clr-namespace:Frontend.Pages.DataViewer"
         xmlns:upload="clr-namespace:Frontend.Pages.UploadData"
         xmlns:infra="clr-namespace:Frontend.Shared.Infrastructure"
+        xmlns:help="clr-namespace:Frontend.Shared.Help"
         Style="{StaticResource AppWindow}"
         Title="{StaticResource ApplicationTitle}"
         Width="1320" Height="870" MinWidth="960" MinHeight="650"
         WindowStartupLocation="CenterScreen"
-        Icon="Icons/icon.ico">
+        Icon="Icons/icon.ico"
+        infra:HelpButtonState.IsHelpOpen="{Binding Help.IsOpen}">
     <Window.Resources>
         <DataTemplate DataType="{x:Type core:CoreInformationViewModel}"><core:CoreInformationPage/></DataTemplate>
         <DataTemplate DataType="{x:Type measurement:MeasurementViewModel}"><measurement:MeasurementPage/></DataTemplate>
@@ -20,8 +22,8 @@
         <DataTemplate DataType="{x:Type viewer:DataViewerViewModel}"><viewer:DataViewerPage/></DataTemplate>
     </Window.Resources>
 
-    <!-- The ? button of every page header sends ApplicationCommands.Help. F1 and Esc are handled in PreviewKeyDown
-         (MainWindow.xaml.cs), so they work wherever the keyboard focus is. All three go through ToggleHelp. -->
+    <!-- The ? button of every page header sends ApplicationCommands.Help. F1, Esc and Ctrl+F are handled in PreviewKeyDown
+         (MainWindow.xaml.cs), so they work wherever the keyboard focus is. F1 and ? go through ToggleHelp. -->
     <Window.CommandBindings>
         <CommandBinding Command="ApplicationCommands.Help" Executed="HelpButtonPressed"/>
     </Window.CommandBindings>
@@ -51,7 +53,7 @@
                 <Button DockPanel.Dock="Top" Style="{StaticResource NavigationButton}" Height="48" Margin="0"
                         Foreground="{StaticResource SidebarTextStrong}"
                         Command="{Binding ToggleSidebarCommand}" AutomationProperties.Name="Toggle sidebar"
-                        infra:Tip.Text="{StaticResource TipSidebarToggle}">
+                        AutomationProperties.HelpText="{StaticResource HelpTextSidebarToggle}">
                     <Grid>
                         <DockPanel Margin="6,0,8,0" Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBoolVisibility}}">
                             <Path DockPanel.Dock="Right" Data="{StaticResource CollapseLeftIcon}" Width="14" Height="14" Stretch="Uniform"
@@ -72,7 +74,7 @@
                 <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource SidebarBorder}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
                 <StackPanel Margin="15,0,0,0">
                     <StackPanel Orientation="Horizontal" Background="Transparent"
-                                infra:Tip.Text="{StaticResource TipConnection}" AutomationProperties.Name="{Binding Backend.Tooltip}">
+                                AutomationProperties.HelpText="{StaticResource HelpTextConnection}" AutomationProperties.Name="{Binding Backend.StatusDescription}">
                         <Ellipse Width="9" Height="9" VerticalAlignment="Center">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse">
@@ -101,7 +103,6 @@
                                     infra:SidebarItem.IsSelected="{Binding IsSelected}"
                                     Command="{Binding DataContext.ShowPageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                     CommandParameter="{Binding}"
-                                    ToolTip="{Binding Title}"
                                     AutomationProperties.Name="{Binding Title}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -136,7 +137,7 @@
                             </Border>
                             <Button DockPanel.Dock="Right" Style="{StaticResource ClearButton}" Margin="8,0,0,0" VerticalAlignment="Top"
                                     Command="{Binding DataContext.Toasts.DismissCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                    CommandParameter="{Binding}" infra:Tip.Text="{StaticResource TipDismiss}" AutomationProperties.Name="Dismiss notification"/>
+                                    CommandParameter="{Binding}" AutomationProperties.HelpText="{StaticResource HelpTextDismiss}" AutomationProperties.Name="Dismiss notification"/>
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource ToastTitle}"/>
                                 <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="13" Margin="0,2,0,0"
@@ -148,5 +149,8 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
+
+        <!-- Help: a drawer that slides in from the right over everything (backdrop, drawer, lightbox). -->
+        <help:HelpDrawer x:Name="HelpOverlay" Grid.ColumnSpan="2" Panel.ZIndex="10" DataContext="{Binding Help}"/>
     </Grid>
 </Window>

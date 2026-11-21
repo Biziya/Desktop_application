@@ -40,14 +40,19 @@ of the app works without it.
 - Upload Data: import an exported CSV, review it, and upload it to the central database.
 - Data Viewer: read-only view of what has been uploaded for a drillhole.
 
-Help (the ? button top right, or F1) opens one Help window with a section per page, scrolled to the page you are on.
-F1 toggles it, Esc closes it, and both work wherever the keyboard focus is. Pressing ? while Help is open brings it
-to the front. The text lives in `Config/help.yaml`, its pictures in `Help/Images/`.
+Help (the ? button top right, or F1) is a drawer that slides in from the right inside the main window
+(`Shared/Help/HelpDrawer`), at the page you are on; it follows page changes. ? and F1 toggle it, Esc closes it (an
+enlarged picture first), Ctrl+F jumps to its search. On Measurement it neither dims the page nor closes on outside
+clicks, and right-click inside it never captures. Every page's help follows one template (purpose, Before you start,
+screenshot with numbered markers, Steps, Buttons and fields, Troubleshooting); the text and marker positions live in
+`Config/help.yaml`, the 2x pictures in `Help/Images/` (both regenerated and checked by DOCS-001). The dragged drawer
+width is remembered in `%LocalAppData%\CT007_Measurement_Studio\ui-settings.json`.
 
-Tooltips answer the short "what is this?" questions on the page itself: they appear after 400 ms, stay 10 s, also
-show on keyboard focus and on disabled controls (where they say why). A small ⓘ beside a label explains that field.
-All tooltip texts and their one shared style are in `Shared/Styles/ToolTips.xaml` (a few sit with their page labels in
-the page YAML files); keep each to one short sentence.
+The app has no tooltips and no ⓘ icons. What a field or button does is explained only in Help, under Buttons and
+fields; controls on every page (sidebar, header, Help itself) are listed under `controls:` in `help.yaml`, and TIP-04
+checks the list. Controls still carry a screen-reader name and help text (`AutomationProperties.HelpText`); disabled
+ones say why. Those texts are in `Shared/Styles/HelpTexts.xaml` (a few sit with their page labels in the page YAML
+files). TIP-05 fails if `ToolTip` comes back in the Frontend source.
 
 ## Configuration files
 
@@ -59,7 +64,7 @@ and key.
 |---|---|
 | `Config/application.yaml` | Package id, name, version, description. The only place the version is written. |
 | `Config/data-retention.yaml` | How long local measurements are kept |
-| `Config/help.yaml` | Help panel text, one section per page |
+| `Config/help.yaml` | Help drawer text: one section per page, shortcuts and controls on every page |
 | `Calculation/Core-Information/device-settings.json` | Device Status rules: check intervals, CT007 name prefix, optional fixed Gamma Guard path |
 | `Pages/CoreInformation/DrillholeInformation/DrillholeInformation.yaml` | Labels, widths and spacing of the drillhole form |
 | `Pages/CoreInformation/DeviceStatus/DeviceStatus.yaml` | Labels and layout of the Device Status rows |

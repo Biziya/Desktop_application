@@ -6,7 +6,7 @@ becomes one row in the table. Readings stay on the laptop until you export them 
 database.
 
 The same guide as a Word file: [Gamma-Core-Log-User-Guide.docx](Gamma-Core-Log-User-Guide.docx).
-Inside the app, press **F1** (or the **?** button at the top right of any page) for the Help window.
+Inside the app, press **F1** (or the **?** button at the top right of any page) to open Help at the page you are on.
 
 - [Before you start](#before-you-start)
 - [Core Information](#core-information)
@@ -15,7 +15,7 @@ Inside the app, press **F1** (or the **?** button at the top right of any page) 
 - [Monitoring](#monitoring)
 - [Upload Data](#upload-data)
 - [Data Viewer](#data-viewer)
-- [Help window and keyboard shortcuts](#help-window-and-keyboard-shortcuts)
+- [Help and keyboard shortcuts](#help-and-keyboard-shortcuts)
 - [When something goes wrong](#when-something-goes-wrong)
 
 ## Before you start
@@ -128,20 +128,28 @@ See what has been uploaded to the central database. Pick a drillhole to list its
 
 ![Data Viewer page](guide-images/data-viewer.png)
 
-## Help window and keyboard shortcuts
+## Help and keyboard shortcuts
 
-The Help window has one section per page, with a picture of the page, and opens at the section for the page you are
-on. The list on the left jumps to any section. There is only ever one Help window: pressing **?** while it is open
-brings it to the front.
+Help slides in from the right edge of the window and opens at the page you are on; it follows you when you change
+page. Each page's help has the same parts: what the page is for, **Before you start**, a picture with numbered markers,
+**Steps**, **Buttons and fields** (the numbers match the markers) and **Troubleshooting**. Search finds text on every
+page, the page list at the top switches page, and the **On this page** links jump to a part. Click the picture to see
+it larger. Drag Help's left edge to make it wider; the width is remembered. The app has no tooltips: what each field
+and button does is in **Buttons and fields**, and the **Keyboard shortcuts** entry also lists the controls found on
+every page (sidebar, header and Help itself).
 
-![Help window](guide-images/help-window.png)
+On the Measurement page Help does not dim the page or close when you click outside it, so you can keep measuring with
+Help open: right-click on the page still captures (right-click inside Help does not).
+
+![Help, opened on the Measurement page](guide-images/help-drawer.png)
 
 | Keys | What it does |
 |---|---|
-| F1 | Opens Help at the page you are on, or closes it. Works on every page, whatever has the keyboard focus, and inside Help. |
-| Esc | Closes Help. |
-| ? button | Opens Help, or brings it to the front if it is already open. |
-| Right-click | Captures one interval — on the Measurement page only, after Start. |
+| F1 | Opens Help at the page you are on, or closes it. Works on every page, whatever has the keyboard focus. |
+| ? button | Opens or closes Help, like F1. It is highlighted while Help is open. |
+| Esc | Closes an enlarged picture, then Help. |
+| Ctrl+F | While Help is open: jumps to its search box. |
+| Right-click | Captures one interval — on the Measurement page only, after Start, and not inside Help. |
 | Enter / Esc | In the capture duration editor: save / cancel. |
 | ↑ ↓ Enter | In the Drillhole box: move through the list and pick a drillhole. |
 

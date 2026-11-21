@@ -26,19 +26,19 @@ public sealed class DrillholeInformationSettings
         resources.Add("NotesLabel", Labels.Notes);
         resources.Add("SaveAndContinueLabel", Labels.SaveAndContinue);
         resources.Add("RetryDrillholesLabel", Labels.Retry);
-        resources.Add("AutofilledToolTip", Labels.AutofilledToolTip);
-        resources.Add("ClearDrillholeToolTip", Labels.ClearDrillholeToolTip);
-        resources.Add("DrillholeLockedToolTip", Labels.DrillholeLockedToolTip);
+        resources.Add("AutofilledHelpText", Labels.AutofilledHelpText);
+        resources.Add("ClearDrillholeHelpText", Labels.ClearDrillholeHelpText);
+        resources.Add("DrillholeLockedHelpText", Labels.DrillholeLockedHelpText);
         resources.Add("DrillholeModeExistingLabel", Labels.ModeExisting);
         resources.Add("DrillholeModeNewLabel", Labels.ModeNew);
-        resources.Add("DrillholeModeToolTip", Labels.ModeToolTip);
+        resources.Add("DrillholeModeHelpText", Labels.ModeHelpText);
         resources.Add("NewDrillholeIdLabel", Labels.NewDrillholeId);
         resources.Add("AddProjectLabel", Labels.AddProject);
         resources.Add("AddCampaignLabel", Labels.AddCampaign);
-        resources.Add("CancelAddToolTip", Labels.CancelAddToolTip);
+        resources.Add("CancelAddHelpText", Labels.CancelAddHelpText);
         resources.Add("SwitchToExistingLabel", Labels.SwitchToExisting);
         resources.Add("LocalTagLabel", Labels.LocalTag);
-        resources.Add("LocalTagToolTip", Labels.LocalTagToolTip);
+        resources.Add("LocalTagHelpText", Labels.LocalTagHelpText);
 
         resources.Add("DrillholeColumnWidth", Fields.DrillholeWidth);
         resources.Add("DrillholeColumnMinWidth", Fields.DrillholeMinWidth);
@@ -71,19 +71,19 @@ public sealed class DrillholeInformationSettings
         public required string Notes { get; init; }
         public required string SaveAndContinue { get; init; }
         public required string Retry { get; init; }
-        public required string AutofilledToolTip { get; init; }
-        public required string ClearDrillholeToolTip { get; init; }
-        public required string DrillholeLockedToolTip { get; init; }
+        public required string AutofilledHelpText { get; init; }
+        public required string ClearDrillholeHelpText { get; init; }
+        public required string DrillholeLockedHelpText { get; init; }
         public required string ModeExisting { get; init; }
         public required string ModeNew { get; init; }
-        public required string ModeToolTip { get; init; }
+        public required string ModeHelpText { get; init; }
         public required string NewDrillholeId { get; init; }
         public required string AddProject { get; init; }
         public required string AddCampaign { get; init; }
-        public required string CancelAddToolTip { get; init; }
+        public required string CancelAddHelpText { get; init; }
         public required string SwitchToExisting { get; init; }
         public required string LocalTag { get; init; }
-        public required string LocalTagToolTip { get; init; }
+        public required string LocalTagHelpText { get; init; }
     }
 
     public sealed class FieldSettings

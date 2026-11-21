@@ -78,12 +78,11 @@
         </Style>
 
         <!-- Body cell text; its alignment comes from the column (MeasurementTableColumn.Alignment). The small margin keeps
-             the text off the vertical grid lines; a value wider than its column ends in "…" and the full value is the tooltip. -->
+             the text off the vertical grid lines; a value wider than its column ends in "…". -->
         <Style x:Key="CellText" TargetType="TextBlock">
             <Setter Property="Margin" Value="4,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
         </Style>
 
         <!-- Header text is centred and wraps (also inside a word such as count0_raw) instead of widening the column. -->
@@ -126,10 +125,10 @@
                                 <!-- Disabled only on Upload Data, while uploading or once uploaded. -->
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource DeleteButton}">
-                                        <Setter Property="infra:Tip.Text" Value="{StaticResource TipDeleteRow}"/>
+                                        <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextDeleteRow}"/>
                                         <Style.Triggers>
                                             <Trigger Property="IsEnabled" Value="False">
-                                                <Setter Property="infra:Tip.Text" Value="{StaticResource TipDeleteRowDisabled}"/>
+                                                <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextDeleteRowDisabled}"/>
                                             </Trigger>
                                         </Style.Triggers>
                                     </Style>

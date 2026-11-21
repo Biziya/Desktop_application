@@ -47,8 +47,8 @@ public sealed class DepthBarChart : FrameworkElement
     public static readonly DependencyProperty ThresholdBrushProperty = Register<Brush>(nameof(ThresholdBrush), Brushes.Firebrick);
     public static readonly DependencyProperty ThresholdLabelProperty = Register(nameof(ThresholdLabel), "Threshold");
 
+    // The bars of the last render (tests read them).
     private readonly List<(Rect Area, MeasurementResult Row)> bars = [];
-    private readonly ToolTip tip = new() { Placement = PlacementMode.Relative };
 
     // Drawing resources reused across renders (a resize renders many times); rebuilt when a brush, font or DPI changes.
     private Pen? axisPen;
@@ -57,17 +57,6 @@ public sealed class DepthBarChart : FrameworkElement
     private Pen? thresholdPen;
     private Typeface? typeface;
     private double pixelsPerDip;
-    private MeasurementResult? hovered;
-
-    public DepthBarChart()
-    {
-        tip.PlacementTarget = this;
-        MouseLeave += (_, _) =>
-        {
-            tip.IsOpen = false;
-            ClearValue(ToolTipService.IsEnabledProperty);
-        };
-    }
 
     public IEnumerable? ItemsSource
     {
@@ -189,7 +178,6 @@ public sealed class DepthBarChart : FrameworkElement
         base.OnRender(drawing);
         bars.Clear();
         DrawnThresholdY = null;
-        hovered = null; // the row values may have changed: the next hover rebuilds the tooltip text
 
         DrawnYTitleRight = null;
         DrawnTickLabelsLeft = null;
@@ -323,40 +311,6 @@ public sealed class DepthBarChart : FrameworkElement
             typeface!, TickFontSize, ThresholdBrush, pixelsPerDip);
         drawing.DrawText(label, new Point(plot.Right - label.Width - 4, Math.Max(plot.Top, lineY - label.Height - 2)));
         DrawnThresholdY = lineY;
-    }
-
-    // Tooltip of the bar under the pointer (the last drawn wins where intervals overlap).
-    protected override void OnMouseMove(MouseEventArgs e)
-    {
-        base.OnMouseMove(e);
-        var point = e.GetPosition(this);
-        var hit = bars.LastOrDefault(b => b.Area.Contains(point)).Row;
-
-        if (hit is null)
-        {
-            tip.IsOpen = false;
-            hovered = null;
-            // Off the bars, the chart's own tooltip (the capture hint) may show again.
-            ClearValue(ToolTipService.IsEnabledProperty);
-            return;
-        }
-
-        // Over a bar only the bar's values show, never the chart's tooltip on top of them.
-        ToolTipService.SetIsEnabled(this, false);
-
-        // The text is rebuilt only when the pointer moves to another bar; within a bar only the position follows.
-        if (!ReferenceEquals(hit, hovered) || !tip.IsOpen)
-        {
-            hovered = hit;
-            tip.Content =
-                $"From: {Depth.Format(hit.FromMm!.Value)} m\n" +
-                $"To: {Depth.Format(hit.ToMm!.Value)} m\n" +
-                $"Step: {(hit.StepMm is { } step ? Depth.FormatCentimetres(step) : "—")} cm\n" +
-                $"CPS: {MeasurementCellFormat.Decimal(Cps(hit))}";
-        }
-        tip.HorizontalOffset = point.X + 14;
-        tip.VerticalOffset = point.Y + 14;
-        tip.IsOpen = true;
     }
 
     private FormattedText Text(string text, double size)

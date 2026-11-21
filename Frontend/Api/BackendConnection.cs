@@ -54,7 +54,7 @@ public sealed class BackendConnection : ObservableObject, IDisposable
         _ => "Checking…"
     };
 
-    public string Tooltip =>
+    public string StatusDescription =>
         $"Backend {api.BaseUrl}: {StateText}" + (lastChecked is { } time ? $" (checked {time:HH:mm:ss})" : "");
 
     public void Start()
@@ -125,7 +125,7 @@ public sealed class BackendConnection : ObservableObject, IDisposable
         var wasOnline = State == BackendState.Online;
         lastChecked = DateTimeOffset.Now;
         State = reachable ? BackendState.Online : BackendState.Offline;
-        Changed(nameof(Tooltip));
+        Changed(nameof(StatusDescription));
 
         if (reachable && !wasOnline)
         {

@@ -11,18 +11,19 @@ using Frontend.Shared.Help;
 namespace Ct007.Tests.FrontendTests;
 
 /// <summary>
-/// FE-DH-NEW (Existing / New drillhole), FE-PAGE, FE-LIVE, FE-THRESH, FE-HELP-05…07: the Gamma Core Log updates (new drillhole, Measurement-page
-/// only capture, live CPS, threshold line, single Help window with F1 / Esc).
+/// FE-DH-NEW (Existing / New drillhole), FE-PAGE, FE-LIVE, FE-THRESH: the Gamma Core Log updates (new drillhole, Measurement-page
+/// only capture, live CPS, threshold line). The Help drawer: HelpDrawerTests.cs.
 /// </summary>
 public static partial class GammaCoreLogUpdateTests
 {
-    private static async Task<(MainViewModel Main, ControlledMeasurements Device)> Shell(TestFolder folder, HelpSettings? help = null)
+    private static async Task<(MainViewModel Main, ControlledMeasurements Device)> Shell(TestFolder folder, HelpSettings? help = null,
+        Frontend.Shared.Infrastructure.UiSettings? ui = null)
     {
         var device = new ControlledMeasurements();
         var main = new MainViewModel(new MemoryRepository(folder.Path("m.db")),
             new ApiSettings("http://stub.test", TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(5)),
             Make.Devices(folder.Path("gg.sqlite")), new StubBackend(), bluetoothDevices: () => [], captureService: device,
-            dialogs: new FakeDialogs(), helpSettings: help);
+            dialogs: new FakeDialogs(), helpSettings: help, uiSettings: ui);
         await main.Core.LoadDrillholesAsync();
         return (main, device);
     }
@@ -539,138 +540,6 @@ public static partial class GammaCoreLogUpdateTests
         Assert.True(double.IsNaN(vm.ThresholdCps), "empty threshold: no line");
     }
 
-    [Test("FE-HELP-05", "Help: ? opens or brings to front, F1 toggles, Esc closes; one Help window only")]
-    public static async Task HelpToggleSingleInstance()
-    {
-        Wpf.EnsureResources();
-        using var folder = new TestFolder();
-        var (main, _) = await Shell(folder, HelpSettings.Load(AppContext.BaseDirectory));
-        var window = new Frontend.MainWindow(main) { ShowActivated = false, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20_000 };
-
-        try
-        {
-            window.Show();
-            Assert.True(window.HelpWindowInstance is null, "no Help window before it is asked for");
-
-            main.ShowHelp();                                    // ? button
-            var help = window.HelpWindowInstance;
-            Assert.True(help is { IsVisible: true }, "? opens Help");
-            Assert.Equal("Core Information", main.Help.Page?.Page, "at the current page");
-
-            main.ShowHelp();                                    // ? again while open
-            Assert.True(ReferenceEquals(help, window.HelpWindowInstance), "same window, no second copy");
-            Assert.True(help!.IsVisible && main.Help.IsOpen, "? never closes it");
-            Assert.Equal(1, Application.Current.Windows.OfType<HelpWindow>().Count(w => w.IsVisible), "one Help window on screen");
-
-            main.ToggleHelp(HelpTrigger.Key);                   // F1 while open
-            Assert.False(main.Help.IsOpen || help.IsVisible, "F1 closes");
-            main.ToggleHelp(HelpTrigger.Key);                   // F1 while closed
-            Assert.True(main.Help.IsOpen && help.IsVisible, "F1 opens");
-            Assert.True(ReferenceEquals(help, window.HelpWindowInstance), "reopened, not recreated");
-
-            Assert.True(Frontend.MainWindow.HandleHelpShortcut(Key.Escape, main.Help, main.ToggleHelp), "Esc handled while open");
-            Assert.False(help.IsVisible, "Esc closes");
-            Assert.False(Frontend.MainWindow.HandleHelpShortcut(Key.Escape, main.Help, main.ToggleHelp), "Esc left alone while Help is closed");
-
-            help.Close();                                       // the window's ×
-            Assert.True(help.IsLoaded && !help.IsVisible, "× only hides");
-        }
-        finally
-        {
-            window.Close();
-        }
-    }
-
-    [Test("FE-HELP-06", "F1 and Esc reach Help whatever has keyboard focus, in the main window and in Help, on every page")]
-    public static async Task HelpShortcutsAnyFocus()
-    {
-        Wpf.EnsureResources();
-        using var folder = new TestFolder();
-        var (main, _) = await Shell(folder, HelpSettings.Load(AppContext.BaseDirectory));
-        var window = new Frontend.MainWindow(main) { ShowActivated = false, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20_000 };
-
-        static void Press(UIElement target, Key key)
-        {
-            var args = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(target)!, 0, key) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
-            target.RaiseEvent(args);
-        }
-
-        try
-        {
-            window.Show();
-
-            foreach (var page in main.Pages)
-            {
-                main.ShowPage(page.Page);
-                window.UpdateLayout();
-                var inner = (UIElement?)Descendants(window).OfType<TextBox>().FirstOrDefault()
-                    ?? Descendants(window).OfType<Button>().First();
-
-                Press(inner, Key.F1);
-                Assert.True(main.Help.IsOpen, $"{page.Title}: F1 from a control inside the page opens Help");
-                Assert.Equal(page.Title, main.Help.Page?.Page, $"{page.Title}: Help at this page");
-
-                var help = window.HelpWindowInstance!;
-                help.UpdateLayout();
-                Press(help.CloseHelpButton, Key.F1);
-                Assert.False(main.Help.IsOpen, $"{page.Title}: F1 inside Help closes it");
-
-                Press(inner, Key.F1);
-                Press(help.CloseHelpButton, Key.Escape);
-                Assert.False(main.Help.IsOpen, $"{page.Title}: Esc inside Help closes it");
-
-                Press(inner, Key.F1);
-                Press(inner, Key.Escape);
-                Assert.False(main.Help.IsOpen, $"{page.Title}: Esc in the main window closes it");
-            }
-
-            main.ShowPage(main.Core);
-            main.ShowHelp();
-            window.HelpWindowInstance!.CloseHelpButton.Command.Execute(null);
-            Assert.False(main.Help.IsOpen, "the Close button closes Help");
-            Assert.True(window.HelpWindowInstance.CloseHelpButton.MinWidth >= 120 && window.HelpWindowInstance.CloseHelpButton.Height >= 40, "Close button is large");
-        }
-        finally
-        {
-            window.Close();
-        }
-    }
-
-    [Test("FE-HELP-07", "Help is context-sensitive: it scrolls to the section of the page on screen; every page has a section")]
-    public static async Task HelpScrollsToPage()
-    {
-        Wpf.EnsureResources();
-        using var folder = new TestFolder();
-        var settings = HelpSettings.Load(AppContext.BaseDirectory);
-        var (main, _) = await Shell(folder, settings);
-        var window = new Frontend.MainWindow(main) { ShowActivated = false, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20_000 };
-
-        try
-        {
-            window.Show();
-            main.ShowHelp();
-            var help = window.HelpWindowInstance!;
-            var offsets = new List<double>();
-
-            foreach (var page in main.Pages)
-            {
-                main.ShowPage(page.Page);
-                await Task.Delay(60);   // the scroll runs once layout is done
-                Assert.Equal(page.Title, main.Help.Page?.Page, $"{page.Title}: section selected");
-                offsets.Add(help.LastSectionOffset);
-            }
-
-            Assert.Equal(0.0, offsets[0], "first section at the top");
-            Assert.True(offsets.Zip(offsets.Skip(1)).All(p => p.Second > p.First), $"each later page scrolls further ({string.Join(", ", offsets)})");
-            Assert.True(settings.HasShortcuts && settings.Shortcuts.Any(s => s.Keys == "F1") && settings.Shortcuts.Any(s => s.Keys == "Esc"),
-                "keyboard shortcuts listed");
-        }
-        finally
-        {
-            window.Close();
-        }
-    }
-
     [Test("FE-THRESH-02", "Threshold eye: the Show/Hide state survives Start, captures, Stop, New Measurement and page switches")]
     public static async Task ThresholdStatePersists()
     {
@@ -687,7 +556,7 @@ public static partial class GammaCoreLogUpdateTests
             window.UpdateLayout();
 
             var eye = Named<Button>(window, "ThresholdLineToggle");
-            Assert.Equal("Show or hide the threshold line", eye.ToolTip as string, "tooltip");
+            Assert.Equal("Show or hide the threshold line", AutomationProperties.GetHelpText(eye), "screen-reader help text");
             var icon = (System.Windows.Shapes.Path)eye.Content;
             Assert.True(ReferenceEquals(icon.Data, Application.Current.FindResource("EyeIcon")), "open eye while shown");
 
@@ -750,48 +619,6 @@ public static partial class GammaCoreLogUpdateTests
             Assert.Equal(LiveRateUnit.Cpm, main.Measurement.LiveUnit, "CPM chosen in the view");
             units[0].IsChecked = true;
             Assert.Equal(LiveRateUnit.Cps, main.Measurement.LiveUnit, "CPS chosen in the view");
-        }
-        finally
-        {
-            window.Close();
-        }
-    }
-
-    [Test("FE-HELP-08", "Help window is owned by the main window and moves with it")]
-    public static async Task HelpFollowsMainWindow()
-    {
-        Wpf.EnsureResources();
-        using var folder = new TestFolder();
-        var (main, _) = await Shell(folder, HelpSettings.Load(AppContext.BaseDirectory));
-        var window = new Frontend.MainWindow(main)
-        {
-            ShowActivated = false, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20_000, Top = 100, Width = 1200, Height = 800
-        };
-
-        try
-        {
-            window.Show();
-            main.ShowHelp();
-            var help = window.HelpWindowInstance!;
-            Assert.True(ReferenceEquals(help.Owner, window), "owned by the main window (minimizes and restores with it)");
-
-            // The user puts Help somewhere, then moves the main window.
-            help.Left = -19_500;
-            help.Top = 180;
-            var before = new Point(help.Left, help.Top);
-            window.Left += 100;
-            window.Top += 50;
-            Assert.True(Math.Abs(before.X + 100 - help.Left) < 1, $"moved right with the main window ({help.Left})");
-            Assert.True(Math.Abs(before.Y + 50 - help.Top) < 1, $"moved down with the main window ({help.Top})");
-
-            // Closed while the main window moves: it reopens at the same place relative to the main window. (Help is put on
-            // the screen first, so opening does not pull it back from off-screen as it would from the test window's place.)
-            help.Left = SystemParameters.VirtualScreenLeft + 100;
-            main.Help.Close();
-            window.Left -= 40;
-            main.ShowHelp();
-            var expected = SystemParameters.VirtualScreenLeft + 60;
-            Assert.True(Math.Abs(expected - help.Left) < 1, $"reopened relative to the main window ({help.Left}, expected {expected})");
         }
         finally
         {

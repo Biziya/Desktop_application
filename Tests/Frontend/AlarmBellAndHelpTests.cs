@@ -13,7 +13,7 @@ public static class AlarmBellAndHelpTests
             durationSettings: new CaptureDurationSettings(null), alarm: new CpsAlarm(() => { }, TimeSpan.Zero), defaultThreshold: 150);
 
         Assert.Equal(AlarmState.Armed, vm.Alarm, "default threshold: armed");
-        Assert.Contains("above 150 CPS", vm.AlarmToolTip, "tooltip names the threshold");
+        Assert.Contains("above 150 CPS", vm.AlarmDescription, "tooltip names the threshold");
 
         vm.Threshold = "";
         Assert.Equal(AlarmState.Off, vm.Alarm, "empty: off");
@@ -24,7 +24,7 @@ public static class AlarmBellAndHelpTests
 
         vm.ToggleAlarmMuteCommand.Execute(null);
         Assert.Equal(AlarmState.Muted, vm.Alarm, "click: muted");
-        Assert.Contains("unmute", vm.AlarmToolTip, "tooltip says how to unmute");
+        Assert.Contains("unmute", vm.AlarmDescription, "tooltip says how to unmute");
         vm.ToggleAlarmMuteCommand.Execute(null);
         Assert.Equal(AlarmState.Armed, vm.Alarm, "click again: armed");
     }
@@ -53,7 +53,7 @@ public static class AlarmBellAndHelpTests
         await Make.Capture(vm, device, d => Complete(d, 180));
         Assert.Equal(AlarmState.Triggered, vm.Alarm, "muted: still shown");
         Assert.Equal(1, played, "muted: no tone");
-        Assert.Contains("Sound muted", vm.AlarmToolTip, "tooltip says the sound is muted");
+        Assert.Contains("Sound muted", vm.AlarmDescription, "tooltip says the sound is muted");
 
         vm.Threshold = "300";
         Assert.Equal(AlarmState.Muted, vm.Alarm, "threshold change clears the trigger");
@@ -122,7 +122,7 @@ public static class AlarmBellAndHelpTests
         }
     }
 
-    [Test("FE-HELP-01", "help.yaml has a non-empty section for every sidebar page; the panel follows navigation")]
+    [Test("FE-HELP-01", "help.yaml follows the 6-part template for every sidebar page; the drawer follows navigation")]
     public static void HelpCoversEveryPage()
     {
         var help = HelpSettings.Load(AppContext.BaseDirectory);
@@ -132,7 +132,11 @@ public static class AlarmBellAndHelpTests
         foreach (var page in main.Pages)
         {
             var section = help.For(page.Title);
-            Assert.True(section is { Items.Count: > 0 } && section.Purpose.Length > 0, $"help for '{page.Title}'");
+            Assert.True(section is not null, $"help for '{page.Title}'");
+            Assert.True(section!.Purpose.Length > 0 && section.HasBeforeYouStart && section.HasImage, $"{page.Title}: purpose, Before you start, screenshot");
+            Assert.True(section.Steps.Count >= 3 && section.Items.Count > 0 && section.Troubleshooting.Count >= 3,
+                $"{page.Title}: steps, buttons and fields, troubleshooting");
+            Assert.True(section.Markers.Count >= 3, $"{page.Title}: numbered markers on the screenshot");
         }
 
         main.ShowHelp();
@@ -144,23 +148,25 @@ public static class AlarmBellAndHelpTests
         Assert.False(main.Help.IsOpen, "closed");
     }
 
-    [Test("FE-HELP-03", "Blocking information comes first: Measurement's important notes and Start / Stop lead its help")]
+    [Test("FE-HELP-03", "Blocking information comes first: Measurement's Before you start, the right-click warning, Start / Stop first")]
     public static void HelpImportantFirst()
     {
         var help = HelpSettings.Load(AppContext.BaseDirectory);
         var measurement = help.For("Measurement")!;
 
-        Assert.True(measurement.HasImportant, "Measurement has important notes");
-        Assert.True(measurement.Important.Any(n => n.Contains("right-click", StringComparison.OrdinalIgnoreCase)), "names the right-click capture");
+        Assert.True(measurement.HasBeforeYouStart, "Measurement has Before you start");
+        Assert.True(measurement.StepsCallouts.Any(c => c.Kind == "warning" && c.Text.Contains("right-click", StringComparison.OrdinalIgnoreCase)),
+            "a Warning names the right-click capture");
         Assert.Equal("Start / Stop", measurement.Items[0].Control, "most important control first");
 
         using var folder = new TestFolder();
         Directory.CreateDirectory(folder.Path("Config"));
-        File.WriteAllText(folder.Path(HelpSettings.File), "pages:\n  - page: Measurement\n    purpose: x\n    items:\n      - control: Start\n        does: y\n");
-        Assert.False(HelpSettings.Load(folder.Root).Pages[0].HasImportant, "'important' is optional");
+        File.WriteAllText(folder.Path(HelpSettings.File), Minimal(""));
+        var page = HelpSettings.Load(folder.Root).Pages[0];
+        Assert.False(page.HasBeforeYouStart || page.HasImage || page.Callouts.Count > 0, "Before you start, image and callouts are optional");
     }
 
-    [Test("FE-HELP-04", "Help stays short: every 'does' is at most 90 characters, every purpose and important line at most 100")]
+    [Test("FE-HELP-04", "Help stays short: one plain sentence per line (does 90 characters, the rest 100)")]
     public static void HelpIsShort()
     {
         var help = HelpSettings.Load(AppContext.BaseDirectory);
@@ -168,11 +174,12 @@ public static class AlarmBellAndHelpTests
         foreach (var page in help.Pages)
         {
             Assert.True(page.Purpose.Length <= 100, $"{page.Page} purpose is {page.Purpose.Length} characters");
-            Assert.True(page.Important.Count <= 2, $"{page.Page} has at most 2 important lines");
+            Assert.True(page.BeforeYouStart.Count <= 2, $"{page.Page} has at most 2 Before you start lines");
 
-            foreach (var line in page.Important)
+            foreach (var line in page.BeforeYouStart.Concat(page.Steps).Concat(page.Callouts.Select(c => c.Text))
+                         .Concat(page.Troubleshooting.SelectMany(t => new[] { t.Problem, t.Fix })))
             {
-                Assert.True(line.Length <= 100, $"{page.Page} important line is {line.Length} characters: {line}");
+                Assert.True(line.Length <= 100, $"{page.Page}: {line.Length} characters: {line}");
             }
 
             foreach (var item in page.Items)
@@ -188,12 +195,28 @@ public static class AlarmBellAndHelpTests
         using var folder = new TestFolder();
         Directory.CreateDirectory(folder.Path("Config"));
 
-        File.WriteAllText(folder.Path(HelpSettings.File), "pages:\n  - page: Measurement\n    purpose: x\n    items: []\n");
-        Assert.Contains("help.yaml: pages[0].items", Assert.Throws<InvalidDataException>(() => HelpSettings.Load(folder.Root), "empty items").Message, "names the key");
+        void Fails(string yaml, string key, string what)
+        {
+            File.WriteAllText(folder.Path(HelpSettings.File), yaml);
+            Assert.Contains(key, Assert.Throws<InvalidDataException>(() => HelpSettings.Load(folder.Root), what).Message, $"{what}: names the key");
+        }
 
-        File.WriteAllText(folder.Path(HelpSettings.File), "pages:\n  - page: Measurement\n    purpose: x\n    items:\n      - control: Start\n");
-        Assert.Contains("help.yaml", Assert.Throws<InvalidDataException>(() => HelpSettings.Load(folder.Root), "missing 'does'").Message, "names the file");
+        Fails("pages:\n  - page: Measurement\n    purpose: x\n    steps: [a]\n    items: []\n    troubleshooting: [{problem: p, fix: f}]\n",
+            "help.yaml: pages[0].items", "empty items");
+        Fails("pages:\n  - page: Measurement\n    purpose: x\n    steps: []\n    items: [{control: c, does: d}]\n    troubleshooting: [{problem: p, fix: f}]\n",
+            "help.yaml: pages[0].steps", "empty steps");
+        Fails(Minimal("    markers: [{n: 2, x: 0.5, y: 0.5}]\n"), "pages[0].markers[0].n", "marker without an item");
+        Fails(Minimal("    markers: [{n: 1, x: 1.5, y: 0.5}]\n"), "pages[0].markers[0]", "marker outside the picture");
+        Fails(Minimal("    callouts: [{kind: hint, section: steps, text: t}]\n"), "pages[0].callouts[0].kind", "unknown callout kind");
+        Fails(Minimal("    callouts: [{kind: tip, section: footer, text: t}]\n"), "pages[0].callouts[0].section", "unknown callout section");
+        Fails("pages:\n  - page: Measurement\n    purpose: x\n    steps: [a]\n    items:\n      - control: Start\n    troubleshooting: [{problem: p, fix: f}]\n",
+            "help.yaml", "missing 'does'");
     }
+
+    // One valid page, with extra keys appended.
+    private static string Minimal(string extra) =>
+        "pages:\n  - page: Measurement\n    purpose: x\n    steps: [a]\n    items: [{control: c, does: d, marker: 1}]\n"
+        + "    troubleshooting: [{problem: p, fix: f}]\n" + extra;
 
     private static MainViewModel Start(TestFolder folder, HelpSettings help) =>
         new(new MemoryRepository(folder.Path("m.db")), new ApiSettings("http://stub.test", TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(5)),

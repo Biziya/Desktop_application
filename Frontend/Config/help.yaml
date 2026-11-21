@@ -1,127 +1,329 @@
-# Help window text: opened with the ? button at the top right of every page, or with F1 (F1 again or Esc closes it).
-# The window shows every page as a section and scrolls to the page you are on.
-# One entry per sidebar page; "page" must match the sidebar title exactly.
-# "important" (optional): what must be done first on that page; shown at the top, in a highlighted box.
-# "image" (optional): screenshot of the page, relative to the app folder (Frontend/Help/Images in the source).
-# "items": the buttons and fields on that page, most important first, and what they do.
-# "shortcuts": the last section, Keyboard shortcuts.
-# Keep it short: one plain sentence each ("does" at most 90 characters, "purpose" at most 100).
+# Help drawer text: opened with the ? button at the top right of every page, or with F1 (F1 again, Esc or × closes it).
+# The drawer opens at the page you are on and follows you when you change page.
+# One entry per sidebar page; "page" must match the sidebar title exactly. Every page uses the same template:
+#   purpose          one line: what the page is for (at most 100 characters)
+#   beforeYouStart   what must be done first; shown in a yellow Note box (at most 2 lines, 100 characters each)
+#   image            screenshot of the page, relative to the app folder (Frontend/Help/Images in the source), 2x size
+#   markers          numbered circles on the screenshot: n = the item's marker, x / y = its centre as a fraction (0..1)
+#                    of the picture's width / height (Tests/Frontend/DocsImages.cs prints them for the real controls)
+#   steps            numbered steps, one short sentence each
+#   items            Buttons and fields: control and what it does (at most 90 characters); marker = its number
+#   troubleshooting  common problems: problem and fix, one short sentence each
+#   callouts         optional boxes: kind tip (blue), note (yellow) or warning (red); section steps, items or
+#                    troubleshooting (the box goes at the end of that section)
+# "shortcuts": the Keyboard shortcuts entry of the page selector; "controls": controls on every page (sidebar,
+#   header, Help itself), listed under the shortcuts. The app has no tooltips: explain every field and button here.
 # Changes take effect after a restart.
 pages:
   - page: Core Information
     purpose: Pick the drillhole and check that this laptop is ready to measure.
-    image: Help/Images/core-information.png
-    important:
+    beforeYouStart:
       - Open GammaGuard and connect the SPP first.
-      - Press Save & Continue before you can measure.
+      - Turn on the CT007 device.
+    image: Help/Images/core-information.png
+    markers:
+      - {n: 1, x: 0.209, y: 0.182}
+      - {n: 2, x: 0.209, y: 0.270}
+      - {n: 3, x: 0.508, y: 0.270}
+      - {n: 4, x: 0.761, y: 0.270}
+      - {n: 5, x: 0.837, y: 0.477}
+      - {n: 6, x: 0.209, y: 0.583}
+      - {n: 7, x: 0.869, y: 0.921}
+    steps:
+      - Choose Existing to pick a saved drillhole, or New to create one.
+      - Type part of the drillhole ID, then pick it from the list.
+      - Check that Project and Campaign are right.
+      - Check Device Status. Every line should be green.
+      - Type your name in Operator, and any notes.
+      - Press Save & Continue to go to Measurement.
     items:
       - control: Existing / New
         does: Existing picks a drillhole from the list. New creates one that is not in it.
+        marker: 1
       - control: Drillhole
-        does: Type part of the ID, then pick it. Measured ones come first; Local = made here.
+        does: Type part of the ID, then pick it. Measured ones come first. × clears the choice.
+        marker: 2
       - control: New drillhole
-        does: Drillhole ID, Project and Campaign are required. Use + Add new for a new name.
-      - control: Save & Continue
-        does: Saves your choice (in New, creates the drillhole) and opens Measurement.
-      - control: Device Status
-        does: Green means ready. Red or amber means something needs fixing.
-      - control: Retry
-        does: Checks the device or database again.
-      - control: Select Database / Change Database
-        does: Pick the GammaGuard database yourself if the app can't find it.
+        does: Drillhole ID, Project and Campaign are required. + Add new adds a name, ← goes back.
+      - control: Project / Campaign
+        does: Filled in from the drillhole. Campaign is the drilling campaign, usually the year.
+        marker: 3
       - control: Operator / Notes
         does: Your name and any remarks. Saved with every reading.
-      - control: Project / Campaign
-        does: Filled in for you from the drillhole.
+        marker: 4
+      - control: Save & Continue
+        does: Saves your choice (in New, creates the drillhole) and opens Measurement.
+        marker: 5
+      - control: Device Status
+        does: CT007 device, measurement database and GammaGuard database. Green means ready.
+        marker: 6
+      - control: Local tag
+        does: The drillhole was created on this laptop. It is not in the central drillhole list.
+      - control: Bluetooth device
+        does: Choose which CT007 device to connect to over Bluetooth.
+      - control: Retry
+        does: Loads the drillhole list again, or checks the device or database again.
+      - control: Select Database / Change Database
+        does: Pick the GammaGuard database yourself if the app can't find it.
+        marker: 7
+    troubleshooting:
+      - problem: The drillhole is not in the list.
+        fix: Choose New and create it. If you were offline, press Retry under Drillhole.
+      - problem: Save & Continue is greyed out.
+        fix: Fill Drillhole, Project and Campaign. In New, all three are required.
+      - problem: The drillhole can't be changed.
+        fix: A measurement is running. Stop it on the Measurement page first.
+      - problem: Device Status is red.
+        fix: Check that the CT007 is on and connected in GammaGuard, then press Retry.
+      - problem: The GammaGuard database is not found.
+        fix: Press Select Database and pick the database file.
+    callouts:
+      - kind: tip
+        section: items
+        text: Fields marked * are required. The numbers match the circles on the picture.
 
   - page: Measurement
     purpose: Measure the drillhole one interval at a time.
+    beforeYouStart:
+      - Save a drillhole on Core Information first.
+      - Check Starting Depth and Step before you press Start.
     image: Help/Images/measurement.png
-    important:
-      - Press Start, then right-click on this page to capture. Right-click does nothing on other pages.
-      - Readings stay on this laptop until you export and upload them.
+    markers:
+      - {n: 1, x: 0.209, y: 0.331}
+      - {n: 2, x: 0.209, y: 0.149}
+      - {n: 3, x: 0.209, y: 0.209}
+      - {n: 4, x: 0.380, y: 0.178}
+      - {n: 5, x: 0.209, y: 0.270}
+      - {n: 6, x: 0.784, y: 0.138}
+      - {n: 7, x: 0.944, y: 0.138}
+      - {n: 8, x: 0.871, y: 0.526}
+      - {n: 9, x: 0.726, y: 0.526}
+      - {n: 10, x: 0.948, y: 0.625}
+    steps:
+      - Check Starting Depth and Step.
+      - Press Start.
+      - Hold the detector at the interval, then right-click anywhere on this page.
+      - Wait for the countdown. The averaged row appears in the table.
+      - Move to the next interval and right-click again.
+      - Press Stop when the drillhole is done.
+      - Press Export CSV to save the table for Upload Data.
     items:
       - control: Start / Stop
-        does: Turns measuring on or off. While on, each right-click here captures one interval.
-      - control: Live
-        does: The newest reading, above the graph. Updates every second. CPS / CPM switches the unit.
-      - control: Eye icon
-        does: Shows or hides the dashed threshold line on the graph.
+        does: Turns measuring on or off. Stop keeps the captured readings.
+        marker: 1
       - control: Starting Depth (m)
         does: Where the first interval starts. The next one follows on its own.
+        marker: 2
       - control: Step (cm)
         does: How long each interval is.
+        marker: 3
       - control: Capture Countdown
-        does: Time left in the current capture. Click it to change the length (2 to 10 s).
-      - control: Export CSV
-        does: Saves the table as a file you can send on the Upload Data page.
+        does: Time left in the capture. Click it to change the length (2 to 10 s), not mid-capture.
+        marker: 4
       - control: Threshold (CPS)
-        does: Plays an alarm when a reading goes above this number. Leave empty for no alarm.
+        does: Alarm when a reading goes above it; drawn as a dashed line. Empty means no alarm.
+        marker: 5
       - control: Bell
         does: Shows the alarm state. Click to mute or unmute.
-      - control: Delete (✕)
-        does: Removes one row, after you confirm.
+      - control: Live
+        does: The newest reading, every second. CPS / CPM switches the unit (CPM = CPS × 60).
+        marker: 6
+      - control: Eye icon
+        does: Shows or hides the dashed threshold line on the graph.
+        marker: 7
+      - control: Graph
+        does: CPS of every captured interval by depth. Right-click anywhere on this page to capture.
+      - control: Export CSV
+        does: Saves the table as a file you can send on the Upload Data page.
+        marker: 8
       - control: New Measurement
         does: Clears the table for a new run on the same drillhole. Saved data is kept.
+        marker: 9
+      - control: Delete (✕)
+        does: Removes one row, after you confirm. Uploaded rows can't be changed.
+        marker: 10
+    troubleshooting:
+      - problem: Right-click does nothing.
+        fix: Press Start first. Right-click only captures on this page.
+      - problem: Start is greyed out.
+        fix: Save a drillhole on Core Information first.
+      - problem: New Measurement is greyed out.
+        fix: Press Stop first. Without a saved drillhole, save one on Core Information.
+      - problem: Export CSV is greyed out.
+        fix: Nothing to export yet. Capture at least one interval.
+      - problem: Live shows no value.
+        fix: Check Device Status on Core Information. The device may be disconnected.
+      - problem: The alarm keeps sounding.
+        fix: Click the bell to mute it, or raise the Threshold.
+      - problem: A row has the wrong depth.
+        fix: Delete it with ✕ and capture that interval again.
+    callouts:
+      - kind: warning
+        section: steps
+        text: Right-click captures only on this page, and only after Start.
+      - kind: note
+        section: items
+        text: Readings stay on this laptop until you export and upload them.
 
   - page: Monitoring
     purpose: Live readings from every detector connected in GammaGuard.
-    image: Help/Images/monitoring.png
-    important:
+    beforeYouStart:
       - GammaGuard must be running, with a database picked on Core Information.
+    image: Help/Images/monitoring.png
+    markers:
+      - {n: 1, x: 0.398, y: 0.175}
+      - {n: 2, x: 0.811, y: 0.216}
+      - {n: 3, x: 0.193, y: 0.217}
+      - {n: 4, x: 0.928, y: 0.921}
+      - {n: 5, x: 0.739, y: 0.175}
+    steps:
+      - Start GammaGuard and connect the detectors.
+      - Pick the GammaGuard database on Core Information.
+      - Check that each detector shows Live.
+      - Click a detector row to see its details.
+      - Press Take sample to average the next readings.
     items:
       - control: State
         does: Live, Stale (nothing for 5 s), No data or Disconnected.
+        marker: 1
       - control: Open Core Information
         does: Takes you to the page where you pick the database.
       - control: Take sample
         does: Skips the next reading, then averages the 5 after it.
+        marker: 2
       - control: Response
         does: Detector response time. Samples need 1 s; you'll see a warning otherwise.
+        marker: 5
       - control: Detector row
         does: Click a row for its details and raw values.
+        marker: 3
+      - control: Dose rate / Coverage / HDM
+        does: Dose rate from the detector, seconds of readings in a sample, and its HDM value.
       - control: Recent readings
         does: Click the arrow to show or hide the latest readings.
+        marker: 4
+    troubleshooting:
+      - problem: State says No data.
+        fix: Check that GammaGuard is running and logging readings.
+      - problem: State says Stale.
+        fix: Nothing arrived for 5 s. Check the detector's cable or Bluetooth.
+      - problem: Take sample shows a warning.
+        fix: Set the detector's response time to 1 s in GammaGuard.
+      - problem: The page is empty.
+        fix: Press Open Core Information and pick the database.
 
   - page: Upload Data
     purpose: Send an exported CSV to the central database.
-    image: Help/Images/upload-data.png
-    important:
-      - This is the only way readings reach the central database.
+    beforeYouStart:
+      - Export a CSV on the Measurement page first.
       - You need to be online (green dot in the sidebar).
+    image: Help/Images/upload-data.png
+    markers:
+      - {n: 1, x: 0.736, y: 0.053}
+      - {n: 2, x: 0.209, y: 0.277}
+      - {n: 3, x: 0.845, y: 0.053}
+      - {n: 4, x: 0.948, y: 0.455}
+    steps:
+      - Press Import CSV and pick a file exported from Measurement.
+      - Check the rows. Delete a wrong row with ✕.
+      - Press Upload Data.
+      - Wait for the message that the upload is done.
     items:
       - control: Import CSV
         does: Opens a CSV saved from the Measurement page. The file is not changed.
+        marker: 1
+      - control: Uploading User
+        does: Your Windows account, saved with the upload.
+        marker: 2
       - control: Upload Data
         does: Sends the rows to the central database. Sending a file twice stores it once.
+        marker: 3
       - control: Delete (✕)
-        does: Drops a row before you upload it.
+        does: Drops a row before you upload it. Rows already uploaded are marked as such.
+        marker: 4
+    troubleshooting:
+      - problem: Upload Data is greyed out.
+        fix: Import a CSV with rows not yet uploaded, or wait for the running upload to finish.
+      - problem: The upload fails.
+        fix: Check that the sidebar shows Online, then try again.
+      - problem: The same file was uploaded twice.
+        fix: Nothing to do. It is stored once.
+      - problem: The CSV won't import.
+        fix: Use the file saved by Export CSV, not an edited copy.
+    callouts:
+      - kind: warning
+        section: items
+        text: This is the only way readings reach the central database.
 
   - page: Data Viewer
     purpose: See what has been uploaded to the central database, by drillhole.
+    beforeYouStart:
+      - Only uploaded readings show here. You need to be online.
     image: Help/Images/data-viewer.png
-    important:
-      - Only uploaded readings show here.
+    markers:
+      - {n: 1, x: 0.209, y: 0.216}
+      - {n: 2, x: 0.938, y: 0.216}
+      - {n: 3, x: 0.494, y: 0.216}
+      - {n: 4, x: 0.194, y: 0.520}
+    steps:
+      - Type part of the drillhole ID, then pick it.
+      - Read its uploaded rows in the table, by depth.
+      - Press Refresh to load the latest uploads.
     items:
       - control: Drillhole
         does: Type part of the ID, then pick it. Only drillholes with uploads are listed.
-      - control: Table
-        does: All uploaded readings for that drillhole, by depth.
+        marker: 1
       - control: Refresh
         does: Loads the latest data again.
+        marker: 2
       - control: Project / Campaign
         does: Project and campaign of the chosen drillhole.
+        marker: 3
+      - control: Table
+        does: All uploaded readings for that drillhole, by depth.
+        marker: 4
+      - control: Retry
+        does: Tries again to load the drillhole list from the server.
+    troubleshooting:
+      - problem: The drillhole is not in the list.
+        fix: Only drillholes with uploads are listed. Upload its CSV first.
+      - problem: The list can't be loaded.
+        fix: Check that you are online, then press Retry.
+      - problem: New rows are missing.
+        fix: Press Refresh.
 
 shortcuts:
   - keys: "F1"
-    does: Opens Help at the page you are on, or closes it. Works on every page and in Help.
-  - keys: "Esc"
-    does: Closes Help.
+    does: Opens Help at the page you are on, or closes it. Works on every page.
   - keys: "? button"
-    does: Opens Help, or brings it to the front if it is already open.
+    does: Opens or closes Help, like F1.
+  - keys: "Esc"
+    does: Closes an enlarged picture, then Help.
+  - keys: "Ctrl+F"
+    does: While Help is open, jumps to its search box.
   - keys: "Right-click"
-    does: Captures one interval, on the Measurement page only, after Start.
+    does: Captures one interval, on the Measurement page only, after Start. Not inside Help.
   - keys: "Enter / Esc"
     does: In the capture duration editor (click the countdown) - saves / cancels.
   - keys: "↑ ↓ Enter"
     does: In the Drillhole box - move through the list and pick a drillhole.
+
+controls:
+  - control: « / »
+    does: Collapses or expands the sidebar.
+  - control: Online / Offline
+    does: Online is connected to the server. Offline saves data on this laptop only.
+  - control: "? button"
+    does: Opens or closes Help for the page you are on (F1). Blue while Help is open.
+  - control: × on a message
+    does: Dismisses the message.
+  - control: × in Help
+    does: Closes Help (Esc).
+  - control: Search
+    does: Searches every help page (Ctrl+F). Click a result to go there.
+  - control: Page list
+    does: Chooses which help page to show.
+  - control: Screenshot
+    does: Click it to show it larger. × or Esc closes the picture.
+  - control: Left edge of Help
+    does: Drag it to make Help wider or narrower. The width is remembered.

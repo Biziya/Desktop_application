@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -11,7 +10,6 @@ namespace Frontend;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel viewModel;
-    private HelpWindow? helpWindow;
 
     public MainWindow()
         : this(new MainViewModel())
@@ -29,99 +27,68 @@ public partial class MainWindow : Window
         // The handler lives as long as the window, so it needs no explicit removal.
         AddHandler(Mouse.PreviewMouseDownEvent, new MouseButtonEventHandler(OnMeasurementMouseDown), handledEventsToo: true);
 
-        // F1 / Esc at window level, before any control sees them: they work whatever has keyboard focus.
+        // F1, Esc and Ctrl+F at window level, before any control sees them: they work whatever has keyboard focus.
         AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler(OnHelpShortcut), handledEventsToo: true);
-        viewModel.Help.PropertyChanged += OnHelpChanged;
-        viewModel.Help.FocusRequested += BringHelpToFront;
 
-        // The Help window moves with this window (moved, resized, maximized or restored). Minimize / restore needs no code:
-        // Help is owned by this window (Owner = this), and Windows hides and shows owned windows with their owner.
-        LocationChanged += (_, _) => FollowMainWindow();
-        SizeChanged += (_, _) => FollowMainWindow();
-        StateChanged += (_, _) => FollowMainWindow();
+        // Esc that a page control did not use (it bubbled back up unhandled) closes Help too.
+        AddHandler(Keyboard.KeyDownEvent, new KeyEventHandler(OnUnhandledEscape));
     }
 
-    // Help's position relative to this window's top-right corner, in DIPs. Updated whenever the user moves Help itself.
-    private Vector? helpOffset;
-    private bool movingHelp;
+    /// <summary>The Help drawer (an overlay of this window).</summary>
+    public HelpDrawer HelpDrawer => HelpOverlay;
 
-    /// <summary>Top-right corner of the main window's client area on screen, in DIPs (also right when maximized).</summary>
-    private Point MainAnchor()
+    private void OnHelpShortcut(object sender, KeyEventArgs e)
     {
-        if (PresentationSource.FromVisual(this)?.CompositionTarget is { } target)
-        {
-            return target.TransformFromDevice.Transform(PointToScreen(new Point(ActualWidth, 0)));
-        }
-
-        return new Point(Left + ActualWidth, Top);
-    }
-
-    private void RememberHelpOffset()
-    {
-        if (!movingHelp && helpWindow is { IsVisible: true } help && WindowState != WindowState.Minimized)
-        {
-            helpOffset = new Point(help.Left, help.Top) - MainAnchor();
-        }
-    }
-
-    private void FollowMainWindow()
-    {
-        if (helpWindow is not { IsVisible: true } help || helpOffset is not { } offset || WindowState == WindowState.Minimized
-            || PresentationSource.FromVisual(this) is null)
+        if (e.Handled)
         {
             return;
         }
 
-        var position = MainAnchor() + offset;
-        movingHelp = true;
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        var help = viewModel.Help;
 
-        try
-        {
-            help.Left = position.X;
-            help.Top = position.Y;
-        }
-        finally
-        {
-            movingHelp = false;
-        }
-    }
-
-    /// <summary>The Help window, once created (one instance for the app's lifetime).</summary>
-    public HelpWindow? HelpWindowInstance => helpWindow;
-
-    /// <summary>F1 toggles Help; Esc closes it (only when open, so Esc keeps its other uses otherwise).</summary>
-    public static bool HandleHelpShortcut(Key key, HelpPanel help, Action<HelpTrigger> toggle)
-    {
         switch (key)
         {
             case Key.F1:
-                toggle(HelpTrigger.Key);
-                return true;
-            case Key.Escape when help.IsOpen:
-                help.Close();
-                return true;
-            default:
-                return false;
+                viewModel.ToggleHelp();
+                e.Handled = true;
+                break;
+            case Key.F when Keyboard.Modifiers == ModifierKeys.Control && help.IsOpen:
+                HelpOverlay.FocusSearch();
+                e.Handled = true;
+                break;
+            // Esc closes the enlarged picture first, then Help: at once when the focus is in Help (or nowhere).
+            // With the focus on a page control (the countdown editor, a dropdown), that control gets Esc first.
+            case Key.Escape when help.IsLightboxOpen:
+            case Key.Escape when help.IsOpen && (Keyboard.FocusedElement is null or Window || HelpOverlay.Contains(Keyboard.FocusedElement)):
+                help.CloseTopmost();
+                e.Handled = true;
+                break;
         }
     }
 
-    private void OnHelpShortcut(object sender, KeyEventArgs e)
+    private void OnUnhandledEscape(object sender, KeyEventArgs e)
     {
-        if (!e.Handled && HandleHelpShortcut(e.Key == Key.System ? e.SystemKey : e.Key, viewModel.Help, viewModel.ToggleHelp))
+        if (e.Key == Key.Escape && viewModel.Help.IsOpen)
         {
+            viewModel.Help.CloseTopmost();
             e.Handled = true;
         }
     }
 
-    // The Help window counts as part of the app: right-click captures while either window is active, but only while
-    // the Measurement page is on screen. On every other page right-click is an ordinary right-click.
-    private bool AcceptMeasurementMouseInput =>
-        (IsActive || helpWindow?.IsActive == true) && IsEnabled && WindowState != WindowState.Minimized
-        && viewModel.IsMeasurementPageActive && viewModel.Measurement.IsMeasurementModeActive;
+    /// <summary>
+    /// Whether a right-click on <paramref name="source"/> captures: only while the Measurement page is on screen and
+    /// measuring, never inside Help (the drawer or its enlarged picture).
+    /// </summary>
+    /// <param name="requireActive">False in tests, whose windows are never activated.</param>
+    public bool RightClickCaptures(object? source, bool requireActive = true) =>
+        (IsActive || !requireActive) && IsEnabled && WindowState != WindowState.Minimized
+        && viewModel.IsMeasurementPageActive && viewModel.Measurement.IsMeasurementModeActive
+        && !HelpOverlay.Contains(source);
 
     private void OnMeasurementMouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton != MouseButton.Right || !AcceptMeasurementMouseInput)
+        if (e.ChangedButton != MouseButton.Right || !RightClickCaptures(e.OriginalSource))
         {
             return;
         }
@@ -137,110 +104,22 @@ public partial class MainWindow : Window
         }
     }
 
-    // The ? button (ApplicationCommands.Help): the same function as F1, but never closes an open Help window.
-    private void HelpButtonPressed(object sender, ExecutedRoutedEventArgs e) => viewModel.ToggleHelp(HelpTrigger.Button);
-
-    private void OnHelpChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(HelpPanel.IsOpen) && !viewModel.Help.IsOpen)
-        {
-            helpWindow?.Hide();
-
-            // Back to the app, so the next key press (F1 again, a shortcut) reaches the main window.
-            if (IsVisible)
-            {
-                Activate();
-            }
-        }
-    }
-
-    // Single instance: created once, then only shown, restored and activated. Opening never does nothing silently.
-    private void BringHelpToFront()
-    {
-        if (helpWindow is null)
-        {
-            helpWindow = new HelpWindow(viewModel.Help, OnMeasurementMouseDown, () => AcceptMeasurementMouseInput,
-                OnHelpShortcut)
-            {
-                Owner = this,
-                WindowStartupLocation = WindowStartupLocation.Manual,
-            };
-            helpWindow.LocationChanged += (_, _) => RememberHelpOffset();
-            PlaceHelpWindow(helpWindow, firstTime: true);
-        }
-        else
-        {
-            // Reopened: at the same place relative to the main window, even if the main window moved while Help was closed.
-            if (!helpWindow.IsVisible && helpOffset is { } offset && PresentationSource.FromVisual(this) is not null)
-            {
-                var position = MainAnchor() + offset;
-                helpWindow.Left = position.X;
-                helpWindow.Top = position.Y;
-            }
-
-            PlaceHelpWindow(helpWindow, firstTime: false);
-        }
-
-        if (helpWindow.WindowState == WindowState.Minimized)
-        {
-            helpWindow.WindowState = WindowState.Normal;
-        }
-
-        helpWindow.Show();
-        RememberHelpOffset();
-        helpWindow.Activate();
-        helpWindow.ScrollToCurrentSection();
-    }
-
-    // First time: near the top-right corner, inside the main window. Later it opens where the user left it, pulled back
-    // onto the screen if that place is no longer visible (another monitor, a resolution change).
-    private void PlaceHelpWindow(Window window, bool firstTime)
-    {
-        var area = SystemParameters.WorkArea;
-
-        if (firstTime && PresentationSource.FromVisual(this)?.CompositionTarget is { } target)
-        {
-            var topRight = target.TransformFromDevice.Transform(PointToScreen(new Point(ActualWidth, 0)));
-            window.Left = topRight.X - window.Width - 32;
-            window.Top = topRight.Y + 72;
-        }
-        else if (firstTime || double.IsNaN(window.Left) || double.IsNaN(window.Top))
-        {
-            window.Left = area.Right - window.Width - 32;
-            window.Top = area.Top + 72;
-        }
-
-        var screenLeft = SystemParameters.VirtualScreenLeft;
-        var screenTop = SystemParameters.VirtualScreenTop;
-        window.Left = Math.Clamp(window.Left, screenLeft, Math.Max(screenLeft, screenLeft + SystemParameters.VirtualScreenWidth - window.Width));
-        window.Top = Math.Clamp(window.Top, screenTop, Math.Max(screenTop, screenTop + SystemParameters.VirtualScreenHeight - 80));
-    }
+    // The ? button (ApplicationCommands.Help): the same function as F1.
+    private void HelpButtonPressed(object sender, ExecutedRoutedEventArgs e) => viewModel.ToggleHelp();
 
     protected override void OnContextMenuOpening(ContextMenuEventArgs e)
     {
         base.OnContextMenuOpening(e);
 
-        // Right-click is reserved for capture while armed; normal menus return after Stop.
-        if (AcceptMeasurementMouseInput)
+        // Right-click is reserved for capture while armed; normal menus return after Stop (and always work in Help).
+        if (RightClickCaptures(e.OriginalSource))
         {
             e.Handled = true;
         }
     }
 
-    protected override void OnClosing(CancelEventArgs e)
-    {
-        base.OnClosing(e);
-
-        if (!e.Cancel && helpWindow is not null)
-        {
-            helpWindow.AllowClose = true;
-        }
-    }
-
     protected override void OnClosed(EventArgs e)
     {
-        viewModel.Help.PropertyChanged -= OnHelpChanged;
-        viewModel.Help.FocusRequested -= BringHelpToFront;
         viewModel.Dispose();
         base.OnClosed(e);
     }

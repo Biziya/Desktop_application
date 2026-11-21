@@ -28,16 +28,16 @@
                         MinHeight="{StaticResource TableActionButtonMinHeight}"
                         Margin="0,0,10,0"
                         Command="{Binding NewMeasurementCommand}">
-                    <!-- Disabled while measuring, or while no drillhole is saved: the tooltip says which. -->
+                    <!-- Disabled while measuring, or while no drillhole is saved: the screen-reader help text says which. -->
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource SuccessButton}">
-                            <Setter Property="infra:Tip.Text" Value="{StaticResource TipNewMeasurement}"/>
+                            <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextNewMeasurement}"/>
                             <Style.Triggers>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter Property="infra:Tip.Text" Value="{StaticResource TipStartDisabled}"/>
+                                    <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextStartDisabled}"/>
                                 </Trigger>
                                 <DataTrigger Binding="{Binding IsMeasurementModeActive}" Value="True">
-                                    <Setter Property="infra:Tip.Text" Value="{StaticResource TipNewMeasurementDisabled}"/>
+                                    <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextNewMeasurementDisabled}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -51,10 +51,10 @@
                         Command="{Binding ExportCommand}">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                            <Setter Property="infra:Tip.Text" Value="{StaticResource TipExport}"/>
+                            <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextExport}"/>
                             <Style.Triggers>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter Property="infra:Tip.Text" Value="{StaticResource TipExportDisabled}"/>
+                                    <Setter Property="AutomationProperties.HelpText" Value="{StaticResource HelpTextExportDisabled}"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
