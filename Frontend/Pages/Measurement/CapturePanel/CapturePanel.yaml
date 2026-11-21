@@ -8,7 +8,9 @@ labels:
   stop: Stop                                    # red glyph + Stop while measuring
   startGlyph: ▶
   stopGlyph: ■
-  liveCps: Live CPS                             # boxed value under the countdown (newest reading, CPS only)
+  live: Live                                    # newest reading, boxed left of the eye icon above the graph
+  cps: CPS                                      # live value unit switch: counts per second
+  cpm: CPM                                      # counts per minute (CPS × 60)
 
 # Final size = size (below) × multiplier. Edit the multipliers: 1.0 = original look, 1.5 = +50 %, 0.8 = −20 %.
 # The countdown ring, its line and its number are enlarged together by 25 % (175 px ring, 10 px line, 40 px number);
@@ -33,7 +35,7 @@ sizes:
   startStopButtonIconFontSize: 13               # the play / stop glyph
   startStopButtonPadding: 16,0                  # no multiplier: used as is
   durationEditorWidth: 230                      # no multiplier
-  liveCpsFontSize: 24                           # the Live CPS value; no multiplier
+  liveFontSize: 18                              # the live value; no multiplier
 
 spacing:
   startStopButton: 0,12,0,0                     # between Threshold and Start / Stop

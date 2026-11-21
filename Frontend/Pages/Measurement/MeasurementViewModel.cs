@@ -14,15 +14,23 @@ public enum MeasurementState
     Processing
 }
 
+/// <summary>Unit of the live value beside the graph: counts per second or per minute (CPS × 60).</summary>
+public enum LiveRateUnit
+{
+    Cps,
+    Cpm
+}
+
 public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavigationAware
 {
-    /// <summary>Shown in the Live CPS box while no recent reading is available.</summary>
+    /// <summary>Shown as the Live value while no recent reading is available.</summary>
     public const string NoLiveCps = "—";
 
     private readonly ILiveCpsReader? liveCpsReader;
     private readonly TimeSpan liveCpsInterval;
     private CancellationTokenSource? livePolling;
-    private string liveCps = NoLiveCps;
+    private double? liveCpsValue;
+    private LiveRateUnit liveUnit = LiveRateUnit.Cps;
 
     // Captures and device data are only accepted while the Measurement page is on screen. A standalone view model
     // (tests) counts as shown; MainViewModel hides it at start-up because the app opens on Core Information.
@@ -150,17 +158,66 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
     /// <summary>The bell beside Threshold: mutes or unmutes the alarm sound.</summary>
     public RelayCommand ToggleAlarmMuteCommand { get; }
 
-    /// <summary>The Show/Hide threshold button above the graph.</summary>
+    /// <summary>The eye icon above the graph: shows or hides the threshold line.</summary>
     public RelayCommand ToggleThresholdLineCommand { get; }
 
     /// <summary>The Measurement page is on screen: right-click captures and live device readings are accepted.</summary>
     public bool IsShown => isShown;
 
-    /// <summary>Newest CPS reading ("12.34"), or <see cref="NoLiveCps"/>. Updated about once a second while shown.</summary>
-    public string LiveCps
+    /// <summary>Newest reading in <see cref="LiveUnit"/> ("12.34" CPS or "740" CPM), or <see cref="NoLiveCps"/>.
+    /// Updated about once a second while shown.</summary>
+    public string LiveValue => FormatLiveValue(liveCpsValue, liveUnit);
+
+    /// <summary>Unit of the live value. Kept for the app session (page switches, Start / Stop); not saved to disk.</summary>
+    public LiveRateUnit LiveUnit
     {
-        get => liveCps;
-        private set => Set(ref liveCps, value);
+        get => liveUnit;
+        set
+        {
+            if (Set(ref liveUnit, value))
+            {
+                Changed(nameof(IsLiveUnitCps));
+                Changed(nameof(IsLiveUnitCpm));
+                Changed(nameof(LiveValue));
+            }
+        }
+    }
+
+    // Two-way targets for the CPS | CPM switch (radio buttons).
+    public bool IsLiveUnitCps
+    {
+        get => liveUnit == LiveRateUnit.Cps;
+        set
+        {
+            if (value)
+            {
+                LiveUnit = LiveRateUnit.Cps;
+            }
+        }
+    }
+
+    public bool IsLiveUnitCpm
+    {
+        get => liveUnit == LiveRateUnit.Cpm;
+        set
+        {
+            if (value)
+            {
+                LiveUnit = LiveRateUnit.Cpm;
+            }
+        }
+    }
+
+    private double? LiveCpsReading
+    {
+        set
+        {
+            if (liveCpsValue != value)
+            {
+                liveCpsValue = value;
+                Changed(nameof(LiveValue));
+            }
+        }
     }
 
     /// <summary>The alarm threshold as a number for the graph; NaN when none is set (no line).</summary>
@@ -232,7 +289,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
         livePolling?.Cancel();
         livePolling?.Dispose();
         livePolling = null;
-        LiveCps = NoLiveCps;
+        LiveCpsReading = null;
     }
 
     // Reads off the UI thread, publishes on it; a read that finishes after the page was left is dropped.
@@ -249,7 +306,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
                     return;
                 }
 
-                LiveCps = FormatLiveCps(cps);
+                LiveCpsReading = cps is { } value && double.IsFinite(value) ? value : null;
                 await Task.Delay(liveCpsInterval, token);
             }
         }
@@ -258,8 +315,12 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
         }
     }
 
-    public static string FormatLiveCps(double? cps) =>
-        cps is { } value && double.IsFinite(value) ? value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) : NoLiveCps;
+    /// <summary>CPS with two decimals; CPM = CPS × 60 as whole counts; <see cref="NoLiveCps"/> without a reading.</summary>
+    public static string FormatLiveValue(double? cps, LiveRateUnit unit) => cps is { } value && double.IsFinite(value)
+        ? unit == LiveRateUnit.Cpm
+            ? Math.Round(value * 60, MidpointRounding.AwayFromZero).ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+            : value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+        : NoLiveCps;
 
     /// <summary>Demo mode: rows without a device ts_ms get a random one for display only (never saved or exported).</summary>
     public bool ShowDemoTsMs { get; }

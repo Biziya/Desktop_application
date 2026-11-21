@@ -1,6 +1,6 @@
 namespace Frontend.Calculation.Measurement;
 
-/// <summary>Newest CPS reading of the recording detector, for the Live CPS box on the Measurement page.</summary>
+/// <summary>Newest CPS reading of the recording detector, for the Live value above the Measurement graph.</summary>
 public interface ILiveCpsReader
 {
     /// <summary>The newest CPS value, or null when no recent reading is available. Never throws.</summary>

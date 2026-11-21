@@ -32,7 +32,7 @@ public static class DocsImages
         Wpf.EnsureResources();
         using var folder = new TestFolder();
 
-        // A recording detector, so Monitoring and Live CPS show values.
+        // A recording detector, so Monitoring and the Live value show readings.
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         using (var gg = new FakeGammaGuard(folder.Path("gg.sqlite")))
         {
@@ -83,7 +83,7 @@ public static class DocsImages
             await Snap(window, output, "new-drillhole");
             main.Core.CancelNewDrillholeCommand.Execute(null);
 
-            // Measurement: armed, a few intervals captured, threshold line at 150 CPS, Live CPS under the countdown.
+            // Measurement: armed, a few intervals captured, threshold line at 150 CPS, Live value and eye icon above the graph.
             main.Core.SaveCommand.Execute(null);
             await Assert.Eventually(() => main.Measurement.ToggleMeasurementCommand.CanExecute(null), "session open");
             main.Measurement.NextFrom = "12.00";
@@ -99,7 +99,7 @@ public static class DocsImages
                 await Assert.Eventually(() => main.Measurement.State == MeasurementState.Ready, "capture finished");
             }
 
-            await Assert.Eventually(() => main.Measurement.LiveCps != MeasurementViewModel.NoLiveCps, "live CPS shown");
+            await Assert.Eventually(() => main.Measurement.LiveValue != MeasurementViewModel.NoLiveCps, "live CPS shown");
             main.Toasts.Items.Clear();
             await Task.Delay(300);
             main.Toasts.Items.Clear();

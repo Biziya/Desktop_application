@@ -128,7 +128,7 @@ const children = [
 
   h1("4. Measurement"),
   p("Measure the drillhole one interval at a time."),
-  ...picture("measurement.png", "Measurement: countdown, Live CPS, graph with threshold line, and the table"),
+  ...picture("measurement.png", "Measurement: countdown, Live value with CPS / CPM switch, eye icon, graph with threshold line, and the table"),
   ...steps([
     "Enter **Starting Depth (m)** and **Step (cm)**. Optionally set **Threshold (CPS)** for an alarm.",
     "Press **Start**.",
@@ -138,9 +138,9 @@ const children = [
   ]),
   p("**Right-click only captures on the Measurement page.** On every other page a right-click does nothing to the table, and readings from the device are ignored. If you leave the Measurement page while a capture is running, that capture is cancelled and nothing is saved; measuring stays switched on, so come back and right-click again."),
   table(["Item", "What it does"], [
-    ["Live CPS", "The boxed value under the countdown: the newest CPS reading from the detector, updated every second while you are on this page (— when there is no recent reading)."],
+    ["Live", "The boxed value above the graph, left of the eye icon: the newest reading from the detector, updated every second while you are on this page (— when there is no recent reading). CPS / CPM beside it switches the unit (CPM = CPS × 60); the choice is kept until you close the app."],
     ["Graph", "One bar per interval: depth along the bottom, CPS up the side."],
-    ["Threshold line", "The alarm threshold as a dashed red line across the graph. Hide threshold / Show threshold above the graph switches it off and on."],
+    ["Threshold line", "The alarm threshold as a dashed red line across the graph, before, during and after measuring. The eye icon above the graph shows it (open eye) or hides it (crossed-out eye)."],
     ["Bell", "Alarm state. Red when the last reading was above the threshold; click to mute or unmute."],
     ["Table", "No, From, To, Step, Date and CPS of every interval. Click ✕ to delete a row (after confirming)."],
     ["Export CSV", "Saves the table as a file for the Upload Data page (the file also holds each capture's sample count)."],

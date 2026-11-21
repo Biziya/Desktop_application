@@ -33,6 +33,57 @@ public partial class MainWindow : Window
         AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler(OnHelpShortcut), handledEventsToo: true);
         viewModel.Help.PropertyChanged += OnHelpChanged;
         viewModel.Help.FocusRequested += BringHelpToFront;
+
+        // The Help window moves with this window (moved, resized, maximized or restored). Minimize / restore needs no code:
+        // Help is owned by this window (Owner = this), and Windows hides and shows owned windows with their owner.
+        LocationChanged += (_, _) => FollowMainWindow();
+        SizeChanged += (_, _) => FollowMainWindow();
+        StateChanged += (_, _) => FollowMainWindow();
+    }
+
+    // Help's position relative to this window's top-right corner, in DIPs. Updated whenever the user moves Help itself.
+    private Vector? helpOffset;
+    private bool movingHelp;
+
+    /// <summary>Top-right corner of the main window's client area on screen, in DIPs (also right when maximized).</summary>
+    private Point MainAnchor()
+    {
+        if (PresentationSource.FromVisual(this)?.CompositionTarget is { } target)
+        {
+            return target.TransformFromDevice.Transform(PointToScreen(new Point(ActualWidth, 0)));
+        }
+
+        return new Point(Left + ActualWidth, Top);
+    }
+
+    private void RememberHelpOffset()
+    {
+        if (!movingHelp && helpWindow is { IsVisible: true } help && WindowState != WindowState.Minimized)
+        {
+            helpOffset = new Point(help.Left, help.Top) - MainAnchor();
+        }
+    }
+
+    private void FollowMainWindow()
+    {
+        if (helpWindow is not { IsVisible: true } help || helpOffset is not { } offset || WindowState == WindowState.Minimized
+            || PresentationSource.FromVisual(this) is null)
+        {
+            return;
+        }
+
+        var position = MainAnchor() + offset;
+        movingHelp = true;
+
+        try
+        {
+            help.Left = position.X;
+            help.Top = position.Y;
+        }
+        finally
+        {
+            movingHelp = false;
+        }
     }
 
     /// <summary>The Help window, once created (one instance for the app's lifetime).</summary>
@@ -114,10 +165,19 @@ public partial class MainWindow : Window
                 Owner = this,
                 WindowStartupLocation = WindowStartupLocation.Manual,
             };
+            helpWindow.LocationChanged += (_, _) => RememberHelpOffset();
             PlaceHelpWindow(helpWindow, firstTime: true);
         }
         else
         {
+            // Reopened: at the same place relative to the main window, even if the main window moved while Help was closed.
+            if (!helpWindow.IsVisible && helpOffset is { } offset && PresentationSource.FromVisual(this) is not null)
+            {
+                var position = MainAnchor() + offset;
+                helpWindow.Left = position.X;
+                helpWindow.Top = position.Y;
+            }
+
             PlaceHelpWindow(helpWindow, firstTime: false);
         }
 
@@ -127,6 +187,7 @@ public partial class MainWindow : Window
         }
 
         helpWindow.Show();
+        RememberHelpOffset();
         helpWindow.Activate();
         helpWindow.ScrollToCurrentSection();
     }

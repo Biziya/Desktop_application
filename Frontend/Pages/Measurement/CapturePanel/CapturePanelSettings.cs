@@ -36,8 +36,10 @@ public sealed class CapturePanelSettings
         resources.Add("StopLabel", Labels.Stop);
         resources.Add("StartGlyph", Labels.StartGlyph);
         resources.Add("StopGlyph", Labels.StopGlyph);
-        resources.Add("LiveCpsLabel", Labels.LiveCps);
-        resources.Add("LiveCpsFontSize", Sizes.LiveCpsFontSize);
+        resources.Add("LiveLabel", Labels.Live);
+        resources.Add("LiveCpsUnitLabel", Labels.Cps);
+        resources.Add("LiveCpmUnitLabel", Labels.Cpm);
+        resources.Add("LiveFontSize", Sizes.LiveFontSize);
 
         resources.Add("CountdownFontSize", Sizes.CountdownFontSize * Multipliers.CountdownFontSize);
         resources.Add("CountdownRingSize", Sizes.CountdownRingSize * Multipliers.CountdownRingSize);
@@ -86,7 +88,9 @@ public sealed class CapturePanelSettings
         public required string Stop { get; init; }
         public required string StartGlyph { get; init; }
         public required string StopGlyph { get; init; }
-        public required string LiveCps { get; init; }
+        public required string Live { get; init; }
+        public required string Cps { get; init; }
+        public required string Cpm { get; init; }
     }
 
     public sealed class MultiplierSettings
@@ -111,7 +115,7 @@ public sealed class CapturePanelSettings
         public required double StartStopButtonIconFontSize { get; init; }
         public required Thickness StartStopButtonPadding { get; init; }
         public required double DurationEditorWidth { get; init; }
-        public required double LiveCpsFontSize { get; init; }
+        public required double LiveFontSize { get; init; }
     }
 
     public sealed class SpacingSettings

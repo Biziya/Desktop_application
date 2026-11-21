@@ -41,9 +41,9 @@ pages:
     items:
       - control: Start / Stop
         does: Turns measuring on or off. While on, each right-click here captures one interval.
-      - control: Live CPS
-        does: The newest CPS reading from the detector, under the countdown. Updates every second.
-      - control: Show / Hide threshold
+      - control: Live
+        does: The newest reading, above the graph. Updates every second. CPS / CPM switches the unit.
+      - control: Eye icon
         does: Shows or hides the dashed threshold line on the graph.
       - control: Starting Depth (m)
         does: Where the first interval starts. The next one follows on its own.

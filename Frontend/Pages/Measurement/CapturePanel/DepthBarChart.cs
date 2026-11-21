@@ -18,7 +18,10 @@ namespace Frontend.Pages.Measurement.CapturePanel;
 /// </summary>
 public sealed class DepthBarChart : FrameworkElement
 {
-    private const double LeftMargin = 58;
+    // The left margin grows with the y tick labels; the y title sits YTitleGap left of them.
+    private const double MinLeftMargin = 24;
+    private const double YTitleGap = 4;
+    private const double TickLabelGap = 6;
     private const double BottomMargin = 34;
     private const double TopMargin = 8;
     private const double RightMargin = 10;
@@ -99,6 +102,12 @@ public sealed class DepthBarChart : FrameworkElement
     /// <summary>Y position of the threshold line in the last render, or null when no line was drawn.</summary>
     public double? DrawnThresholdY { get; private set; }
 
+    /// <summary>Right edge (x) of the rotated y title in the last render.</summary>
+    public double? DrawnYTitleRight { get; private set; }
+
+    /// <summary>Left edge (x) of the widest y tick label in the last render, or null when there was no y scale.</summary>
+    public double? DrawnTickLabelsLeft { get; private set; }
+
     private bool HasThreshold => ShowThreshold && double.IsFinite(Threshold) && Threshold >= 0;
 
     private static DependencyProperty Register<T>(string name, T fallback) => DependencyProperty.Register(
@@ -178,10 +187,12 @@ public sealed class DepthBarChart : FrameworkElement
         DrawnThresholdY = null;
         hovered = null; // the row values may have changed: the next hover rebuilds the tooltip text
 
-        var plot = new Rect(LeftMargin, TopMargin,
-            Math.Max(0, ActualWidth - LeftMargin - RightMargin), Math.Max(0, ActualHeight - TopMargin - BottomMargin));
+        DrawnYTitleRight = null;
+        DrawnTickLabelsLeft = null;
 
-        if (plot.Width < 20 || plot.Height < 20)
+        var plotHeight = Math.Max(0, ActualHeight - TopMargin - BottomMargin);
+
+        if (plotHeight < 20 || ActualWidth - MinLeftMargin - RightMargin < 20)
         {
             return;
         }
@@ -192,16 +203,67 @@ public sealed class DepthBarChart : FrameworkElement
         var axisPen = this.axisPen ??= Frozen(AxisBrush);
         var gridPen = this.gridPen ??= Frozen(GridBrush);
 
+        // Y: 0 to a round value above the largest CPS and above a visible threshold, so the threshold line is on the
+        // graph in every state: before the first capture (no rows), while measuring and after Stop / New Measurement.
+        // Without rows and without a threshold there is no y scale (just the axes and the empty text).
+        var cpsMax = rows.Count == 0 ? 0d : rows.Max(Cps);
+
+        if (HasThreshold)
+        {
+            cpsMax = Math.Max(cpsMax, Threshold);
+        }
+
+        var hasYScale = rows.Count > 0 || HasThreshold;
+        var yStep = NiceStep(Math.Max(0.01, cpsMax), Math.Max(2, (int)(plotHeight / 34)));
+        var yMax = Math.Max(yStep, Math.Ceiling(cpsMax / yStep) * yStep);
+        var yLabels = new List<(double Value, FormattedText Label)>();
+
+        if (hasYScale)
+        {
+            for (var value = 0d; value <= yMax + yStep / 2; value += yStep)
+            {
+                yLabels.Add((value, Text(Compact(value), TickFontSize)));
+            }
+        }
+
+        // The y title sits right next to the tick labels: the left margin is the title, a small gap and the widest label.
+        var yTitle = Text(YAxisLabel, AxisLabelFontSize);
+        var tickWidth = yLabels.Count == 0 ? 0 : yLabels.Max(l => l.Label.Width);
+        var titleWidth = YAxisLabel.Length == 0 ? 0 : yTitle.Height;
+        var leftMargin = Math.Max(MinLeftMargin, titleWidth + YTitleGap + tickWidth + TickLabelGap);
+        var plot = new Rect(leftMargin, TopMargin, Math.Max(0, ActualWidth - leftMargin - RightMargin), plotHeight);
+
+        if (plot.Width < 20)
+        {
+            return;
+        }
+
+        double Y(double value) => plot.Bottom - value / yMax * plot.Height;
+
         // Axis titles.
         var xTitle = Text(XAxisLabel, AxisLabelFontSize);
         drawing.DrawText(xTitle, new Point(plot.Left + (plot.Width - xTitle.Width) / 2, plot.Bottom + 19));
-        var yTitle = Text(YAxisLabel, AxisLabelFontSize);
+        var titleLeft = plot.Left - TickLabelGap - tickWidth - YTitleGap - titleWidth;
         drawing.PushTransform(new RotateTransform(-90, 0, 0));
-        drawing.DrawText(yTitle, new Point(-(plot.Top + (plot.Height + yTitle.Width) / 2), 0));
+        drawing.DrawText(yTitle, new Point(-(plot.Top + (plot.Height + yTitle.Width) / 2), titleLeft));
         drawing.Pop();
+        DrawnYTitleRight = titleLeft + titleWidth;
+
+        foreach (var (value, label) in yLabels)
+        {
+            var y = Math.Round(Y(value)) + 0.5;
+            drawing.DrawLine(gridPen, new Point(plot.Left, y), new Point(plot.Right, y));
+            drawing.DrawText(label, new Point(plot.Left - label.Width - TickLabelGap, y - label.Height / 2));
+        }
+
+        if (yLabels.Count > 0)
+        {
+            DrawnTickLabelsLeft = plot.Left - TickLabelGap - tickWidth;
+        }
 
         if (rows.Count == 0)
         {
+            DrawThreshold(drawing, plot, Y);
             drawing.DrawLine(axisPen, plot.BottomLeft, plot.BottomRight);
             drawing.DrawLine(axisPen, plot.TopLeft, plot.BottomLeft);
             var empty = Text(EmptyText, AxisLabelFontSize);
@@ -209,39 +271,13 @@ public sealed class DepthBarChart : FrameworkElement
             return;
         }
 
-        // X: depth range of all intervals, on round tick values. Y: 0 to a round value above the largest CPS.
-        // One pass for the depth range and the largest CPS.
-        long fromMin = long.MaxValue, toMax = long.MinValue;
-        var cpsMax = 0d;
-
-        foreach (var row in rows)
-        {
-            fromMin = Math.Min(fromMin, row.FromMm!.Value);
-            toMax = Math.Max(toMax, row.ToMm!.Value);
-            cpsMax = Math.Max(cpsMax, Cps(row));
-        }
-
-        // A visible threshold is always inside the y range, even above every bar.
-        if (HasThreshold)
-        {
-            cpsMax = Math.Max(cpsMax, Threshold);
-        }
-
+        // X: depth range of all intervals, on round tick values.
+        var fromMin = rows.Min(r => r.FromMm!.Value);
+        var toMax = rows.Max(r => r.ToMm!.Value);
         var xStep = NiceStep((toMax - fromMin) / 1000d, Math.Max(2, (int)(plot.Width / 80)));
         var xMin = Math.Floor(fromMin / 1000d / xStep) * xStep;
         var xMax = Math.Max(xMin + xStep, Math.Ceiling(toMax / 1000d / xStep) * xStep);
-        var yStep = NiceStep(Math.Max(0.01, cpsMax), Math.Max(2, (int)(plot.Height / 34)));
-        var yMax = Math.Max(yStep, Math.Ceiling(cpsMax / yStep) * yStep);
         double X(double metres) => plot.Left + (metres - xMin) / (xMax - xMin) * plot.Width;
-        double Y(double value) => plot.Bottom - value / yMax * plot.Height;
-
-        for (var value = 0d; value <= yMax + yStep / 2; value += yStep)
-        {
-            var y = Math.Round(Y(value)) + 0.5;
-            drawing.DrawLine(gridPen, new Point(plot.Left, y), new Point(plot.Right, y));
-            var label = Text(Compact(value), TickFontSize);
-            drawing.DrawText(label, new Point(plot.Left - label.Width - 6, y - label.Height / 2));
-        }
 
         for (var metres = xMin; metres <= xMax + xStep / 2; metres += xStep)
         {
@@ -263,19 +299,26 @@ public sealed class DepthBarChart : FrameworkElement
             bars.Add((area, row));
         }
 
-        // Threshold: a dashed horizontal line over the bars, labelled at its right end.
-        if (HasThreshold)
-        {
-            var y = Math.Round(Y(Threshold)) + 0.5;
-            drawing.DrawLine(thresholdPen ??= DashedPen(ThresholdBrush), new Point(plot.Left, y), new Point(plot.Right, y));
-            var label = new FormattedText($"{ThresholdLabel} {Compact(Threshold)}", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-                typeface!, TickFontSize, ThresholdBrush, pixelsPerDip);
-            drawing.DrawText(label, new Point(plot.Right - label.Width - 4, Math.Max(plot.Top, y - label.Height - 2)));
-            DrawnThresholdY = y;
-        }
-
+        DrawThreshold(drawing, plot, Y);
         drawing.DrawLine(axisPen, plot.BottomLeft, plot.BottomRight);
         drawing.DrawLine(axisPen, plot.TopLeft, plot.BottomLeft);
+    }
+
+    // The one place the threshold is drawn: a dashed horizontal line over the bars, labelled at its right end. Every
+    // render (new rows, clear, resize, page switch, Show/Hide) goes through it, so the line never drops out.
+    private void DrawThreshold(DrawingContext drawing, Rect plot, Func<double, double> y)
+    {
+        if (!HasThreshold)
+        {
+            return;
+        }
+
+        var lineY = Math.Round(y(Threshold)) + 0.5;
+        drawing.DrawLine(thresholdPen ??= DashedPen(ThresholdBrush), new Point(plot.Left, lineY), new Point(plot.Right, lineY));
+        var label = new FormattedText($"{ThresholdLabel} {Compact(Threshold)}", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            typeface!, TickFontSize, ThresholdBrush, pixelsPerDip);
+        drawing.DrawText(label, new Point(plot.Right - label.Width - 4, Math.Max(plot.Top, lineY - label.Height - 2)));
+        DrawnThresholdY = lineY;
     }
 
     // Tooltip of the bar under the pointer (the last drawn wins where intervals overlap).

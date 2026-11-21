@@ -46,7 +46,7 @@
             </Border.Style>
             <!-- The 14 px side padding holds the selected item's accent bar, flush with the sidebar edge. -->
             <DockPanel Margin="14,10,14,16">
-                <!-- Header: one big button (app icon, name and «) that collapses the sidebar; collapsed it shows » to
+                <!-- Header: one big button (app name and «; no app icon) that collapses the sidebar; collapsed it shows » to
                      expand again. Same rounded grey hover as the page items. -->
                 <Button DockPanel.Dock="Top" Style="{StaticResource NavigationButton}" Height="48" Margin="0"
                         Foreground="{StaticResource SidebarTextStrong}"
@@ -70,8 +70,7 @@
                             <Path DockPanel.Dock="Right" Data="{StaticResource CollapseLeftIcon}" Width="14" Height="14" Stretch="Uniform"
                                   StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                   Stroke="{StaticResource SidebarMuted}" VerticalAlignment="Center"/>
-                            <Image Source="{StaticResource AppIcon}" Width="28" Height="28" VerticalAlignment="Center"/>
-                            <TextBlock Text="{StaticResource ApplicationName}" FontSize="16" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{StaticResource ApplicationName}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
                         </DockPanel>
                         <Path Data="{StaticResource ExpandRightIcon}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center"
                               StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"

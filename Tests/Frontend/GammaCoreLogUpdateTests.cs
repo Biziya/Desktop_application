@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -189,22 +190,37 @@ public static class GammaCoreLogUpdateTests
             new MemoryRepository(folder.Path("m.db")), liveCps: reader, liveCpsInterval: TimeSpan.FromMilliseconds(20));
         using var _vm = vm;
 
-        await Assert.Eventually(() => vm.LiveCps == "12.35", "first reading (two decimals, CPS only)");
+        await Assert.Eventually(() => vm.LiveValue == "12.35", "first reading (two decimals, CPS only)");
         reader.Value = 80;
-        await Assert.Eventually(() => vm.LiveCps == "80.00", "updates in real time");
+        await Assert.Eventually(() => vm.LiveValue == "80.00", "updates in real time");
         reader.Value = null;
-        await Assert.Eventually(() => vm.LiveCps == MeasurementViewModel.NoLiveCps, "no recent reading");
+        await Assert.Eventually(() => vm.LiveValue == MeasurementViewModel.NoLiveCps, "no recent reading");
 
         reader.Value = 5;
         vm.OnHidden();
-        Assert.Equal(MeasurementViewModel.NoLiveCps, vm.LiveCps, "cleared when the page is left");
+        Assert.Equal(MeasurementViewModel.NoLiveCps, vm.LiveValue, "cleared when the page is left");
         var reads = reader.Reads;
         await Task.Delay(150);
         Assert.True(reader.Reads <= reads + 1, $"no device reads outside the page ({reads} → {reader.Reads})");
-        Assert.Equal(MeasurementViewModel.NoLiveCps, vm.LiveCps, "nothing shown outside the page");
+        Assert.Equal(MeasurementViewModel.NoLiveCps, vm.LiveValue, "nothing shown outside the page");
 
         vm.OnShown();
-        await Assert.Eventually(() => vm.LiveCps == "5.00", "resumes on return");
+        await Assert.Eventually(() => vm.LiveValue == "5.00", "resumes on return");
+
+        // CPS | CPM switch: CPM = CPS × 60 (whole counts), applied at once and kept across page switches.
+        Assert.Equal(LiveRateUnit.Cps, vm.LiveUnit, "CPS by default");
+        vm.IsLiveUnitCpm = true;
+        Assert.Equal("300", vm.LiveValue, "5 CPS = 300 CPM, without waiting for the next reading");
+        Assert.True(vm.IsLiveUnitCpm && !vm.IsLiveUnitCps, "one unit selected");
+        reader.Value = 118.42;
+        await Assert.Eventually(() => vm.LiveValue == "7105", "118.42 CPS = 7105 CPM");
+        vm.OnHidden();
+        vm.OnShown();
+        Assert.Equal(LiveRateUnit.Cpm, vm.LiveUnit, "unit kept when the page is left and shown again");
+        await Assert.Eventually(() => vm.LiveValue == "7105", "still CPM after returning");
+        vm.IsLiveUnitCps = true;
+        Assert.Equal("118.42", vm.LiveValue, "back to CPS");
+        Assert.Equal(MeasurementViewModel.NoLiveCps, MeasurementViewModel.FormatLiveValue(null, LiveRateUnit.Cpm), "no reading in CPM either");
     }
 
     [Test("FE-LIVE-02", "GammaGuardLiveCps: newest sample of the detector as CPS; stale or missing data gives none")]
@@ -292,6 +308,20 @@ public static class GammaCoreLogUpdateTests
         chart.ShowThreshold = true;
         chart.Threshold = double.NaN;
         Assert.True(Render() is null, "no threshold, no line");
+
+        // Every graph state: empty (before Start), with rows (measuring / after Stop), cleared (New Measurement).
+        var live = new ObservableCollection<MeasurementResult>();
+        chart.ItemsSource = live;
+        chart.Threshold = 150;
+        Assert.True(Render() is { } empty && empty > 8 && empty < 300 - 34, "empty graph before measuring: line drawn inside the plot");
+        live.Add(rows[0]);
+        Assert.True(Render() is not null, "during measurement");
+        live.Add(rows[1]);
+        Assert.True(Render() is not null, "after more captures (rescaled)");
+        live.Clear();
+        Assert.True(Render() is not null, "after the graph is cleared");
+        chart.ShowThreshold = false;
+        Assert.True(Render() is null, "hidden on the empty graph too");
 
         // The view model drives it: the Threshold box and the Show/Hide button.
         using var folder = new TestFolder();
@@ -438,6 +468,160 @@ public static class GammaCoreLogUpdateTests
             window.Close();
         }
     }
+
+    [Test("FE-THRESH-02", "Threshold eye: the Show/Hide state survives Start, captures, Stop, New Measurement and page switches")]
+    public static async Task ThresholdStatePersists()
+    {
+        Wpf.EnsureResources();
+        using var folder = new TestFolder();
+        var (main, device) = await Shell(folder);
+        var window = new Frontend.MainWindow(main) { ShowActivated = false, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20_000 };
+
+        try
+        {
+            window.Show();
+            await Arm(main);
+            main.Measurement.Threshold = "150";
+            window.UpdateLayout();
+
+            var eye = Named<Button>(window, "ThresholdLineToggle");
+            Assert.Equal("Show/Hide threshold", eye.ToolTip as string, "tooltip");
+            var icon = (System.Windows.Shapes.Path)eye.Content;
+            Assert.True(ReferenceEquals(icon.Data, Application.Current.FindResource("EyeIcon")), "open eye while shown");
+
+            eye.Command.Execute(null);
+            Assert.False(main.Measurement.IsThresholdLineVisible, "eye hides the line");
+            Assert.True(ReferenceEquals(icon.Data, Application.Current.FindResource("EyeOffIcon")), "crossed-out eye while hidden");
+
+            await Make.Capture(main.Measurement, device);
+            Assert.False(main.Measurement.IsThresholdLineVisible, "still hidden after a capture");
+            main.ShowPage(main.Monitoring);
+            main.ShowPage(main.Measurement);
+            Assert.False(main.Measurement.IsThresholdLineVisible, "still hidden after a page switch");
+            main.Measurement.ToggleMeasurementCommand.Execute(null);   // Stop
+            Assert.False(main.Measurement.IsThresholdLineVisible, "still hidden after Stop");
+            main.Measurement.NewMeasurementCommand.Execute(null);
+            Assert.False(main.Measurement.IsThresholdLineVisible, "still hidden after New Measurement");
+
+            main.ShowPage(main.Measurement);
+            window.UpdateLayout();
+            eye = Named<Button>(window, "ThresholdLineToggle");
+            eye.Command.Execute(null);
+            Assert.True(main.Measurement.IsThresholdLineVisible, "eye shows it again");
+            window.UpdateLayout();
+            var chart = Descendants(window).OfType<DepthBarChart>().Single();
+            new RenderTargetBitmap(Math.Max(1, (int)chart.ActualWidth), Math.Max(1, (int)chart.ActualHeight), 96, 96, PixelFormats.Pbgra32).Render(chart);
+            Assert.True(chart.DrawnThresholdY is not null, "line drawn on the cleared graph");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [Test("FE-LIVE-03", "Live value sits left of the eye icon on the graph's header row, with a CPS | CPM switch")]
+    public static async Task LiveBoxBesideEye()
+    {
+        Wpf.EnsureResources();
+        using var folder = new TestFolder();
+        var (main, _) = await Shell(folder);
+        var window = new Frontend.MainWindow(main) { ShowActivated = false, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20_000 };
+
+        try
+        {
+            window.Show();
+            main.ShowPage(main.Measurement);
+            window.UpdateLayout();
+
+            var live = Named<Border>(window, "LiveBox");
+            var eye = Named<Button>(window, "ThresholdLineToggle");
+            var header = Named<StackPanel>(window, "GraphHeader");
+            Assert.True(ReferenceEquals(VisualTreeHelper.GetParent(live), header) && ReferenceEquals(VisualTreeHelper.GetParent(eye), header), "same row");
+            var liveBox = live.TransformToAncestor(window).TransformBounds(new Rect(live.RenderSize));
+            var eyeBox = eye.TransformToAncestor(window).TransformBounds(new Rect(eye.RenderSize));
+            Assert.True(liveBox.Right <= eyeBox.Left, $"live box left of the eye ({liveBox.Right} ≤ {eyeBox.Left})");
+            Assert.True(Math.Abs((liveBox.Top + liveBox.Bottom) / 2 - (eyeBox.Top + eyeBox.Bottom) / 2) < 2, "vertically aligned");
+
+            var units = Descendants(live).OfType<RadioButton>().ToList();
+            Assert.Sequence(new[] { "CPS", "CPM" }, units.Select(u => u.Content as string), "unit switch");
+            units[1].IsChecked = true;
+            Assert.Equal(LiveRateUnit.Cpm, main.Measurement.LiveUnit, "CPM chosen in the view");
+            units[0].IsChecked = true;
+            Assert.Equal(LiveRateUnit.Cps, main.Measurement.LiveUnit, "CPS chosen in the view");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [Test("FE-HELP-08", "Help window is owned by the main window and moves with it")]
+    public static async Task HelpFollowsMainWindow()
+    {
+        Wpf.EnsureResources();
+        using var folder = new TestFolder();
+        var (main, _) = await Shell(folder, HelpSettings.Load(AppContext.BaseDirectory));
+        var window = new Frontend.MainWindow(main)
+        {
+            ShowActivated = false, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20_000, Top = 100, Width = 1200, Height = 800
+        };
+
+        try
+        {
+            window.Show();
+            main.ShowHelp();
+            var help = window.HelpWindowInstance!;
+            Assert.True(ReferenceEquals(help.Owner, window), "owned by the main window (minimizes and restores with it)");
+
+            // The user puts Help somewhere, then moves the main window.
+            help.Left = -19_500;
+            help.Top = 180;
+            var before = new Point(help.Left, help.Top);
+            window.Left += 100;
+            window.Top += 50;
+            Assert.True(Math.Abs(before.X + 100 - help.Left) < 1, $"moved right with the main window ({help.Left})");
+            Assert.True(Math.Abs(before.Y + 50 - help.Top) < 1, $"moved down with the main window ({help.Top})");
+
+            // Closed while the main window moves: it reopens at the same place relative to the main window. (Help is put on
+            // the screen first, so opening does not pull it back from off-screen as it would from the test window's place.)
+            help.Left = SystemParameters.VirtualScreenLeft + 100;
+            main.Help.Close();
+            window.Left -= 40;
+            main.ShowHelp();
+            var expected = SystemParameters.VirtualScreenLeft + 60;
+            Assert.True(Math.Abs(expected - help.Left) < 1, $"reopened relative to the main window ({help.Left}, expected {expected})");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [Test("FE-CHART-01", "Graph: the Y-axis title sits right next to the tick labels, whatever their width")]
+    public static void YAxisTitleNextToTicks()
+    {
+        Wpf.EnsureResources();
+        var session = Guid.NewGuid();
+
+        foreach (var cps in new[] { 5.0, 120.0, 25_000.0 })
+        {
+            var chart = new DepthBarChart
+            {
+                ItemsSource = new[] { Make.Row(session, 1, 0, reading: new DeviceReading(Count0: cps)) },
+                YAxisLabel = "CPS",
+                Threshold = double.NaN,
+            };
+            chart.Measure(new Size(600, 300));
+            chart.Arrange(new Rect(0, 0, 600, 300));
+            new RenderTargetBitmap(600, 300, 96, 96, PixelFormats.Pbgra32).Render(chart);
+
+            var gap = chart.DrawnTickLabelsLeft!.Value - chart.DrawnYTitleRight!.Value;
+            Assert.True(gap >= 0 && gap <= 8, $"{cps} CPS: title {gap:0.0} px from the tick labels");
+        }
+    }
+
+    private static T Named<T>(DependencyObject root, string name) where T : FrameworkElement =>
+        Descendants(root).OfType<T>().FirstOrDefault(e => e.Name == name) ?? throw new InvalidOperationException($"{name} not found");
 
     private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
     {

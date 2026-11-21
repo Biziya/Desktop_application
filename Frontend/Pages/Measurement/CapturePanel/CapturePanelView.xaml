@@ -113,6 +113,34 @@
                 </Style.Triggers>
             </Style>
 
+            <!-- CPS | CPM switch of the live value: two radio buttons drawn as small pills; the chosen unit is white. -->
+            <Style x:Key="UnitPill" TargetType="RadioButton">
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RadioButton">
+                            <Border x:Name="Pill" CornerRadius="4" Padding="7,2" Background="Transparent"
+                                    BorderBrush="Transparent" BorderThickness="1">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Pill" Property="Background" Value="{StaticResource Surface}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource Blue}"/>
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="Pill" Property="BorderBrush" Value="{StaticResource Blue}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <!-- Glyph and label of the Start / Stop toggle; they switch with IsMeasurementModeActive. -->
             <Style x:Key="StartStopGlyph" TargetType="Run">
                 <Setter Property="FontSize" Value="{StaticResource StartStopButtonIconFontSize}"/>
@@ -294,31 +322,6 @@
                                VerticalAlignment="Center"/>
                 </Grid>
             </Button>
-            <!-- Live CPS, directly under the countdown: the newest reading of the recording detector, refreshed about once a
-                 second while the Measurement page is shown ("—" when no recent reading). CPS only. -->
-            <Border x:Name="LiveCpsBox"
-                    Margin="0,12,0,0" Padding="12,8"
-                    Width="{StaticResource CountdownRingSize}"
-                    HorizontalAlignment="Center"
-                    Background="{StaticResource Surface}"
-                    BorderBrush="{StaticResource Line}" BorderThickness="1.5"
-                    CornerRadius="{StaticResource ControlRadius}"
-                    ToolTip="Newest CPS reading from the detector, updated about once a second"
-                    AutomationProperties.Name="Live CPS"
-                    AutomationProperties.AutomationId="LiveCpsBox">
-                <StackPanel>
-                    <TextBlock Text="{StaticResource LiveCpsLabel}"
-                               FontSize="{StaticResource CountdownLabelFontSize}"
-                               Foreground="{StaticResource Muted}"
-                               HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding LiveCps}"
-                               FontSize="{StaticResource LiveCpsFontSize}"
-                               FontWeight="SemiBold"
-                               Foreground="{StaticResource TextPrimary}"
-                               HorizontalAlignment="Center"
-                               AutomationProperties.AutomationId="LiveCpsValue"/>
-                </StackPanel>
-            </Border>
             <!-- Compact duration editor below the countdown (a popup, so the layout never moves).
                  Enter saves, Escape cancels; invalid input shows a 5 s error toast and keeps the editor open. -->
             <Popup IsOpen="{Binding IsEditingDuration, Mode=OneWay}"
@@ -353,20 +356,81 @@
             </Popup>
         </StackPanel>
 
-        <!-- The alarm threshold as a dashed horizontal line on the graph; this button shows or hides it. -->
+        <!-- Graph header, right-aligned on one line: the live value (left) and the eye that shows or hides the dashed
+             threshold line (right). -->
         <Grid Grid.Column="2" Grid.RowSpan="3">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            <Button HorizontalAlignment="Right" Margin="0,0,0,4" Padding="12,4" MinHeight="0"
-                    FontSize="12"
-                    Style="{StaticResource SecondaryButton}"
-                    Command="{Binding ToggleThresholdLineCommand}"
-                    Content="{Binding ThresholdLineButtonText}"
-                    ToolTip="Show or hide the threshold line on the graph"
-                    AutomationProperties.AutomationId="ThresholdLineToggle"
-                    AutomationProperties.Name="{Binding ThresholdLineButtonText}"/>
+            <StackPanel x:Name="GraphHeader" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,4">
+                <!-- Live value: the newest reading of the recording detector, refreshed about once a second while the
+                     Measurement page is shown ("—" when no recent reading), in CPS or CPM (CPS × 60). The unit choice is
+                     kept for the app session. -->
+                <Border x:Name="LiveBox"
+                        Padding="10,3,4,3" Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        Background="{StaticResource Surface}"
+                        BorderBrush="{StaticResource Line}" BorderThickness="1.5"
+                        CornerRadius="{StaticResource ControlRadius}"
+                        ToolTip="Newest reading from the detector, updated about once a second"
+                        AutomationProperties.Name="Live reading"
+                        AutomationProperties.AutomationId="LiveBox">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{StaticResource LiveLabel}"
+                                   FontSize="13"
+                                   Foreground="{StaticResource Muted}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding LiveValue}"
+                                   FontSize="{StaticResource LiveFontSize}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimary}"
+                                   VerticalAlignment="Center"
+                                   MinWidth="64" TextAlignment="Right"
+                                   AutomationProperties.AutomationId="LiveValue"/>
+                        <Border Margin="8,0,0,0" Padding="2" CornerRadius="6" Background="{StaticResource HoverSurface}"
+                                VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton GroupName="LiveUnit" Style="{StaticResource UnitPill}"
+                                             Content="{StaticResource LiveCpsUnitLabel}"
+                                             IsChecked="{Binding IsLiveUnitCps}"
+                                             ToolTip="Counts per second"
+                                             AutomationProperties.AutomationId="LiveUnitCps"/>
+                                <RadioButton GroupName="LiveUnit" Style="{StaticResource UnitPill}"
+                                             Content="{StaticResource LiveCpmUnitLabel}"
+                                             IsChecked="{Binding IsLiveUnitCpm}"
+                                             ToolTip="Counts per minute (CPS × 60)"
+                                             AutomationProperties.AutomationId="LiveUnitCpm"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+                <!-- Open eye: the threshold line is shown; crossed-out eye: hidden. -->
+                <Button x:Name="ThresholdLineToggle"
+                        Style="{StaticResource IconButton}"
+                        VerticalAlignment="Center"
+                        Command="{Binding ToggleThresholdLineCommand}"
+                        ToolTip="Show/Hide threshold"
+                        AutomationProperties.AutomationId="ThresholdLineToggle"
+                        AutomationProperties.Name="{Binding ThresholdLineButtonText}">
+                    <Path Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.8"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
+                        <Path.Style>
+                            <Style TargetType="Path">
+                                <Setter Property="Data" Value="{StaticResource EyeIcon}"/>
+                                <Setter Property="Stroke" Value="{StaticResource TextPrimary}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsThresholdLineVisible}" Value="False">
+                                        <Setter Property="Data" Value="{StaticResource EyeOffIcon}"/>
+                                        <Setter Property="Stroke" Value="{StaticResource Muted}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Path.Style>
+                    </Path>
+                </Button>
+            </StackPanel>
         <local:DepthBarChart Grid.Row="1"
                              MinHeight="{StaticResource ChartMinHeight}"
                              ItemsSource="{Binding Results}"

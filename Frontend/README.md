@@ -28,9 +28,10 @@ of the app works without it.
 - Measurement: set Starting Depth, Step and an optional CPS alarm threshold, press Start, then right-click anywhere
   on the Measurement page to capture. Right-clicks and device data are ignored on every other page, and leaving the
   page cancels a running capture without saving it. Each capture (2 to 10 s, default 5 s; click the countdown to
-  change it) averages the Gamma Guard samples written during that time into one row. The Live CPS box under the
-  countdown shows the newest reading while a capture runs, and the graph draws the alarm threshold as a dashed line
-  (Show/Hide threshold). Rows can be deleted and exported to CSV.
+  change it) averages the Gamma Guard samples written during that time into one row. The Live box above the graph
+  shows the newest reading every second while the page is shown, in CPS or CPM (CPS × 60; the unit choice lasts for
+  the session). The graph always draws the alarm threshold as a dashed line, before, during and after measuring;
+  the eye icon beside the Live box shows or hides it. Rows can be deleted and exported to CSV.
 - Monitoring: live status of every detector writing to the Gamma Guard (CT008) database, with a 5-second sample
   button. Ported from EIC's CT008 Monitor in `SHIBA/`.
 - Upload Data: import an exported CSV, review it, and upload it to the central database.
