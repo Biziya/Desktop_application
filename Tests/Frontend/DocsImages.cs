@@ -114,7 +114,7 @@ public static class DocsImages
             await SnapPage(window, output, "measurement", "Measurement");
 
             // The Help drawer over the Measurement page (no dim there), at the top of the Measurement help.
-            main.ShowHelp();
+            main.ToggleHelp();
             await Task.Delay(400);
             await Snap(window, output, "help-drawer");
             main.Help.Close();

@@ -90,24 +90,7 @@ public sealed class BackendConnection : ObservableObject, IDisposable
         lifetime.Dispose();
     }
 
-    private async Task RunAsync()
-    {
-        var token = lifetime.Token;
-
-        while (!token.IsCancellationRequested)
-        {
-            await CheckNowAsync();
-
-            try
-            {
-                await Task.Delay(interval, token);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-        }
-    }
+    private Task RunAsync() => Polling.RunAsync(CheckNowAsync, interval, lifetime.Token);
 
     private async Task CheckAsync()
     {

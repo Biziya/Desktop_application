@@ -28,7 +28,7 @@ public sealed class MeasurementTableSettings
     public required SizeSettings Sizes { get; init; }
 
     /// <summary>
-    /// The resources MeasurementTableView.xaml uses: final sizes (multipliers applied) and, as "MeasurementTableColumns",
+    /// The resources the Measurement table (MeasurementPage.xaml, MeasurementGrid.xaml) uses: final sizes (multipliers applied) and, as "MeasurementTableColumns",
     /// the columns in table order.
     /// </summary>
     public void AddTo(ResourceDictionary resources)

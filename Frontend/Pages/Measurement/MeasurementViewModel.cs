@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.IO;
 using Frontend.Calculation.Measurement;
 using Frontend.Shared.Infrastructure;
@@ -26,9 +25,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
     /// <summary>Shown as the Live value while no recent reading is available.</summary>
     public const string NoLiveCps = "—";
 
-    private readonly ILiveCpsReader? liveCpsReader;
-    private readonly TimeSpan liveCpsInterval;
-    private CancellationTokenSource? livePolling;
+    private readonly LiveCpsPoller? livePoller;
     private double? liveCpsValue;
     private LiveRateUnit liveUnit = LiveRateUnit.Cps;
 
@@ -67,8 +64,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
     private bool isAlarmMuted;
     private bool isAlarmTriggered;
 
-    // Database writes run one after another, in the order they were requested. Never faults.
-    private Task persistence = Task.CompletedTask;
+    private readonly SerialWriteQueue writes = new();
 
     public MeasurementViewModel(
         IMeasurementService measurement,
@@ -84,8 +80,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
         TimeSpan? liveCpsInterval = null)
     {
         ShowDemoTsMs = showDemoTsMs;
-        liveCpsReader = liveCps;
-        this.liveCpsInterval = liveCpsInterval ?? TimeSpan.FromSeconds(1);
+        livePoller = liveCps is null ? null : new LiveCpsPoller(liveCps, liveCpsInterval ?? TimeSpan.FromSeconds(1));
         this.alarm = alarm ?? new CpsAlarm(() => { }, TimeSpan.Zero);
         thresholdCps = defaultThreshold;
         threshold = defaultThreshold is { } initial ? CpsAlarm.FormatThreshold(initial) : "";
@@ -273,46 +268,19 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
         RefreshCommands();
     }
 
+    // Live readings only while the page is on screen; leaving it stops the poller, so a late read is dropped.
     private void StartLivePolling()
     {
-        if (liveCpsReader is null || !isShown || disposed || livePolling is not null)
+        if (isShown && !disposed)
         {
-            return;
+            livePoller?.Start(cps => LiveCpsReading = cps, lifetime.Token);
         }
-
-        livePolling = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
-        _ = PollLiveCpsAsync(liveCpsReader, livePolling.Token);
     }
 
     private void StopLivePolling()
     {
-        livePolling?.Cancel();
-        livePolling?.Dispose();
-        livePolling = null;
+        livePoller?.Stop();
         LiveCpsReading = null;
-    }
-
-    // Reads off the UI thread, publishes on it; a read that finishes after the page was left is dropped.
-    private async Task PollLiveCpsAsync(ILiveCpsReader reader, CancellationToken token)
-    {
-        try
-        {
-            while (!token.IsCancellationRequested)
-            {
-                var cps = await Task.Run(reader.ReadLatestCps, token);
-
-                if (token.IsCancellationRequested || !isShown)
-                {
-                    return;
-                }
-
-                LiveCpsReading = cps is { } value && double.IsFinite(value) ? value : null;
-                await Task.Delay(liveCpsInterval, token);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
     }
 
     /// <summary>CPS with two decimals; CPM = CPS × 60 as whole counts; <see cref="NoLiveCps"/> without a reading.</summary>
@@ -612,7 +580,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
 
         try
         {
-            await persistence;
+            await writes.WhenIdle;
             await load();
         }
         catch (Exception error)
@@ -728,9 +696,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
         }
 
         disposed = true;
-        livePolling?.Cancel();
-        livePolling?.Dispose();
-        livePolling = null;
+        livePoller?.Stop();
         StopMeasurementMode();
 
         if (hasUnsavedRows)
@@ -739,7 +705,7 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
         }
 
         // Let queued saves finish on close. They run on the thread pool, so waiting here cannot deadlock.
-        persistence.Wait(TimeSpan.FromSeconds(5));
+        writes.WaitForPending(TimeSpan.FromSeconds(5));
         lifetime.Cancel();
         lifetime.Dispose();
         ExportCommand.Refresh();
@@ -923,7 +889,8 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
                 return;
             }
 
-            var row = BuildResult(data, current, core, fromMm, toMm, stepValue, duration);
+            var row = MeasurementResultFactory.Create(data, current, core, nextCapture, fromMm, toMm, stepValue, duration);
+            nextCapture++;
 
             AddSorted(row);
 
@@ -981,52 +948,6 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
                 RefreshCommands();
             }
         }
-    }
-
-    // Device captures are averaged from their samples (saved with the row); other services (tests) deliver plain values.
-    private MeasurementResult BuildResult(
-        CaptureData data, MeasurementSession current, CoreSnapshot core, long fromMm, long toMm, long stepMm, TimeSpan duration)
-    {
-        var deviceSamples = data.DeviceSamples;
-        var sampleCount = deviceSamples?.Count ?? data.Samples.Count;
-
-        if (sampleCount == 0)
-        {
-            throw new CaptureException(deviceSamples is null
-                ? "The capture returned no samples. Nothing was saved."
-                : $"No samples were received from {data.Device?.Name ?? data.Device?.Serial ?? "the device"} during the {duration.TotalSeconds:0} s capture. Nothing was saved.");
-        }
-
-        var summary = deviceSamples is null ? null : SampleAveraging.Summarize(deviceSamples);
-        var device = deviceSamples is null ? null : data.Device;
-
-        return new MeasurementResult
-        {
-            SessionId = current.Id,
-            CaptureNumber = nextCapture++,
-            StartTime = data.StartTime,
-            EndTime = data.EndTime,
-            CompletedAt = data.CompletedAt,
-            SampleCount = sampleCount,
-            ExpectedSamples = data.ExpectedSamples,
-            DurationMs = (long)(data.EndTime - data.StartTime).TotalMilliseconds,
-            Reading = summary is null
-                ? data.Reading ?? DeviceReading.Empty
-                : new DeviceReading(summary.FirstTsMs, summary.Count0, summary.Count0Raw, summary.Hdm, summary.HdmRaw, summary.DoseRate),
-            Temperature = summary?.Temperature,
-            Pressure = summary?.Pressure,
-            DeviceSerial = device?.Serial,
-            DeviceName = device?.Name,
-            DeviceMac = device?.Mac,
-            DeviceSessionId = summary?.DeviceSessionId,
-            Samples = deviceSamples,
-            AverageValue = deviceSamples is null ? data.Samples.Average() : null,
-            Unit = deviceSamples is null ? data.Unit : null,
-            Core = core,
-            FromMm = fromMm,
-            ToMm = toMm,
-            StepMm = stepMm
-        };
     }
 
     // Each row gets its demo value once, when it enters the table, so redraws and re-sorting keep the same value.
@@ -1134,17 +1055,9 @@ public sealed class MeasurementViewModel : ObservableObject, IDisposable, INavig
     // Queues a write without blocking the UI. A failure is reported (by default: the rows stay in the table).
     private async Task<bool> Persist(Func<Task> write, Func<Exception, string>? failureMessage = null)
     {
-        var previous = persistence;
-        var current = Task.Run(async () =>
-        {
-            await previous;
-            await write();
-        });
-        persistence = current.ContinueWith(_ => { }, TaskScheduler.Default);
-
         try
         {
-            await current;
+            await writes.Enqueue(write);
             return true;
         }
         catch (Exception error)

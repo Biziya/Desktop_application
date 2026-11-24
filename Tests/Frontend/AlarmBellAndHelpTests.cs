@@ -139,7 +139,7 @@ public static class AlarmBellAndHelpTests
             Assert.True(section.Markers.Count >= 3, $"{page.Title}: numbered markers on the screenshot");
         }
 
-        main.ShowHelp();
+        main.ToggleHelp();
         Assert.True(main.Help.IsOpen, "opened");
         Assert.Equal("Core Information", main.Help.Page?.Page, "current page's help");
         main.ShowPage(main.DataViewer);

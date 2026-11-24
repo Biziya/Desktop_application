@@ -1,5 +1,6 @@
 using System.Windows.Controls;
 using Frontend.Api.Measurements;
+using Frontend.Shared.Infrastructure;
 
 namespace Frontend.Pages.DataViewer;
 
@@ -8,28 +9,7 @@ public partial class DataViewerPage : UserControl
 {
     public DataViewerPage() => InitializeComponent();
 
-    private void DrillholeTyped(object sender, TextChangedEventArgs e)
-    {
-        if (sender is not ComboBox { IsKeyboardFocusWithin: true } box ||
-            box.Template.FindName("PART_EditableTextBox", box) is not TextBox editor)
-        {
-            return;
-        }
-
-        // A pick sets the text to its Hole ID: that is not typing, so the list stays closed.
-        if (box.SelectedItem is UploadedDrillhole picked && picked.HoleId == editor.Text)
-        {
-            return;
-        }
-
-        var caret = editor.CaretIndex;
-
-        if (!box.IsDropDownOpen && editor.Text.Length > 0 && box.Items.Count > 0)
-        {
-            box.IsDropDownOpen = true;
-        }
-
-        editor.SelectionLength = 0;
-        editor.CaretIndex = caret;
-    }
+    // A pick sets the text to its Hole ID: that is not typing, so the list stays closed.
+    private void DrillholeTyped(object sender, TextChangedEventArgs e) =>
+        ComboBoxTyping.OpenListKeepingCaret(sender, (box, text) => box.SelectedItem is UploadedDrillhole picked && picked.HoleId == text);
 }

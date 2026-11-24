@@ -102,8 +102,7 @@
             <Border x:Name="Box" Style="{StaticResource Callout}" AutomationProperties.Name="{Binding Label}">
                 <DockPanel>
                     <Path x:Name="Icon" DockPanel.Dock="Left" Data="{StaticResource CalloutInfoGeometry}" Width="16" Height="16"
-                          Stretch="Uniform" Margin="0,2,10,0" VerticalAlignment="Top" StrokeThickness="1.8"
-                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                          Style="{StaticResource StrokeIcon}" Margin="0,2,10,0" VerticalAlignment="Top"
                           Stroke="{Binding BorderBrush, ElementName=Box}"/>
                     <TextBlock Style="{StaticResource Body}" Foreground="{StaticResource TextPrimary}">
                         <Run x:Name="Label" Text="{Binding Label, Mode=OneWay}" FontWeight="Bold"
@@ -228,9 +227,9 @@
                                      infra:TextBoxHint.Placeholder="Search help"
                                      AutomationProperties.HelpText="{StaticResource HelpTextHelpSearch}"
                                      AutomationProperties.Name="Search help" AutomationProperties.AutomationId="HelpSearch"/>
-                            <Path Data="{StaticResource SearchIcon}" Width="14" Height="14" Stretch="Uniform" Margin="12,7,0,0"
-                                  HorizontalAlignment="Left" StrokeThickness="1.8" Stroke="{StaticResource Muted}" IsHitTestVisible="False"
-                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>                        </Grid>
+                            <Path Data="{StaticResource SearchIcon}" Width="14" Height="14" Style="{StaticResource StrokeIcon}" Margin="12,7,0,0"
+                                  HorizontalAlignment="Left" Stroke="{StaticResource Muted}" IsHitTestVisible="False"/>
+                        </Grid>
 
                         <ComboBox x:Name="PageSelector" Margin="0,8,6,0" ItemsSource="{Binding Entries}" DisplayMemberPath="Title"
                                   SelectedItem="{Binding Selected}" AutomationProperties.HelpText="{StaticResource HelpTextHelpPage}"
@@ -280,9 +279,8 @@
                                                 Visibility="{Binding HasBeforeYouStart, Converter={StaticResource BoolVisibility}}">
                                         <Border Style="{StaticResource Callout}" Margin="0" AutomationProperties.Name="Before you start">
                                             <DockPanel>
-                                                <Path DockPanel.Dock="Left" Data="{StaticResource CalloutInfoGeometry}" Width="16" Height="16" Stretch="Uniform"
-                                                      Margin="0,2,10,0" VerticalAlignment="Top" StrokeThickness="1.8" Stroke="{StaticResource Warning}"
-                                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                                <Path DockPanel.Dock="Left" Data="{StaticResource CalloutInfoGeometry}" Width="16" Height="16" Style="{StaticResource StrokeIcon}"
+                                                      Margin="0,2,10,0" VerticalAlignment="Top" Stroke="{StaticResource Warning}"/>
                                                 <StackPanel>
                                                     <TextBlock Text="Before you start" FontSize="14" FontWeight="Bold" Margin="0,0,0,4"/>
                                                     <ItemsControl ItemsSource="{Binding BeforeYouStart}" Focusable="False">

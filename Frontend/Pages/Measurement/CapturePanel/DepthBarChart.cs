@@ -2,13 +2,8 @@ using System.Collections;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using Frontend.Calculation.Measurement;
-using Frontend.Pages.Measurement.Table;
 
 namespace Frontend.Pages.Measurement.CapturePanel;
 
@@ -58,6 +53,24 @@ public sealed class DepthBarChart : FrameworkElement
     private Typeface? typeface;
     private double pixelsPerDip;
 
+    // The rows collection this chart listens to, only while it is on screen: the collection belongs to the long-lived
+    // MeasurementViewModel and the view is re-created on every visit, so a lasting subscription would keep every old
+    // chart (and its page) alive.
+    private INotifyCollectionChanged? observed;
+
+    // The y title is drawn turned a quarter left; one frozen transform serves every render.
+    private static readonly RotateTransform QuarterLeft = FreezeAndReturn(new RotateTransform(-90, 0, 0));
+
+    public DepthBarChart()
+    {
+        Loaded += (_, _) =>
+        {
+            Observe(ItemsSource as INotifyCollectionChanged);
+            InvalidateVisual();
+        };
+        Unloaded += (_, _) => Observe(null);
+    }
+
     public IEnumerable? ItemsSource
     {
         get => (IEnumerable?)GetValue(ItemsSourceProperty);
@@ -106,20 +119,36 @@ public sealed class DepthBarChart : FrameworkElement
     private static DependencyProperty Register<T>(string name, T fallback) => DependencyProperty.Register(
         name, typeof(T), typeof(DepthBarChart), new FrameworkPropertyMetadata(fallback, FrameworkPropertyMetadataOptions.AffectsRender));
 
-    // Redraw when rows are added, removed, moved or reloaded.
+    // Redraw when rows are added, removed, moved or reloaded (while on screen; see Loaded).
     private static void OnItemsSourceChanged(DependencyObject owner, DependencyPropertyChangedEventArgs e)
     {
         var chart = (DepthBarChart)owner;
 
-        if (e.OldValue is INotifyCollectionChanged oldItems)
+        if (chart.IsLoaded)
         {
-            oldItems.CollectionChanged -= chart.OnItemsChanged;
+            chart.Observe(e.NewValue as INotifyCollectionChanged);
+        }
+    }
+
+    private void Observe(INotifyCollectionChanged? items)
+    {
+        if (observed is not null)
+        {
+            observed.CollectionChanged -= OnItemsChanged;
         }
 
-        if (e.NewValue is INotifyCollectionChanged newItems)
+        observed = items;
+
+        if (items is not null)
         {
-            newItems.CollectionChanged += chart.OnItemsChanged;
+            items.CollectionChanged += OnItemsChanged;
         }
+    }
+
+    private static T FreezeAndReturn<T>(T freezable) where T : Freezable
+    {
+        freezable.Freeze();
+        return freezable;
     }
 
     private void OnItemsChanged(object? sender, NotifyCollectionChangedEventArgs e) => InvalidateVisual();
@@ -236,7 +265,7 @@ public sealed class DepthBarChart : FrameworkElement
         var xTitle = Text(XAxisLabel, AxisLabelFontSize);
         drawing.DrawText(xTitle, new Point(plot.Left + (plot.Width - xTitle.Width) / 2, plot.Bottom + 19));
         var titleLeft = plot.Left - TickLabelGap - tickWidth - YTitleGap - titleWidth;
-        drawing.PushTransform(new RotateTransform(-90, 0, 0));
+        drawing.PushTransform(QuarterLeft);
         drawing.DrawText(yTitle, new Point(-(plot.Top + (plot.Height + yTitle.Width) / 2), titleLeft));
         drawing.Pop();
         DrawnYTitleRight = titleLeft + titleWidth;

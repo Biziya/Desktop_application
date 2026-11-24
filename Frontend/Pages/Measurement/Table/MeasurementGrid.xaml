@@ -65,17 +65,7 @@
             </Style.Triggers>
         </Style>
 
-        <Style TargetType="DataGridRow">
-            <Setter Property="BorderThickness" Value="0"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{StaticResource HoverSurface}"/>
-                </Trigger>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="{StaticResource SoftBlue}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
+        <Style TargetType="DataGridRow" BasedOn="{StaticResource DataTableRow}"/>
 
         <!-- Body cell text; its alignment comes from the column (MeasurementTableColumn.Alignment). The small margin keeps
              the text off the vertical grid lines; a value wider than its column ends in "…". -->
