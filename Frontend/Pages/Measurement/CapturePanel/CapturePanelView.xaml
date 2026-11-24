@@ -240,10 +240,9 @@
                         Command="{Binding ToggleAlarmMuteCommand}"
                         AutomationProperties.HelpText="{Binding AlarmDescription}"
                         AutomationProperties.Name="{Binding AlarmDescription}">
-                    <Path Width="15" Height="15" Stretch="Uniform" StrokeThickness="1.8"
-                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
+                    <Path Width="15" Height="15">
                         <Path.Style>
-                            <Style TargetType="Path">
+                            <Style TargetType="Path" BasedOn="{StaticResource StrokeIcon}">
                                 <Setter Property="Data" Value="{StaticResource BellIcon}"/>
                                 <Setter Property="Stroke" Value="{StaticResource TextPrimary}"/>
                                 <Style.Triggers>
@@ -400,10 +399,9 @@
                         AutomationProperties.HelpText="{StaticResource HelpTextThresholdLine}"
                         AutomationProperties.AutomationId="ThresholdLineToggle"
                         AutomationProperties.Name="{Binding ThresholdLineButtonText}">
-                    <Path Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.8"
-                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
+                    <Path Width="18" Height="18">
                         <Path.Style>
-                            <Style TargetType="Path">
+                            <Style TargetType="Path" BasedOn="{StaticResource StrokeIcon}">
                                 <Setter Property="Data" Value="{StaticResource EyeIcon}"/>
                                 <Setter Property="Stroke" Value="{StaticResource TextPrimary}"/>
                                 <Style.Triggers>

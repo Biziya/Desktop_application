@@ -87,6 +87,19 @@
     <Geometry x:Key="ScrollDownArrow">M0,0 L7,0 3.5,4 Z</Geometry>
     <Geometry x:Key="ScrollLeftArrow">M4,0 L0,3.5 4,7 Z</Geometry>
     <Geometry x:Key="ScrollRightArrow">M0,0 L4,3.5 0,7 Z</Geometry>
+    <!-- Outline icons (the 24 x 24 geometries above): one stroke weight with rounded ends and corners. Size and colour per use. -->
+    <Style x:Key="StrokeIcon" TargetType="Path">
+        <Setter Property="Stretch" Value="Uniform"/>
+        <Setter Property="StrokeThickness" Value="1.8"/>
+        <Setter Property="StrokeLineJoin" Value="Round"/>
+        <Setter Property="StrokeStartLineCap" Value="Round"/>
+        <Setter Property="StrokeEndLineCap" Value="Round"/>
+    </Style>
+    <!-- One labelled field in a drillhole form (Core Information, Data Viewer). The margin comes from
+         DrillholeInformation.yaml, added after this dictionary loads, hence DynamicResource. -->
+    <Style x:Key="FieldPanel" TargetType="StackPanel">
+        <Setter Property="Margin" Value="{DynamicResource DrillholeFieldMargin}"/>
+    </Style>
     <BooleanToVisibilityConverter x:Key="BoolVisibility"/>
     <infra:InverseBoolVisibilityConverter x:Key="InverseBoolVisibility"/>
     <infra:NonEmptyVisibilityConverter x:Key="NonEmptyVisibility"/>
@@ -824,7 +837,7 @@
     </Style>
 
     <!-- ===== Read-only data tables (Monitoring): row lines only, grey header, soft-blue selection.
-         The Measurement table builds on these with its own YAML sizes (MeasurementGrid.xaml). ===== -->
+         The Measurement table (MeasurementGrid.xaml) reuses DataTableRow and sizes the rest from MeasurementTable.yaml. ===== -->
     <Style x:Key="DataTableHeader" TargetType="DataGridColumnHeader">
         <Setter Property="Background" Value="{StaticResource SubtleSurface}"/>
         <Setter Property="Foreground" Value="{StaticResource Muted}"/>

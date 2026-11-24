@@ -56,13 +56,11 @@
                         AutomationProperties.HelpText="{StaticResource HelpTextSidebarToggle}">
                     <Grid>
                         <DockPanel Margin="6,0,8,0" Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource InverseBoolVisibility}}">
-                            <Path DockPanel.Dock="Right" Data="{StaticResource CollapseLeftIcon}" Width="14" Height="14" Stretch="Uniform"
-                                  StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                            <Path DockPanel.Dock="Right" Data="{StaticResource CollapseLeftIcon}" Width="14" Height="14" Style="{StaticResource StrokeIcon}"
                                   Stroke="{StaticResource SidebarMuted}" VerticalAlignment="Center"/>
                             <TextBlock Text="{StaticResource ApplicationName}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
                         </DockPanel>
-                        <Path Data="{StaticResource ExpandRightIcon}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center"
-                              StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                        <Path Data="{StaticResource ExpandRightIcon}" Width="14" Height="14" Style="{StaticResource StrokeIcon}" HorizontalAlignment="Center"
                               Stroke="{StaticResource SidebarMuted}" VerticalAlignment="Center"
                               Visibility="{Binding IsSidebarCollapsed, Converter={StaticResource BoolVisibility}}"/>
                     </Grid>
