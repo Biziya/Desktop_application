@@ -100,24 +100,41 @@
     <infra:ZeroVisibilityConverter x:Key="ZeroVisibility"/>
     <infra:ResourceKeyConverter x:Key="ResourceKey"/>
 
-    <!-- Application icon: the shapes of Icons/icon.svg (64 x 64), drawn natively because WPF does not render SVG files. -->
+    <!-- Application icon: the shapes of Icons/icon.svg (512 x 512), drawn natively because WPF does not render SVG files. -->
     <DrawingImage x:Key="AppIcon">
         <DrawingImage.Drawing>
             <DrawingGroup>
-                <GeometryDrawing Brush="#2563EB" Geometry="M14,0 H50 A14,14 0 0 1 64,14 V50 A14,14 0 0 1 50,64 H14 A14,14 0 0 1 0,50 V14 A14,14 0 0 1 14,0 Z"/>
-                <GeometryDrawing Brush="#FFFFFF">
+                <!-- Navy tile -->
+                <GeometryDrawing Brush="#0B1F4B">
                     <GeometryDrawing.Geometry>
-                        <GeometryGroup>
-                            <RectangleGeometry Rect="14,30,9,16" RadiusX="2" RadiusY="2"/>
-                            <RectangleGeometry Rect="27.5,21,9,25" RadiusX="2" RadiusY="2"/>
-                            <RectangleGeometry Rect="41,12,9,34" RadiusX="2" RadiusY="2"/>
-                        </GeometryGroup>
+                        <RectangleGeometry Rect="0,0,512,512" RadiusX="112" RadiusY="112"/>
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
-                <GeometryDrawing Brush="#BFD3FF">
+                <!-- Gamma glyph -->
+                <DrawingGroup Transform="0.75,0,0,0.75,56,46">
+                    <GeometryDrawing Geometry="M18,52 C30,34 58,32 76,60 C92,84 104,112 112,140 C132,168 156,208 118,226 C82,240 70,196 112,140 C130,100 152,64 188,34">
+                        <GeometryDrawing.Pen>
+                            <Pen Brush="#FFFFFF" Thickness="22" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/>
+                        </GeometryDrawing.Pen>
+                    </GeometryDrawing>
+                </DrawingGroup>
+                <!-- Gamma log trace -->
+                <GeometryDrawing Geometry="M96,260 L128,260 144,244 160,268 176,256 208,260 232,238 252,264 272,224 300,72 322,260 336,246 352,268 368,254 392,260 416,260">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#FFFFFF" Thickness="22" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/>
+                    </GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <!-- Drill core -->
+                <GeometryDrawing Brush="#FFFFFF">
                     <GeometryDrawing.Geometry>
-                        <RectangleGeometry Rect="11,49,42,3" RadiusX="1.5" RadiusY="1.5"/>
+                        <RectangleGeometry Rect="72,332,368,64" RadiusX="4" RadiusY="4"/>
                     </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Fracture lines across the core -->
+                <GeometryDrawing Geometry="M168,332 L160,352 L172,372 L162,396 M286,332 L278,350 L292,370 L282,396 M376,332 L370,356 L382,376 L374,396">
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#0B1F4B" Thickness="8" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/>
+                    </GeometryDrawing.Pen>
                 </GeometryDrawing>
             </DrawingGroup>
         </DrawingImage.Drawing>

@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Gamma Core Log app icon: a gamma-ray log trace peaking above a drill core sample">
   <!-- Gamma Core Log. Source icon; Theme.xaml "AppIcon" draws the same shapes, icon.ico is rendered from it. -->
-  <rect x="0" y="0" width="64" height="64" rx="14" fill="#2563EB"/>
-  <rect x="14" y="30" width="9" height="16" rx="2" fill="#FFFFFF"/>
-  <rect x="27.5" y="21" width="9" height="25" rx="2" fill="#FFFFFF"/>
-  <rect x="41" y="12" width="9" height="34" rx="2" fill="#FFFFFF"/>
-  <rect x="11" y="49" width="42" height="3" rx="1.5" fill="#BFD3FF"/>
+  <rect width="512" height="512" rx="112" fill="#0B1F4B"/>
+  <g transform="translate(56 46) scale(0.75)"><path d="M18 52 C30 34 58 32 76 60 C92 84 104 112 112 140 C132 168 156 208 118 226 C82 240 70 196 112 140 C130 100 152 64 188 34" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <polyline points="96,260 128,260 144,244 160,268 176,256 208,260 232,238 252,264 272,224 300,72 322,260 336,246 352,268 368,254 392,260 416,260" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="72" y="332" width="368" height="64" rx="4" fill="#FFFFFF"/>
+  <path d="M168 332 L160 352 L172 372 L162 396 M286 332 L278 350 L292 370 L282 396 M376 332 L370 356 L382 376 L374 396" fill="none" stroke="#0B1F4B" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

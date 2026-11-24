@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -27,6 +28,7 @@ public partial class HelpDrawer : UserControl
     private IInputElement? focusBeforeOpen;
     private DateTime ignoreScrollUntil;
     private double? dragWidth;
+    private bool caretFollowsSlide;
 
     public HelpDrawer()
     {
@@ -167,7 +169,15 @@ public partial class HelpDrawer : UserControl
         Drawer.Visibility = Visibility.Visible;
         // Reopened while still sliding out: continue from where it is.
         var from = wasVisible ? Math.Min(Slide.X, Drawer.Width) : Drawer.Width;
-        Animate(from, 0, OpenDuration, EasingMode.EaseOut, null);
+        // The search box gets focus while the drawer is still sliding in. WPF places the text caret (an adorner) only
+        // on layout, which the slide transform does not cause, so the caret would stay where the box was when focus
+        // landed: partway into the box. Re-place it on every step of the slide, and once more when it ends.
+        FollowSlideWithCaret(true);
+        Animate(from, 0, OpenDuration, EasingMode.EaseOut, () =>
+        {
+            FollowSlideWithCaret(false);
+            UpdateCaret();
+        });
         RestoreScroll();
         Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
         {
@@ -178,8 +188,40 @@ public partial class HelpDrawer : UserControl
         });
     }
 
+    // Freezable.Changed throws when removing a handler that is not attached, so track it.
+    private void FollowSlideWithCaret(bool follow)
+    {
+        if (follow == caretFollowsSlide)
+        {
+            return;
+        }
+
+        caretFollowsSlide = follow;
+
+        if (follow)
+        {
+            Slide.Changed += SlideMoved;
+        }
+        else
+        {
+            Slide.Changed -= SlideMoved;
+        }
+    }
+
+    private void SlideMoved(object? sender, EventArgs e) => UpdateCaret();
+
+    /// <summary>Moves the search box's text caret to where the box is now drawn.</summary>
+    private void UpdateCaret()
+    {
+        if (SearchBox.IsKeyboardFocused)
+        {
+            AdornerLayer.GetAdornerLayer(SearchBox)?.Update();
+        }
+    }
+
     private void Close()
     {
+        FollowSlideWithCaret(false);
         RememberScroll();
         var returnTo = focusBeforeOpen;
         focusBeforeOpen = null;
