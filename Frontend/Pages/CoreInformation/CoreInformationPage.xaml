@@ -13,7 +13,7 @@
         <ScrollViewer Style="{StaticResource PageScroll}">
             <StackPanel Margin="{StaticResource PageScrollContentMargin}">
                 <drillhole:DrillholeInformationView/>
-                <device:DeviceStatusView/>
+                <device:DeviceStatusView DataContext="{Binding DeviceStatus}"/>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>

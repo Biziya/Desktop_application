@@ -303,7 +303,7 @@ public static class StatusAndPresentationTests
         var dialogs = new FakeDialogs();
         var form = new CoreInformationViewModel(_ => { }, new DrillholesClient(api), new BackendConnection(api, TimeSpan.FromMinutes(5)),
             new DrillholeCache(measurementDb), new MemoryRepository(measurementDb), devices, TimeSpan.Zero, toasts, dialogs);
-        var select = form.SelectGammaGuardDatabaseCommand;
+        var select = form.DeviceStatus.SelectGammaGuardDatabaseCommand;
 
         async Task Choose(string? file)
         {
@@ -349,7 +349,7 @@ public static class StatusAndPresentationTests
         Assert.Equal(second, ((GammaGuardDeviceDatabase)new GammaGuardCaptureDevices(devices).Resolve().Samples).Path,
             "the next capture reads the new database");
 
-        form.RefreshGammaGuardDatabaseCommand.Execute(null);
+        form.DeviceStatus.RefreshGammaGuardDatabaseCommand.Execute(null);
         await devices.CheckGammaGuardDatabaseAsync(rediscover: true);
         Assert.Equal(second, devices.GammaGuardDatabase.Path, "Retry keeps the selection");
     }
