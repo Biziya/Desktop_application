@@ -2,7 +2,7 @@ using System.Windows.Controls;
 
 namespace Frontend.Pages.CoreInformation.DeviceStatus;
 
-// View only: device checks and database access run in DeviceStatusMonitor (Calculation/Core-Information).
+// View only: device checks and database access run in DeviceStatusMonitor (Calculation/CoreInformation).
 public partial class DeviceStatusView : UserControl
 {
     public DeviceStatusView() => InitializeComponent();

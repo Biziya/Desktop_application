@@ -65,7 +65,7 @@ and key.
 | `Config/application.yaml` | Package id, name, version, description. The only place the version is written. |
 | `Config/data-retention.yaml` | How long local measurements are kept |
 | `Config/help.yaml` | Help drawer text: one section per page, shortcuts and controls on every page |
-| `Calculation/Core-Information/device-settings.json` | Device Status rules: check intervals, CT007 name prefix, optional fixed Gamma Guard path |
+| `Calculation/Core-Information/device-settings.json` (source: `Calculation/CoreInformation/`) | Device Status rules: check intervals, CT007 name prefix, optional fixed Gamma Guard path |
 | `Pages/CoreInformation/DrillholeInformation/DrillholeInformation.yaml` | Labels, widths and spacing of the drillhole form |
 | `Pages/CoreInformation/DeviceStatus/DeviceStatus.yaml` | Labels and layout of the Device Status rows |
 | `Pages/Measurement/CapturePanel/CapturePanel.yaml` | Capture panel labels and sizes, chart axes, alarm threshold and tone |

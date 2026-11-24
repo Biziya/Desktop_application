@@ -86,7 +86,9 @@
           CopyToOutputDirectory="PreserveNewest" />
 
     <!-- CT-007 device configuration -->
-    <None Update="Calculation\Core-Information\device-settings.json"
+    <!-- Deployed at its documented path (README), so installed copies and support notes stay valid. -->
+    <None Update="Calculation\CoreInformation\device-settings.json"
+          Link="Calculation\Core-Information\device-settings.json"
           CopyToOutputDirectory="PreserveNewest" />
 
     <!-- Page YAML configuration -->
