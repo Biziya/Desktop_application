@@ -86,9 +86,23 @@ public static class PerfMeasurements
             await Assert.Eventually(() => repository.Saves.Count >= Captures, "all captures saved", timeoutMs: 120_000);
             main.Measurement.ToggleMeasurementCommand.Execute(null);
 
+            // Monitoring catching up on a 5,000-reading backlog (the most one poll reads) with the page on screen.
+            main.ShowPage(main.Monitoring);
+            await Idle();
+            var engine = main.Monitoring.Engine;
+            string[] serials = ["SN-A", "SN-B", "SN-C", "SN-D"];
+            var statuses = serials.Select(s => new Frontend.Calculation.CoreInformation.GammaGuardDatabase.DetectorStatusRow(s, $"Meter {s}", "00:11", "1.0", 14, "s1", "logging", 1, now, now)).ToArray();
+            engine.Apply(new Frontend.Calculation.CoreInformation.GammaGuardDatabase.MonitorSnapshot(3, 1, statuses, [Samples.At(1, now, 10, serials[0])]), now);
+            var backlog = Enumerable.Range(2, 5000).Select(i => Samples.At(i, now + i * 250L, 10 + i % 7, serials[i % 4])).ToList();
+            var monitorWatch = Stopwatch.StartNew();
+            engine.Apply(new Frontend.Calculation.CoreInformation.GammaGuardDatabase.MonitorSnapshot(3, 5001, statuses, backlog), now + 5001 * 250L);
+            await Idle();
+            var monitorMs = monitorWatch.Elapsed.TotalMilliseconds;
+
             Console.WriteLine($"PERF window shown + idle: {windowMs:F0} ms");
             Console.WriteLine($"PERF page switch: mean {switches.Average():F1} ms, p95 {Percentile(switches, 0.95):F1} ms ({switches.Count} switches)");
             Console.WriteLine($"PERF managed memory after 1 cycle: {afterOne / 1024.0 / 1024:F1} MB, after {NavigationCycles}: {afterAll / 1024.0 / 1024:F1} MB (growth {(afterAll - afterOne) / 1024.0 / 1024:F2} MB)");
+            Console.WriteLine($"PERF Monitoring 5,000-reading backlog applied and rendered: {monitorMs:F0} ms");
             Console.WriteLine($"PERF capture: first 20 mean {captureTimes.Take(20).Average():F1} ms, last 20 mean {captureTimes.TakeLast(20).Average():F1} ms");
             Console.WriteLine($"PERF save (background): first 20 mean {repository.Saves.Take(20).Average():F1} ms, last 20 mean {repository.Saves.TakeLast(20).Average():F1} ms; measured-drillholes reload: {repository.Reloads.Count} calls, last 20 mean {repository.Reloads.TakeLast(20).DefaultIfEmpty().Average():F1} ms");
         }
