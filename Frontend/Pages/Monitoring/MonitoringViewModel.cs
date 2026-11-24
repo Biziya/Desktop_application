@@ -205,11 +205,7 @@ public sealed class MonitoringViewModel : ObservableObject, INavigationAware, ID
     {
         try
         {
-            while (!token.IsCancellationRequested && (isShown || Engine.HasRunningSamples))
-            {
-                await PollOnceAsync();
-                await Task.Delay(interval, token);
-            }
+            await Polling.RunAsync(PollOnceAsync, interval, token, () => isShown || Engine.HasRunningSamples);
         }
         catch (OperationCanceledException)
         {

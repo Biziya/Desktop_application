@@ -232,24 +232,7 @@ public sealed class DeviceStatusMonitor : ObservableObject, IDisposable
         BluetoothDevicesMessage = result.Devices.Count == 0 ? "No CT007 device (CT007-M, CT007-T, …) is paired with this laptop." : "";
     }
 
-    private async Task RunAsync(Func<Task> check, TimeSpan every)
-    {
-        var token = lifetime.Token;
-
-        while (!token.IsCancellationRequested)
-        {
-            await check();
-
-            try
-            {
-                await Task.Delay(every, token);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-        }
-    }
+    private Task RunAsync(Func<Task> check, TimeSpan every) => Polling.RunAsync(check, every, lifetime.Token);
 
     // Reuses a running check of the same kind; otherwise runs the check off the UI thread and publishes the result.
     private Task Run<T>(ref Task? running, Func<T> check, Action<T> publish, Func<Exception, T> failed)
