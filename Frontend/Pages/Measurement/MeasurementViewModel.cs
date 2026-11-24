@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.IO;
 using Frontend.Calculation.Measurement;
 using Frontend.Shared.Infrastructure;

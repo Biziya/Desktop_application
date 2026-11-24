@@ -20,6 +20,13 @@
 
     <!-- release/ holds build output (build-installer.ps1), never source. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);release/**</DefaultItemExcludes>
+
+    <!-- Unused usings, private members and parameters (.editorconfig) are build warnings. IDE0005 needs the XML
+         documentation file; missing doc comments are not warned about. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS1573;CS1734</NoWarn>
+    <PublishDocumentationFile>false</PublishDocumentationFile>
   </PropertyGroup>
 
   <!-- Application metadata comes from Config\application.yaml (the single source of truth), so every build -

@@ -12,7 +12,7 @@ namespace Frontend;
 public partial class App : Application
 {
     [STAThread]
-    private static void Main(string[] args)
+    private static void Main()
     {
         // Velopack must run before WPF starts (it may handle install/update hooks and exit).
         VelopackApp.Build().Run();
