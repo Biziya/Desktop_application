@@ -54,7 +54,6 @@
          Create    green #16A34A  SuccessButton       New Measurement, Import CSV, Start
          Danger    red   #C8283F  DangerButton        Stop, destructive confirmations
          Neutral   white + grey   SecondaryButton     Cancel, Retry, Help, Refresh -->
-    <SolidColorBrush x:Key="ButtonPrimary" Color="#2563EB" po:Freeze="True"/>
     <SolidColorBrush x:Key="ButtonCreate" Color="#16A34A" po:Freeze="True"/>
     <SolidColorBrush x:Key="ButtonDanger" Color="#C8283F" po:Freeze="True"/>
     <!-- Scroll bar thumb: resting, and under the mouse / while dragged. -->
@@ -68,7 +67,6 @@
     <Geometry x:Key="MeasurementIcon">M4,20 L4,12 7,12 7,20 Z M10,20 L10,4 13,4 13,20 Z M16,20 L16,8 19,8 19,20 Z</Geometry>
     <Geometry x:Key="MonitoringIcon">M2,12 L6,12 9,4 15,20 18,12 22,12</Geometry>
     <Geometry x:Key="DataViewerIcon">M4,5 A8,3 0 1 0 20,5 A8,3 0 1 0 4,5 Z M4,5 L4,19 A8,3 0 0 0 20,19 L20,5 M4,12 A8,3 0 0 0 20,12</Geometry>
-    <Geometry x:Key="HelpIcon">M2,12 A10,10 0 1 0 22,12 A10,10 0 1 0 2,12 Z M9.2,9.2 A2.9,2.9 0 1 1 13.4,11.8 C12.4,12.3 12,13 12,14 M12,17.4 L12,17.6</Geometry>
     <Geometry x:Key="BellIcon">M6,16 L6,10 A6,6 0 0 1 18,10 L18,16 20,18 4,18 Z M10,21 A2,2 0 0 0 14,21</Geometry>
     <Geometry x:Key="BellOffIcon">M6,16 L6,10 A6,6 0 0 1 18,10 L18,16 20,18 4,18 Z M10,21 A2,2 0 0 0 14,21 M3,3 L21,21</Geometry>
     <!-- Threshold line toggle on the Measurement graph: open eye = shown, crossed-out eye = hidden. -->
@@ -89,56 +87,12 @@
     <Geometry x:Key="ScrollDownArrow">M0,0 L7,0 3.5,4 Z</Geometry>
     <Geometry x:Key="ScrollLeftArrow">M4,0 L0,3.5 4,7 Z</Geometry>
     <Geometry x:Key="ScrollRightArrow">M0,0 L4,3.5 0,7 Z</Geometry>
-    <!-- Filled glyphs (Fill, not Stroke). -->
-    <Geometry x:Key="PlayIcon">M6,4 L20,12 6,20 Z</Geometry>
-    <Geometry x:Key="StopIcon">M5,5 L19,5 19,19 5,19 Z</Geometry>
     <BooleanToVisibilityConverter x:Key="BoolVisibility"/>
     <infra:InverseBoolVisibilityConverter x:Key="InverseBoolVisibility"/>
     <infra:NonEmptyVisibilityConverter x:Key="NonEmptyVisibility"/>
     <infra:NotNullVisibilityConverter x:Key="NotNullVisibility"/>
-    <infra:NonEmptyVisibilityConverter x:Key="ZeroLengthVisibility" Invert="True"/>
     <infra:ZeroVisibilityConverter x:Key="ZeroVisibility"/>
     <infra:ResourceKeyConverter x:Key="ResourceKey"/>
-
-    <!-- Application icon: the shapes of Icons/icon.svg (512 x 512), drawn natively because WPF does not render SVG files. -->
-    <DrawingImage x:Key="AppIcon">
-        <DrawingImage.Drawing>
-            <DrawingGroup>
-                <!-- Navy tile -->
-                <GeometryDrawing Brush="#0B1F4B">
-                    <GeometryDrawing.Geometry>
-                        <RectangleGeometry Rect="0,0,512,512" RadiusX="112" RadiusY="112"/>
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <!-- Gamma glyph -->
-                <DrawingGroup Transform="0.75,0,0,0.75,56,46">
-                    <GeometryDrawing Geometry="M18,52 C30,34 58,32 76,60 C92,84 104,112 112,140 C132,168 156,208 118,226 C82,240 70,196 112,140 C130,100 152,64 188,34">
-                        <GeometryDrawing.Pen>
-                            <Pen Brush="#FFFFFF" Thickness="22" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/>
-                        </GeometryDrawing.Pen>
-                    </GeometryDrawing>
-                </DrawingGroup>
-                <!-- Gamma log trace -->
-                <GeometryDrawing Geometry="M96,260 L128,260 144,244 160,268 176,256 208,260 232,238 252,264 272,224 300,72 322,260 336,246 352,268 368,254 392,260 416,260">
-                    <GeometryDrawing.Pen>
-                        <Pen Brush="#FFFFFF" Thickness="22" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/>
-                    </GeometryDrawing.Pen>
-                </GeometryDrawing>
-                <!-- Drill core -->
-                <GeometryDrawing Brush="#FFFFFF">
-                    <GeometryDrawing.Geometry>
-                        <RectangleGeometry Rect="72,332,368,64" RadiusX="4" RadiusY="4"/>
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <!-- Fracture lines across the core -->
-                <GeometryDrawing Geometry="M168,332 L160,352 L172,372 L162,396 M286,332 L278,350 L292,370 L282,396 M376,332 L370,356 L382,376 L374,396">
-                    <GeometryDrawing.Pen>
-                        <Pen Brush="#0B1F4B" Thickness="8" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/>
-                    </GeometryDrawing.Pen>
-                </GeometryDrawing>
-            </DrawingGroup>
-        </DrawingImage.Drawing>
-    </DrawingImage>
 
     <!-- ===== Text and containers ===== -->
     <Style x:Key="AppWindow" TargetType="Window">

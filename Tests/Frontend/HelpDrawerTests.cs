@@ -82,7 +82,7 @@ public static partial class GammaCoreLogUpdateTests
             Press(help, Key.F1);
             Assert.False(main.Help.IsOpen, "F1 closes");
 
-            main.ShowHelp();
+            main.ToggleHelp();
             window.UpdateLayout();
             var close = Within<Button>(drawer, "HelpCloseButton");
             Assert.Equal("Close help (Esc)", AutomationProperties.GetHelpText(close), "× help text");
@@ -131,7 +131,7 @@ public static partial class GammaCoreLogUpdateTests
             }
 
             main.ShowPage(main.Measurement);
-            main.ShowHelp();
+            main.ToggleHelp();
             window.UpdateLayout();
             Within<Button>(drawer, "HelpScreenshot").Command.Execute(main.Help.Page);
             window.UpdateLayout();
@@ -161,7 +161,7 @@ public static partial class GammaCoreLogUpdateTests
         try
         {
             main.ShowPage(main.UploadData);
-            main.ShowHelp();
+            main.ToggleHelp();
             Assert.Equal("Upload Data", main.Help.Page?.Page, "opens at the page on screen");
 
             foreach (var page in main.Pages)
@@ -187,7 +187,7 @@ public static partial class GammaCoreLogUpdateTests
 
             main.Help.Close();
             main.ShowPage(main.Core);
-            main.ShowHelp();
+            main.ToggleHelp();
             Assert.Equal("Core Information", main.Help.Page?.Page, "reopened at the page on screen");
         }
         finally
@@ -207,14 +207,14 @@ public static partial class GammaCoreLogUpdateTests
         try
         {
             var backdrop = Descendants(drawer).OfType<Border>().First(b => AutomationProperties.GetAutomationId(b) == "HelpBackdrop");
-            main.ShowHelp();
+            main.ToggleHelp();
             window.UpdateLayout();
             Assert.True(backdrop.IsVisible, "Core Information: dimmed behind Help");
             backdrop.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.MouseDownEvent });
             Assert.False(main.Help.IsOpen, "a click on the dimmed page closes Help");
 
             await Arm(main);                                                // Measurement, measuring
-            main.ShowHelp();
+            main.ToggleHelp();
             window.UpdateLayout();
             Assert.False(backdrop.IsVisible, "Measurement: no dim, the graph stays visible");
             Assert.True(drawer.Panel.IsVisible, "Help is open");
@@ -250,7 +250,7 @@ public static partial class GammaCoreLogUpdateTests
 
         try
         {
-            main.ShowHelp();
+            main.ToggleHelp();
             window.UpdateLayout();
             Assert.Equal(420.0, drawer.Panel.ActualWidth, "420 px at first");
 
@@ -284,7 +284,7 @@ public static partial class GammaCoreLogUpdateTests
 
         try
         {
-            main.ShowHelp();
+            main.ToggleHelp();
             help.SearchText = "threshold";
             window.UpdateLayout();
             Assert.True(help.SearchResults.Count > 0 && help.SearchResults.All(r => r.Snippet.Contains("threshold", StringComparison.OrdinalIgnoreCase)),
@@ -349,7 +349,7 @@ public static partial class GammaCoreLogUpdateTests
         {
             var operatorBox = Descendants(window).OfType<TextBox>().First(t => t.IsVisible && AutomationProperties.GetName(t) == "Operator");
             operatorBox.Focus();
-            main.ShowHelp();
+            main.ToggleHelp();
             await Settle(window);
             Assert.True(ReferenceEquals(FocusManager.GetFocusedElement(window), drawer.SearchField), "focus moved to the search box");
 
@@ -376,7 +376,7 @@ public static partial class GammaCoreLogUpdateTests
 
         try
         {
-            main.ShowHelp();
+            main.ToggleHelp();
             Assert.True(drawer.SlideOffset > 0, $"starts off to the right ({drawer.SlideOffset})");
             await Assert.Eventually(() => drawer.SlideOffset == 0, "slides in", 1000);
             main.Help.Close();
@@ -384,7 +384,7 @@ public static partial class GammaCoreLogUpdateTests
             await Assert.Eventually(() => !drawer.Panel.IsVisible, "then hidden", 1000);
 
             HelpDrawer.AnimationsEnabled = () => false;
-            main.ShowHelp();
+            main.ToggleHelp();
             Assert.Equal(0.0, drawer.SlideOffset, "animations off: in at once");
             main.Help.Close();
             Assert.False(drawer.Panel.IsVisible, "and out at once");
@@ -416,7 +416,7 @@ public static partial class GammaCoreLogUpdateTests
         try
         {
             main.ShowPage(main.Measurement);
-            main.ShowHelp();
+            main.ToggleHelp();
             await Settle(window);
             var shot = Within<Button>(drawer, "HelpScreenshot");
             var markers = Descendants(shot).OfType<Border>().Where(b => b.Child is TextBlock { Text: { Length: > 0 } }).ToList();
@@ -447,7 +447,7 @@ public static partial class GammaCoreLogUpdateTests
 
         try
         {
-            main.ShowHelp();
+            main.ToggleHelp();
             await Settle(window);
             var box = drawer.SearchField;
             var hint = (TextBlock)box.Template.FindName("Hint", box);

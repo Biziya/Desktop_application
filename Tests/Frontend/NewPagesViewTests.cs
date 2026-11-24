@@ -58,7 +58,7 @@ public static class MainWindowViewTests
         var errors = await Wpf.RenderWindow(new Frontend.MainWindow(main), "main-measurement-help", beforeCapture: () =>
         {
             main.ShowPage(main.Measurement);
-            main.ShowHelp();
+            main.ToggleHelp();
         });
         Assert.Sequence(Array.Empty<string>(), errors, "binding errors (Measurement + Help)");
         Assert.Equal(AlarmState.Armed, main.Measurement.Alarm, "bell armed");

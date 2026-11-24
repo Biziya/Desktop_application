@@ -223,10 +223,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public bool IsShown(ObservableObject page) => CurrentPage == page;
 
-    /// <summary>The ? button: opens Help at this page's section, or closes it (same as F1).</summary>
-    public void ShowHelp() => ToggleHelp();
-
-    /// <summary>The one function behind the ? button and F1 (see <see cref="HelpPanel.Toggle"/>).</summary>
+    /// <summary>The one function behind the ? button and F1: opens Help at this page's section, or closes it (see <see cref="HelpPanel.Toggle"/>).</summary>
     public void ToggleHelp() => Help.Toggle(CurrentTitle);
 
     /// <summary>Sidebar title of the page on screen; Help opens at this page's section.</summary>

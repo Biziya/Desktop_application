@@ -74,7 +74,7 @@ public static partial class GammaCoreLogUpdateTests
             main.ToggleSidebarCommand.Execute(null);
             Check("Collapsed sidebar");
             main.ToggleSidebarCommand.Execute(null);
-            main.ShowHelp();
+            main.ToggleHelp();
             Check("Help drawer");
             main.Help.OpenLightboxCommand.Execute(main.Help.Page);
             Check("Help lightbox");
