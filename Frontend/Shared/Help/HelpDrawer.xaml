@@ -225,15 +225,12 @@
 
                         <Grid Margin="0,4,6,0">
                             <TextBox x:Name="SearchBox" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="34,0,11,0"
+                                     infra:TextBoxHint.Placeholder="Search help"
                                      AutomationProperties.HelpText="{StaticResource HelpTextHelpSearch}"
                                      AutomationProperties.Name="Search help" AutomationProperties.AutomationId="HelpSearch"/>
                             <Path Data="{StaticResource SearchIcon}" Width="14" Height="14" Stretch="Uniform" Margin="12,7,0,0"
                                   HorizontalAlignment="Left" StrokeThickness="1.8" Stroke="{StaticResource Muted}" IsHitTestVisible="False"
-                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                            <TextBlock Text="Search help" Margin="35,7,0,0" VerticalAlignment="Center" Foreground="{StaticResource Muted}"
-                                       IsHitTestVisible="False"
-                                       Visibility="{Binding Text.IsEmpty, ElementName=SearchBox, Converter={StaticResource BoolVisibility}}"/>
-                        </Grid>
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>                        </Grid>
 
                         <ComboBox x:Name="PageSelector" Margin="0,8,6,0" ItemsSource="{Binding Entries}" DisplayMemberPath="Title"
                                   SelectedItem="{Binding Selected}" AutomationProperties.HelpText="{StaticResource HelpTextHelpPage}"

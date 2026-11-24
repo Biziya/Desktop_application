@@ -296,10 +296,23 @@
                     <Border x:Name="Frame" CornerRadius="{StaticResource ControlRadius}"
                             Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}">
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False"
-                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        <Grid>
+                            <!-- No Margin here: TextBox already passes its Padding to this ScrollViewer itself, so binding it
+                                 again applied the padding twice and pushed the text (and caret) right. -->
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            <!-- Placeholder (infra:TextBoxHint.Placeholder): inset by the Padding plus the 2 px WPF insets
+                                 typed text by, so the caret sits on its first letter. -->
+                            <TextBlock x:Name="Hint" Margin="{TemplateBinding Padding}" Padding="2,0" Visibility="Collapsed"
+                                       Text="{Binding (infra:TextBoxHint.Placeholder), RelativeSource={RelativeSource TemplatedParent}}"
+                                       VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                       Foreground="{StaticResource Muted}" IsHitTestVisible="False"/>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter TargetName="Hint" Property="Visibility" Value="Visible"/>
+                        </Trigger>
                         <Trigger Property="IsReadOnly" Value="True">
                             <Setter TargetName="Frame" Property="Background" Value="{StaticResource ReadOnlySurface}"/>
                         </Trigger>

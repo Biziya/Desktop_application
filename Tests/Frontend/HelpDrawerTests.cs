@@ -437,4 +437,43 @@ public static partial class GammaCoreLogUpdateTests
             HelpDrawer.AnimationsEnabled = () => SystemParameters.ClientAreaAnimation;
         }
     }
+
+    [Test("FE-HELP-09", "Help search: the caret, the 'Search help' placeholder and typed text all start at one point after the icon")]
+    public static async Task HelpSearchPlaceholderAlignsWithCaret()
+    {
+        HelpDrawer.AnimationsEnabled = () => false;
+        using var folder = new TestFolder();
+        var (main, window, drawer) = await HelpShell(folder);
+
+        try
+        {
+            main.ShowHelp();
+            await Settle(window);
+            var box = drawer.SearchField;
+            var hint = (TextBlock)box.Template.FindName("Hint", box);
+            double HintTextLeft() => hint.TranslatePoint(new Point(hint.Padding.Left, 0), box).X;
+
+            Assert.Equal("Search help", hint.Text, "placeholder text");
+            Assert.True(hint.IsVisible, "placeholder shown while empty");
+            var caret = box.GetRectFromCharacterIndex(0).Left;
+            Assert.True(caret > 30, $"text starts after the icon ({caret})");
+            Assert.Near(caret, HintTextLeft(), 0.5, "placeholder's first letter is where the caret is");
+
+            box.Text = "a";
+            window.UpdateLayout();
+            Assert.False(hint.IsVisible, "placeholder hidden once typed");
+            Assert.Near(caret, box.GetRectFromCharacterIndex(0).Left, 0.5, "typed text starts at the same point");
+
+            box.Text = "";
+            window.UpdateLayout();
+            Assert.True(hint.IsVisible, "placeholder back when cleared");
+            Assert.Near(caret, HintTextLeft(), 0.5, "in the same place");
+            Assert.Near(caret, box.GetRectFromCharacterIndex(0).Left, 0.5, "caret back at the start");
+        }
+        finally
+        {
+            window.Close();
+            HelpDrawer.AnimationsEnabled = () => SystemParameters.ClientAreaAnimation;
+        }
+    }
 }
