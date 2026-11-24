@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using Frontend.Shared.Infrastructure;
 
 namespace Frontend.Pages.CoreInformation.DrillholeInformation;
 
@@ -23,26 +24,13 @@ public partial class DrillholeInformationView : UserControl
         Loaded += (_, _) => Observe(DataContext as CoreInformationViewModel);
     }
 
-    // While the user types in the Drillhole box, show the filtered list and keep the caret where it was (opening the
-    // dropdown would otherwise select the whole text, so the next key would replace it).
+    // Typing in the Drillhole box shows the filtered list (ComboBoxTyping) and resets the arrow-key choice.
     private void DrillholeTyped(object sender, TextChangedEventArgs e)
     {
-        if (sender is not ComboBox { IsKeyboardFocusWithin: true } box ||
-            box.Template.FindName("PART_EditableTextBox", box) is not TextBox editor)
+        if (ComboBoxTyping.OpenListKeepingCaret(sender))
         {
-            return;
+            arrowed = false;
         }
-
-        arrowed = false;
-        var caret = editor.CaretIndex;
-
-        if (!box.IsDropDownOpen && editor.Text.Length > 0 && box.Items.Count > 0)
-        {
-            box.IsDropDownOpen = true;
-        }
-
-        editor.SelectionLength = 0;
-        editor.CaretIndex = caret;
     }
 
     // Enter picks the highlighted closest match (unless the arrow keys chose another entry); Escape keeps the
